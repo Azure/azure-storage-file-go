@@ -1,8 +1,0 @@
-# Refer to https://golang.github.io/dep/docs/Gopkg.toml.html
-[[constraint]]
-  name = "github.com/Azure/azure-storage-pipeline"
-  version = "0.1.0"
-  
-[[constraint]]
-  name = "gopkg.in/check.v1"  # This project is only needed if you run "go test" on the Azure Storage packages
-  branch = "v1"               # Project version constraint
