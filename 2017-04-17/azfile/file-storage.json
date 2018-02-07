@@ -1,0 +1,485 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Azure File Storage",
+    "version": "2017-04-17",
+    "x-ms-code-generation-settings": {
+      "header": "MIT",
+      "strictSpecAdherence": false
+    }
+  },
+  "x-ms-parameterized-host": {
+    "hostTemplate": "{url}",
+    "useSchemePrefix": false,
+    "positionInOperation": "first",
+    "parameters": [
+      {
+        "$ref": "#/parameters/Url"
+      }
+    ]
+  },
+  "securityDefinitions": {
+    "file_shared_key": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
+  },
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/xml",
+    "application/octet-stream",
+    "text/plain"
+  ],
+  "produces": [
+    "application/xml",
+    "application/octet-stream",
+    "text/plain"
+  ],
+  "paths": {
+
+  },
+  "x-ms-paths": {
+    "/?restype=service&comp=properties": {
+      "put": {
+        "tags": [
+          "service"
+        ],
+        "operationId": "Service_SetProperties",
+        "description": "Sets properties for a storage account's File service endpoint, including properties for Storage Analytics metrics and CORS (Cross-Origin Resource Sharing) rules.",
+        "parameters": [
+          {
+            "$ref": "#/parameters/StorageServiceProperties"
+          },
+          {
+            "$ref": "#/parameters/Timeout"
+          },
+          {
+            "$ref": "#/parameters/ApiVersionParameter"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success (Accepted)",
+            "headers": {
+              "x-ms-request-id": {
+                "x-ms-client-name": "RequestId",
+                "type": "string",
+                "description": "This header uniquely identifies the request that was made and can be used for troubleshooting the request."
+              },
+              "x-ms-version": {
+                "x-ms-client-name": "Version",
+                "type": "string",
+                "description": "Indicates the version of the File service used to execute the request."
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "service"
+        ],
+        "operationId": "Service_GetProperties",
+        "description": "Gets the properties of a storage account's File service, including properties for Storage Analytics metrics and CORS (Cross-Origin Resource Sharing) rules.",
+        "parameters": [
+          {
+            "$ref": "#/parameters/Timeout"
+          },
+          {
+            "$ref": "#/parameters/ApiVersionParameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "headers": {
+              "x-ms-request-id": {
+                "x-ms-client-name": "RequestId",
+                "type": "string",
+                "description": "This header uniquely identifies the request that was made and can be used for troubleshooting the request."
+              },
+              "x-ms-version": {
+                "x-ms-client-name": "Version",
+                "type": "string",
+                "description": "Indicates the version of the File service used to execute the request."
+              }
+            },
+            "schema": {
+              "$ref": "#/definitions/StorageServiceProperties"
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "restype",
+          "in": "query",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "service"
+          ]
+        },
+        {
+          "name": "comp",
+          "in": "query",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "properties"
+          ]
+        }
+      ]
+    },
+    "/?comp=list": {
+      "get": {
+        "tags": [
+          "service"
+        ],
+        "operationId": "Service_ListShares",
+        "description": "The List Shares operation returns a list of the shares and share snapshots under the specified account.",
+        "parameters": [
+          {
+            "$ref": "#/parameters/Prefix"
+          },
+          {
+            "$ref": "#/parameters/Marker"
+          },
+          {
+            "$ref": "#/parameters/MaxResults"
+          },
+          {
+            "$ref": "#/parameters/ListSharesInclude"
+          },
+          {
+            "$ref": "#/parameters/Timeout"
+          },
+          {
+            "$ref": "#/parameters/ApiVersionParameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "headers": {
+              "x-ms-request-id": {
+                "x-ms-client-name": "RequestId",
+                "type": "string",
+                "description": "This header uniquely identifies the request that was made and can be used for troubleshooting the request."
+              },
+              "x-ms-version": {
+                "x-ms-client-name": "Version",
+                "type": "string",
+                "description": "Indicates the version of the File service used to execute the request."
+              }
+            },
+            "schema": {
+              "$ref": "#/definitions/ListSharesResponse"
+            }
+          }
+        },
+        "x-ms-pageable": {
+          "nextLinkName": "NextMarker"
+        }
+      },
+      "parameters": [
+        {
+          "name": "comp",
+          "in": "query",
+          "required": true,
+          "type": "string",
+          "enum": [
+            "list"
+          ]
+        }
+      ]
+    }
+
+
+  },
+  "definitions": {
+    "CorsRule": {
+      "description": "CORS is an HTTP feature that enables a web application running under one domain to access resources in another domain. Web browsers implement a security restriction known as same-origin policy that prevents a web page from calling APIs in a different domain; CORS provides a secure way to allow one domain (the origin domain) to call APIs in another domain.",
+      "type": "object",
+      "required": [
+        "AllowedOrigins",
+        "AllowedMethods",
+        "AllowedHeaders",
+        "ExposedHeaders",
+        "MaxAgeInSeconds"
+      ],
+      "properties": {
+        "AllowedOrigins": {
+          "description": "The origin domains that are permitted to make a request against the storage service via CORS. The origin domain is the domain from which the request originates. Note that the origin must be an exact case-sensitive match with the origin that the user age sends to the service. You can also use the wildcard character '*' to allow all origin domains to make requests via CORS.",
+          "type": "string"
+        },
+        "AllowedMethods": {
+          "description": "The methods (HTTP request verbs) that the origin domain may use for a CORS request. (comma separated)",
+          "type": "string"
+        },
+        "AllowedHeaders": {
+          "description": "The request headers that the origin domain may specify on the CORS request.",
+          "type": "string"
+        },
+        "ExposedHeaders": {
+          "description": "The response headers that may be sent in the response to the CORS request and exposed by the browser to the request issuer.",
+          "type": "string"
+        },
+        "MaxAgeInSeconds": {
+          "description": "The maximum amount time that a browser should cache the preflight OPTIONS request.",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "ListSharesResponse": {
+      "xml": {
+        "name": "EnumerationResults"
+      },
+      "description": "An enumeration of shares.",
+      "type": "object",
+      "required": [
+        "ServiceEndpoint",
+        "Prefix",
+        "MaxResults",
+        "NextMarker"
+      ],
+      "properties": {
+        "ServiceEndpoint": {
+          "type": "string",
+          "xml": {
+            "attribute": true
+          }
+        },
+        "Prefix": {
+          "type": "string"
+        },
+        "Marker": {
+          "type": "string"
+        },
+        "MaxResults": {
+          "type": "integer"
+        },
+        "Shares": {
+          "xml": {
+            "wrapped": true
+          },
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Share",
+            "xml": {
+              "name": "Share"
+            }
+          }
+        },
+        "NextMarker": {
+          "type": "string"
+        }
+      }
+    },
+    "Metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "Metrics": {
+      "description": "Storage Analytics metrics for file service.",
+      "required": [
+        "Enabled"
+      ],
+      "properties": {
+        "Version": {
+          "description": "The version of Storage Analytics to configure.",
+          "type": "string"
+        },
+        "Enabled": {
+          "description": "Indicates whether metrics are enabled for the File service.",
+          "type": "boolean"
+        },
+        "IncludeAPIs": {
+          "description": "Indicates whether metrics should generate summary statistics for called API operations.",
+          "type": "boolean"
+        },
+        "RetentionPolicy": {
+          "$ref": "#/definitions/RetentionPolicy"
+        }
+      }
+    },
+    "RetentionPolicy": {
+      "description": "The retention policy.",
+      "type": "object",
+      "required": [
+        "Enabled"
+      ],
+      "properties": {
+        "Enabled": {
+          "description": "Indicates whether a retention policy is enabled for the File service. If false, metrics data is retained, and the user is responsible for deleting it.",
+          "type": "boolean"
+        },
+        "Days": {
+          "description": "Indicates the number of days that metrics data should be retained. All data older than this value will be deleted. Metrics data is deleted on a best-effort basis after the retention period expires.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 365
+        }
+      }
+    },
+    "Share": {
+      "description": "An Azure Storage share.",
+      "type": "object",
+      "required": [
+        "Name",
+        "Properties"
+      ],
+      "properties": {
+        "Name": {
+          "type": "string"
+        },
+        "Snapshot": {
+          "type": "string"
+        },
+        "Properties": {
+          "$ref": "#/definitions/ShareProperties"
+        },
+        "Metadata": {
+          "$ref": "#/definitions/Metadata"
+        }
+      }
+    },
+    "ShareProperties": {
+      "description": "Properties of a share.",
+      "type": "object",
+      "required": [
+        "Last-Modified",
+        "Etag",
+        "Quota"
+      ],
+      "properties": {
+        "Last-Modified": {
+          "type": "string",
+          "format": "date-time-rfc1123"
+        },
+        "Etag": {
+          "type": "string",
+          "format": "etag"
+        },
+        "Quota": {
+          "type": "integer"
+        }
+      }
+    },
+    "StorageServiceProperties": {
+      "description": "Storage service properties.",
+      "type": "object",
+      "properties": {
+        "HourMetrics": {
+          "description": "A summary of request statistics grouped by API in hourly aggregates for files.",
+          "$ref": "#/definitions/Metrics"
+        },
+        "MinuteMetrics": {
+          "description": "A summary of request statistics grouped by API in minute aggregates for files.",
+          "$ref": "#/definitions/Metrics"
+        },
+        "Cors": {
+          "description": "The set of CORS rules.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CorsRule",
+            "xml": {
+              "name": "CorsRule"
+            }
+          },
+          "xml": {
+            "wrapped": true
+          }
+        }
+      }
+    }
+  },
+  "parameters": {
+    "ApiVersionParameter": {
+      "name": "x-ms-version",
+      "x-ms-client-name": "version",
+      "in": "header",
+      "description": "Specifies the version of the operation to use for this request.",
+      "required": true,
+      "type": "string"
+    },
+    "ListSharesInclude": {
+      "name": "include",
+      "in": "query",
+      "description": "Include this parameter to specify one or more datasets to include in the response.",
+      "required": false,
+      "type": "array",
+      "collectionFormat": "csv",
+      "items": {
+        "type": "string",
+        "enum": [
+          "snapshots",
+          "metadata"
+        ],
+        "x-ms-enum": {
+          "name": "ListSharesIncludeType",
+          "modelAsString": false
+        }
+      },
+      "x-ms-parameter-location": "method"
+    },
+    "Marker": {
+      "name": "marker",
+      "in": "query",
+      "description": "A string value that identifies the portion of the list to be returned with the next list operation. The operation returns a marker value within the response body if the list returned was not complete. The marker value may then be used in a subsequent call to request the next set of list items. The marker value is opaque to the client.",
+      "required": false,
+      "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "MaxResults": {
+      "name": "maxresults",
+      "in": "query",
+      "description": "Specifies the maximum number of shares to return. If the request does not specify maxresults, or specifies a value greater than 5,000, the server will return up to 5,000 items.",
+      "required": false,
+      "type": "integer",
+      "minimum": 1,
+      "x-ms-parameter-location": "method"
+    },
+    "Prefix": {
+      "name": "prefix",
+      "in": "query",
+      "description": "Filters the results to return only shares whose name begins with the specified prefix.",
+      "required": false,
+      "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "Url": {
+      "name": "url",
+      "in": "path",
+      "description": "The URL of the service account, share, directory or file that is the target of the desired operation.",
+      "required": true,
+      "type": "string",
+      "x-ms-skip-url-encoding": true
+    },
+    "StorageServiceProperties": {
+      "name": "StorageServiceProperties",
+      "in": "body",
+      "description": "The StorageService properties.",
+      "required": true,
+      "schema": {
+        "$ref": "#/definitions/StorageServiceProperties"
+      },
+      "x-ms-parameter-location": "method"
+    },
+    "Timeout": {
+      "name": "timeout",
+      "in": "query",
+      "description": "The timeout parameter is expressed in seconds. For more information, see <a href=\"https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN\">Setting Timeouts for File Service Operations.</a>",
+      "required": false,
+      "type": "integer",
+      "minimum": 0,
+      "x-ms-parameter-location": "method"
+    }
+  } 
+}
