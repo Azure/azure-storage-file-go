@@ -2,6 +2,7 @@ package azfile
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"time"
 )

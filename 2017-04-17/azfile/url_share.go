@@ -5,10 +5,10 @@ import (
 	"context"
 	"net/url"
 	"strings"
-	"time"
 
-	"github.com/Azure/azure-storage-go-proto/2016-05-31/pipeline"
+	"github.com/Azure/azure-pipeline-go/pipeline"
 )
+
 /*
 https://docs.microsoft.com/en-us/rest/api/storageservices/operations-on-shares--file-service-
 Get Share Properties
@@ -153,27 +153,4 @@ func (p *AccessPolicyPermission) Parse(s string) {
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-container-acl.
 func (s ShareURL) SetPermissions(ctx context.Context, permissions []SignedIdentifier) (*ShareSetACLResponse, error) {
 	return nil, nil // q.client.SetACL(ctx, permissions, nil, nil, nil)
-}
-
-func (q QueueURL) Clear(ctx context.Context) (*QueueClearResponse, error) {
-	return nil, nil
-}
-
-func (q QueueURL) PutMessage(ctx context.Context, timeToLiveSeconds int, messageText string) (*QueuePutMessageResponse, error) {
-	return nil, nil
-}
-
-func (q QueueURL) GetMessages(ctx context.Context, maxMessages int, visibilityTimeout time.Duration) (*QueueGetMessagesResponse, error) {
-	return nil, nil
-}
-
-func (q QueueURL) PeekMessages(ctx context.Context, maxMessages int) (*QueuePeekMessagesResponse, error) {
-	return nil, nil
-}
-
-func (q QueueURL) DeleteMessage(ctx context.Context, pr PopReceipt) (*QueueDeleteMessageResponse, error) {
-	return nil, nil
-}
-func (q QueueURL) UpdateMessage(ctx context.Context, pr PopReceipt, visibilityTimeout time.Duration) (*QueueUpdateMessage	Response, error) {
-	return nil, nil
 }

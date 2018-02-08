@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/Azure/azure-storage-go-proto/2016-05-31/pipeline"
+	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
 // Metadata contains metadata key/value pairs.

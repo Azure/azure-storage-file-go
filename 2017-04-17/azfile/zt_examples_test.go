@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-storage-go-proto/2016-05-31/pipeline"
+	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
 // https://godoc.org/github.com/fluhus/godoc-tricks

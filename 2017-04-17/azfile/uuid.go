@@ -1,4 +1,4 @@
-package azblob
+package azfile
 
 import (
 	"crypto/rand"

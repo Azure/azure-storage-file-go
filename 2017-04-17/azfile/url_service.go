@@ -8,11 +8,6 @@ import (
 	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
-const (
-	// RootContainerName is the special Azure Storage name used to identify a storage account's root container.
-	RootContainerName = "$root"
-)
-
 // PipelineOptions is used to configure a request policy pipeline's retry policy and logging.
 type PipelineOptions struct {
 	// Log configures the pipeline's logging infrastructure indicating what information is logged and where.
@@ -64,7 +59,7 @@ func NewServiceURL(primaryURL url.URL, p pipeline.Pipeline) ServiceURL {
 	if p == nil {
 		panic("p can't be nil")
 	}
-	client := newServiceClient(primaryURL, p)
+	client := serviceClient{} //newServiceClient(primaryURL, p)
 	return ServiceURL{client: client}
 }
 
