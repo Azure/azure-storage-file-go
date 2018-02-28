@@ -3,7 +3,6 @@ package azfile
 import (
 	"context"
 	"net/url"
-	"strings"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
 )
@@ -49,17 +48,17 @@ func NewPipeline(c Credential, o PipelineOptions) pipeline.Pipeline {
 	return pipeline.NewPipeline(f, pipeline.Options{HTTPSender: nil, Log: o.Log})
 }
 
-// A ServiceURL represents a URL to the Azure Storage Blob service allowing you to manipulate blob containers.
+// A ServiceURL represents a URL to the Azure Storage File service allowing you to manipulate file shares.
 type ServiceURL struct {
 	client serviceClient
 }
 
 // NewServiceURL creates a ServiceURL object using the specified URL and request policy pipeline.
-func NewServiceURL(primaryURL url.URL, p pipeline.Pipeline) ServiceURL {
+func NewServiceURL(url url.URL, p pipeline.Pipeline) ServiceURL {
 	if p == nil {
 		panic("p can't be nil")
 	}
-	client := serviceClient{} //newServiceClient(primaryURL, p)
+	client := newServiceClient(url, p)
 	return ServiceURL{client: client}
 }
 
@@ -79,14 +78,14 @@ func (s ServiceURL) WithPipeline(p pipeline.Pipeline) ServiceURL {
 	return NewServiceURL(s.URL(), p)
 }
 
-// NewContainerURL creates a new ContainerURL object by concatenating containerName to the end of
-// ServiceURL's URL. The new ContainerURL uses the same request policy pipeline as the ServiceURL.
-// To change the pipeline, create the ContainerURL and then call its WithPipeline method passing in the
-// desired pipeline object. Or, call this package's NewContainerURL instead of calling this object's
-// NewContainerURL method.
-func (s ServiceURL) NewQueueURL(queueName string) QueueURL {
-	queueURL := appendToURLPath(s.URL(), queueName)
-	return NewQueueURL(queueURL, s.client.Pipeline())
+// NewShareURL creates a new ShareURL object by concatenating shareName to the end of
+// ServiceURL's URL. The new ShareURL uses the same request policy pipeline as the ServiceURL.
+// To change the pipeline, create the ShareURL and then call its WithPipeline method passing in the
+// desired pipeline object. Or, call this package's NewShareURL instead of calling this object's
+// NewShareURL method.
+func (s ServiceURL) NewShareURL(shareName string) ShareURL {
+	shareURL := appendToURLPath(s.URL(), shareName)
+	return NewShareURL(shareURL, s.client.Pipeline())
 }
 
 // appendToURLPath appends a string to the end of a URL's path (prefixing the string with a '/' if required)
@@ -109,25 +108,24 @@ func appendToURLPath(u url.URL, name string) url.URL {
 	return u
 }
 
-// ListContainers returns a single segment of containers starting from the specified Marker. Use an empty
-// Marker to start enumeration from the beginning. Container names are returned in lexicographic order.
-// After getting a segment, process it, and then call ListContainers again (passing the the previously-returned
+// ListShares returns a single segment of shares starting from the specified Marker. Use an empty
+// Marker to start enumeration from the beginning. Share names are returned in lexicographic order.
+// After getting a segment, process it, and then call ListShares again (passing the the previously-returned
 // Marker) to get the next segment. For more information, see
-// https://docs.microsoft.com/rest/api/storageservices/list-containers2.
-func (s ServiceURL) ListContainers(ctx context.Context, marker Marker, o ListContainersOptions) (*ListContainersResponse, error) {
+// https://docs.microsoft.com/en-us/rest/api/storageservices/list-shares.
+func (s ServiceURL) ListShares(ctx context.Context, marker Marker, o ListSharesOptions) (*ListSharesResponse, error) {
 	prefix, include, maxResults := o.pointers()
-	return s.client.ListContainers(ctx, prefix, marker.val, maxResults, include, nil, nil)
+	return s.client.ListShares(ctx, prefix, marker.val, maxResults, include, nil)
 }
 
-// ListContainersOptions defines options available when calling ListContainers.
-type ListContainersOptions struct {
-	Detail     ListContainersDetail // No IncludeType header is produced if ""
-	Prefix     string               // No Prefix header is produced if ""
-	MaxResults int32                // 0 means unspecified
-	// TODO: update swagger to generate this type?
+// ListSharesOptions defines options available when calling ListShares.
+type ListSharesOptions struct {
+	Detail     ListSharesDetail // No IncludeType header is produced if ""
+	Prefix     string           // No Prefix header is produced if ""
+	MaxResults int32            // 0 means unspecified
 }
 
-func (o *ListContainersOptions) pointers() (prefix *string, include ListContainersIncludeType, maxResults *int32) {
+func (o *ListSharesOptions) pointers() (prefix *string, include []ListSharesIncludeType, maxResults *int32) {
 	if o.Prefix != "" {
 		prefix = &o.Prefix
 	}
@@ -137,39 +135,37 @@ func (o *ListContainersOptions) pointers() (prefix *string, include ListContaine
 		}
 		maxResults = &o.MaxResults
 	}
-	include = ListContainersIncludeType(o.Detail.string())
+	include = o.Detail.toArray()
 	return
 }
 
-// ListContainersDetail indicates what additional information the service should return with each container.
-type ListContainersDetail struct {
-	// Tells the service whether to return metadata for each container.
-	Metadata bool
+// ListSharesDetail indicates what additional information the service should return with each share.
+type ListSharesDetail struct {
+	Metadata, Snapshots bool
 }
 
 // string produces the Include query parameter's value.
-func (d *ListContainersDetail) string() string {
-	items := make([]string, 0, 1)
+func (d *ListSharesDetail) toArray() []ListSharesIncludeType {
+	items := make([]ListSharesIncludeType, 0, 2)
 	// NOTE: Multiple strings MUST be appended in alphabetic order or signing the string for authentication fails!
 	if d.Metadata {
-		items = append(items, string(ListContainersIncludeMetadata))
+		items = append(items, ListSharesIncludeMetadata)
 	}
-	if len(items) > 0 {
-		return strings.Join(items, ",")
+	if d.Snapshots {
+		items = append(items, ListSharesIncludeSnapshots)
 	}
-	return string(ListContainersIncludeNone)
+
+	return items
 }
 
-/*
-func (bsu BlobServiceURL) GetProperties(ctx context.Context) (*StorageServiceProperties, error) {
-	return bsu.client.GetProperties(ctx, nil, nil)
+// GetProperties returns the properties of the File service.
+// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/get-file-service-properties.
+func (s ServiceURL) GetProperties(ctx context.Context) (*StorageServiceProperties, error) {
+	return s.client.GetProperties(ctx, nil)
 }
 
-func (bsu BlobServiceURL) SetProperties(ctx context.Context, properties StorageServiceProperties) (*ServiceSetPropertiesResponse, error) {
-	return bsu.client.SetProperties(ctx, properties, nil, nil)
+// SetProperties sets the properties of the File service.
+// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/set-file-service-properties.
+func (s ServiceURL) SetProperties(ctx context.Context, properties StorageServiceProperties) (*ServiceSetPropertiesResponse, error) {
+	return s.client.SetProperties(ctx, properties, nil)
 }
-
-func (bsu BlobServiceURL) GetStats(ctx context.Context) (*StorageServiceStats, error) {
-	return bsu.client.GetStats(ctx, nil, nil)
-}
-*/

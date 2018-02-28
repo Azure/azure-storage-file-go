@@ -8,54 +8,55 @@ import (
 
 const (
 	snapshotTimeFormat = "2006-01-02T15:04:05.0000000Z07:00"
+	shareSnapshot      = "sharesnapshot"
 )
 
-// A BlobURLParts object represents the components that make up an Azure Storage Container/Blob URL. You parse an
-// existing URL into its parts by calling NewBlobURLParts(). You construct a URL from parts by calling URL().
+// A FileURLParts object represents the components that make up an Azure Storage Share/Directory/File URL. You parse an
+// existing URL into its parts by calling NewFileURLParts(). You construct a URL from parts by calling URL().
 // NOTE: Changing any SAS-related field requires computing a new SAS signature.
-type BlobURLParts struct {
+type FileURLParts struct {
 	Scheme         string    // Ex: "https://"
-	Host           string    // Ex: "account.blob.core.windows.net"
-	ContainerName  string    // "" if no container
-	BlobName       string    // "" if no blob
-	Snapshot       time.Time // IsZero is true if not a snapshot
+	Host           string    // Ex: "account.share.core.windows.net"
+	ShareName      string    // Share name, Ex: "myshare"
+	Path           string    // Path of directory or file, Ex: "mydirectory/myfile"
+	ShareSnapshot  time.Time // IsZero is true if not a snapshot
 	SAS            SASQueryParameters
 	UnparsedParams string
 }
 
-// NewBlobURLParts parses a URL initializing BlobURLParts' fields including any SAS-related & snapshot query parameters. Any other
-// query parameters remain in the UnparsedParams field. This method overwrites all fields in the BlobURLParts object.
-func NewBlobURLParts(u url.URL) BlobURLParts {
-	up := BlobURLParts{
+// NewFileURLParts parses a URL initializing FileURLParts' fields including any SAS-related & sharesnapshot query parameters. Any other
+// query parameters remain in the UnparsedParams field. This method overwrites all fields in the FileURLParts object.
+func NewFileURLParts(u url.URL) FileURLParts {
+	up := FileURLParts{
 		Scheme: u.Scheme,
 		Host:   u.Host,
 	}
 
-	// Find the container & blob names (if any)
 	if u.Path != "" {
 		path := u.Path
+
 		if path[0] == '/' {
-			path = path[1:] // If path starts with a slash, remove it
+			path = path[1:]
 		}
 
 		// Find the next slash (if it exists)
-		containerEndIndex := strings.Index(path, "/")
-		if containerEndIndex == -1 { // Slash not found; path has container name & no blob name
-			up.ContainerName = path
-		} else {
-			up.ContainerName = path[:containerEndIndex] // The container name is the part between the slashes
-			up.BlobName = path[containerEndIndex+1:]    // The blob name is after the container slash
+		shareEndIndex := strings.Index(path, "/")
+		if shareEndIndex == -1 { // Slash not found; path has share name & no path of directory or file
+			up.ShareName = path
+		} else { // Slash found; path has share name & path of directory or file
+			up.ShareName = path[:shareEndIndex]
+			up.Path = path[shareEndIndex+1:]
 		}
 	}
 
 	// Convert the query parameters to a case-sensitive map & trim whitespace
 	paramsMap := u.Query()
 
-	up.Snapshot = time.Time{} // Assume no snapshot
-	if snapshotStr, ok := caseInsensitiveValues(paramsMap).Get("snapshot"); ok {
-		up.Snapshot, _ = time.Parse(snapshotTimeFormat, snapshotStr[0])
+	up.ShareSnapshot = time.Time{} // Assume no snapshot
+	if snapshotStr, ok := caseInsensitiveValues(paramsMap).Get(shareSnapshot); ok {
+		up.ShareSnapshot, _ = time.Parse(snapshotTimeFormat, snapshotStr[0])
 		// If we recognized the query parameter, remove it from the map
-		delete(paramsMap, "snapshot")
+		delete(paramsMap, shareSnapshot)
 	}
 	up.SAS = NewSASQueryParameters(paramsMap, true)
 	up.UnparsedParams = paramsMap.Encode()
@@ -73,26 +74,26 @@ func (values caseInsensitiveValues) Get(key string) ([]string, bool) {
 	return []string{}, false
 }
 
-// URL returns a URL object whose fields are initialized from the BlobURLParts fields. The URL's RawQuery
+// URL returns a URL object whose fields are initialized from the FileURLParts fields. The URL's RawQuery
 // field contains the SAS, snapshot, and unparsed query parameters.
-func (up BlobURLParts) URL() url.URL {
+func (up FileURLParts) URL() url.URL {
 	path := ""
-	// Concatenate container & blob names (if they exist)
-	if up.ContainerName != "" {
-		path += "/" + up.ContainerName
-		if up.BlobName != "" {
-			path += "/" + up.BlobName
+	// Concatenate share & path of directory or file (if they exist)
+	if up.ShareName != "" {
+		path += "/" + up.ShareName
+		if up.Path != "" {
+			path += "/" + up.Path
 		}
 	}
 
 	rawQuery := up.UnparsedParams
 
-	// Concatenate blob snapshot query parameter (if it exists)
-	if !up.Snapshot.IsZero() {
+	// Concatenate share snapshot query parameter (if it exists)
+	if !up.ShareSnapshot.IsZero() {
 		if len(rawQuery) > 0 {
 			rawQuery += "&"
 		}
-		rawQuery += "snapshot=" + up.Snapshot.Format(snapshotTimeFormat)
+		rawQuery += shareSnapshot + "=" + up.ShareSnapshot.Format(snapshotTimeFormat)
 	}
 	sas := up.SAS.Encode()
 	if sas != "" {

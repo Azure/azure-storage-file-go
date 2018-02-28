@@ -5,64 +5,28 @@ import (
 	"context"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
-/*
-https://docs.microsoft.com/en-us/rest/api/storageservices/operations-on-shares--file-service-
-Get Share Properties
-Set Share Properties
-Get Share Stats
-
-https://docs.microsoft.com/en-us/rest/api/storageservices/operations-on-directories
-List Directories and Files
-Create Directory
-Get Directory Properties
-Delete Directory
-Get Directory Metadata
-Set Directory Metadata
-
-https://docs.microsoft.com/en-us/rest/api/storageservices/operations-on-files
-Create File
-Get File
-Get File Properties
-Set File Properties
-Put Range
-List Ranges
-Get File Metadata
-Set File Metadata
-Delete File
-Copy File
-Abort Copy File
-*/
-
-const (
-	// QueueMaxGetMessages indicates the maximum number of messages you can retrieve
-	// with each call to GetMessages (32).
-	QueueMaxGetMessages = 32
-
-	// QueueMessageMaxBytes indicates the maximum number of bytes allowed for a message's text.
-	QueueMessageMaxBytes = 64 * 1024 // 64KB
-)
-
-// A ShareURL represents a URL to the Azure Storage queue allowing you to work with messages.
+// A ShareURL represents a URL to the Azure Storage share allowing you to manipulate its directories and files.
 type ShareURL struct {
-	client queueClient
+	shareClient shareClient
 }
 
 // NewShareURL creates a ShareURL object using the specified URL and request policy pipeline.
-func NewShareURL(url url.URL, p pipeline.Pipeline) QueueURL {
+func NewShareURL(url url.URL, p pipeline.Pipeline) ShareURL {
 	if p == nil {
 		panic("p can't be nil")
 	}
-	client := shareClient{} //"newQueueClient(url, p)"
-	return ShareURL{client: client}
+	shareClient := newShareClient(url, p)
+	return ShareURL{shareClient: shareClient}
 }
 
-// URL returns the URL endpoint used by the QueueURL object.
+// URL returns the URL endpoint used by the ShareURL object.
 func (s ShareURL) URL() url.URL {
-	return q.client.URL()
+	return s.shareClient.URL()
 }
 
 // String returns the URL as a string.
@@ -71,50 +35,99 @@ func (s ShareURL) String() string {
 	return u.String()
 }
 
-// WithPipeline creates a new QueueURL object identical to the source but with the specified request policy pipeline.
+// WithPipeline creates a new ShareURL object identical to the source but with the specified request policy pipeline.
 func (s ShareURL) WithPipeline(p pipeline.Pipeline) ShareURL {
 	return NewShareURL(s.URL(), p)
 }
 
-// Create creates a new container within a storage account. If a container with the same name already exists, the operation fails.
-// For more information, see https://docs.microsoft.com/rest/api/storageservices/create-container.
-func (s ShareURL) Create(ctx context.Context, metadata Metadata) (*ShareCreateResponse, error) {
-	return nil, nil // q.client.Create(ctx, nil, metadata, nil)
+// WithSnapshot creates a new ShareURL object identical to the source but with the specified snapshot timestamp.
+// Pass time.Time{} to remove the snapshot returning a URL to the base share.
+func (s ShareURL) WithSnapshot(snapshot time.Time) ShareURL {
+	p := NewFileURLParts(s.URL())
+	p.ShareSnapshot = snapshot
+	return NewShareURL(p.URL(), s.shareClient.Pipeline())
 }
 
-// Delete marks the specified queue for deletion. The queue and any messages contained within it are later deleted during garbage collection.
-// For more information, see https://docs.microsoft.com/rest/api/storageservices/delete-container.
-func (s ShareURL) Delete(ctx context.Context) (*ShareDeleteResponse, error) {
-	return nil, nil // q.client.Delete(ctx, nil, nil, nil)
+// NewDirectoryURL creates a new DirectoryURL object by concatenating directoryName to the end of
+// ShareURL's URL. The new DirectoryURL uses the same request policy pipeline as the ShareURL.
+// To change the pipeline, create the DirectoryURL and then call its WithPipeline method passing in the
+// desired pipeline object. Or, call this package's NewDirectoryURL instead of calling this object's
+// NewDirectoryURL method.
+func (s ShareURL) NewDirectoryURL(directoryName string) DirectoryURL {
+	directoryURL := appendToURLPath(s.URL(), directoryName)
+	return NewDirectoryURL(directoryURL, s.shareClient.Pipeline())
 }
 
-// GetMetadata returns the container's metadata and system properties.
-// For more information, see https://docs.microsoft.com/rest/api/storageservices/get-container-metadata.
-func (s ShareURL) GetMetadata(ctx context.Context) (*ShareGetPropertiesResponse, error) {
+// NewRootDirectoryURL creates a new DirectoryURL object using ShareURL's URL.
+// The new DirectoryURL uses the same request policy pipeline as the
+// ShareURL. To change the pipeline, create the DirectoryURL and then call its WithPipeline method
+// passing in the desired pipeline object. Or, call NewDirectoryURL instead of calling the NewDirectoryURL method.
+func (s ShareURL) NewRootDirectoryURL() DirectoryURL {
+	return NewDirectoryURL(s.URL(), s.shareClient.Pipeline())
+}
+
+// Create creates a new share within a storage account. If a share with the same name already exists, the operation fails.
+// quotaInGB specifies the maximum size of the share in gigabytes, 0 means no quote and uses service's default value.
+// For more information, see https://docs.microsoft.com/rest/api/storageservices/create-share.
+func (s ShareURL) Create(ctx context.Context, metadata Metadata, quotaInGB int32) (*ShareCreateResponse, error) {
+	var quota *int32
+	if quotaInGB != 0 {
+		quota = &quotaInGB
+	}
+	return s.shareClient.Create(ctx, nil, metadata, quota)
+}
+
+// CreateSnapshot creates a read-only snapshot of a share.
+// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/snapshot-share.
+func (s ShareURL) CreateSnapshot(ctx context.Context, metadata Metadata) (*ShareCreateSnapshotResponse, error) {
+	return s.shareClient.CreateSnapshot(ctx, nil, metadata)
+}
+
+// Delete marks the specified share or share snapshot for deletion.
+// The share or share snapshot and any files contained within it are later deleted during garbage collection.
+// For more information, see https://docs.microsoft.com/rest/api/storageservices/delete-share.
+func (s ShareURL) Delete(ctx context.Context, deleteSnapshotsOption DeleteSnapshotsOptionType) (*ShareDeleteResponse, error) {
+	return s.shareClient.Delete(ctx, nil, nil, deleteSnapshotsOption)
+}
+
+// GetPropertiesAndMetadata returns all user-defined metadata and system properties for the specified share or share snapshot.
+// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/get-share-properties.
+func (s ShareURL) GetPropertiesAndMetadata(ctx context.Context) (*ShareGetPropertiesResponse, error) {
 	// NOTE: GetMetadata actually calls GetProperties internally because GetProperties returns the metadata AND the properties.
 	// This allows us to not expose a GetProperties method at all simplifying the API.
-	return nil, nil // c.client.GetProperties(ctx, nil, ac.pointers(), nil)
+	return s.shareClient.GetProperties(ctx, nil, nil)
 }
 
-// SetMetadata sets the container's metadata.
-// For more information, see https://docs.microsoft.com/rest/api/storageservices/set-container-metadata.
+// SetProperties sets service-defined properties for the specified share.
+// quotaInGB specifies the maximum size of the share in gigabytes, 0 means no quote and uses service's default value.
+// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/set-share-properties.
+func (s ShareURL) SetProperties(ctx context.Context, quotaInGB int32) (*ShareSetPropertiesResponse, error) {
+	var quota *int32
+	if quotaInGB != 0 {
+		quota = &quotaInGB
+	}
+	return s.shareClient.SetProperties(ctx, nil, quota)
+}
+
+// SetMetadata sets the share's metadata.
+// For more information, see https://docs.microsoft.com/rest/api/storageservices/set-share-metadata.
 func (s ShareURL) SetMetadata(ctx context.Context, metadata Metadata) (*ShareSetMetadataResponse, error) {
-	return nil, nil // q.client.SetMetadata(ctx, nil, metadata, ifModifiedSince, nil)
+	return s.shareClient.SetMetadata(ctx, nil, metadata)
 }
 
-// GetPermissions returns the container's permissions. The permissions indicate whether container's blobs may be accessed publicly.
-// For more information, see https://docs.microsoft.com/rest/api/storageservices/get-container-acl.
+// GetPermissions returns information about stored access policies specified on the share.
+// For more information, see https://docs.microsoft.com/rest/api/storageservices/get-share-acl.
 func (s ShareURL) GetPermissions(ctx context.Context) (*SignedIdentifiers, error) {
-	return nil, nil // q.client.GetACL(ctx, nil, ac.pointers(), nil)
+	return s.shareClient.GetACL(ctx, nil)
 }
 
-// The AccessPolicyPermission type simplifies creating the permissions string for a container's access policy.
+// The AccessPolicyPermission type simplifies creating the permissions string for a share's access policy.
 // Initialize an instance of this type and then call its String method to set AccessPolicy's Permission field.
 type AccessPolicyPermission struct {
 	Read, Add, Create, Write, Delete, List bool
 }
 
-// String produces the access policy permission string for an Azure Storage container.
+// String produces the access policy permission string for an Azure Storage share.
 // Call this method to set AccessPolicy's Permission field.
 func (p AccessPolicyPermission) String() string {
 	var b bytes.Buffer
@@ -149,8 +162,14 @@ func (p *AccessPolicyPermission) Parse(s string) {
 	p.List = strings.ContainsRune(s, 'l')
 }
 
-// SetPermissions sets the container's permissions. The permissions indicate whether blobs in a container may be accessed publicly.
-// For more information, see https://docs.microsoft.com/rest/api/storageservices/set-container-acl.
+// SetPermissions sets a stored access policy for use with shared access signatures.
+// For more information, see https://docs.microsoft.com/rest/api/storageservices/set-share-acl.
 func (s ShareURL) SetPermissions(ctx context.Context, permissions []SignedIdentifier) (*ShareSetACLResponse, error) {
-	return nil, nil // q.client.SetACL(ctx, permissions, nil, nil, nil)
+	return s.shareClient.SetACL(ctx, permissions, nil)
+}
+
+// GetStats retrieves statistics related to the share.
+// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/get-share-stats.
+func (s ShareURL) GetStats(ctx context.Context) (*ShareStats, error) {
+	return s.shareClient.GetStats(ctx, nil)
 }
