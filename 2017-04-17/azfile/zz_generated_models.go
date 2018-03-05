@@ -1395,6 +1395,19 @@ func (r Ranges) ETag() ETag {
 	return ETag(r.rawResponse.Header.Get("ETag"))
 }
 
+// FileContentLength returns the value for header x-ms-content-length.
+func (r Ranges) FileContentLength() int64 {
+	s := r.rawResponse.Header.Get("x-ms-content-length")
+	if s == "" {
+		return -1
+	}
+	i, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	return i
+}
+
 // LastModified returns the value for header Last-Modified.
 func (r Ranges) LastModified() time.Time {
 	s := r.rawResponse.Header.Get("Last-Modified")
@@ -1416,11 +1429,6 @@ func (r Ranges) RequestID() string {
 // Version returns the value for header x-ms-version.
 func (r Ranges) Version() string {
 	return r.rawResponse.Header.Get("x-ms-version")
-}
-
-// XMsContentLength returns the value for header x-ms-content-length.
-func (r Ranges) XMsContentLength() string {
-	return r.rawResponse.Header.Get("x-ms-content-length")
 }
 
 // RetentionPolicy - The retention policy.

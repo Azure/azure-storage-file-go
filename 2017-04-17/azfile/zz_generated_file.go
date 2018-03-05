@@ -308,7 +308,7 @@ func (client fileClient) getPreparer(timeout *int32, rangeParameter *string, ran
 
 // getResponder handles the response to the Get request.
 func (client fileClient) getResponder(resp pipeline.Response) (pipeline.Response, error) {
-	err := validateResponse(resp, http.StatusOK)
+	err := validateResponse(resp, http.StatusOK, http.StatusPartialContent)
 	if resp == nil {
 		return nil, err
 	}
