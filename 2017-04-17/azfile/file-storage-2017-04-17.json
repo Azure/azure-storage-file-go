@@ -2043,7 +2043,9 @@
                 "description": "The ETag contains a value which represents the version of the file, in quotes."
               },
               "x-ms-content-length": {
-                "type": "string",
+                "x-ms-client-name": "FileContentLength",
+                "type": "integer",
+                "format": "int64",
                 "description": "The size of the file in bytes."
               },
               "x-ms-request-id": {
