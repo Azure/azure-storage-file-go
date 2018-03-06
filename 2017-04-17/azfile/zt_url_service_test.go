@@ -1,39 +1,19 @@
-package azfile
-/*
+package azfile_test
+
 import (
 	"context"
-	"fmt"
-	"net/url"
-	"os"
-	"testing"
 
-	chk "gopkg.in/check.v1" // go get gopkg.in/check.v1
+	"github.com/Azure/azure-storage-file-go/2017-04-17/azfile"
+	chk "gopkg.in/check.v1"
 )
-
-// Hook up gocheck to testing
-func Test(t *testing.T) { chk.TestingT(t) }
 
 type StorageAccountSuite struct{}
 
 var _ = chk.Suite(&StorageAccountSuite{})
 
-func getStorageAccount(c *chk.C) ServiceURL {
-	name := os.Getenv("ACCOUNT_NAME")
-	key := os.Getenv("ACCOUNT_KEY")
-	if name == "" || key == "" {
-		panic("ACCOUNT_NAME and ACCOUNT_KEY environment vars must be set before running tests")
-	}
-	u, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net", name))
-	c.Assert(err, chk.IsNil)
-
-	credential := NewSharedKeyCredential(name, key)
-	pipeline := NewPipeline(credential, PipelineOptions{})
-	return NewServiceURL(*u, pipeline)
-}
-
-/*func (s *StorageAccountSuite) TestGetSetProperties(c *chk.C) {
-	sa := getStorageAccount(c)
-	setProps := StorageServiceProperties{}
+func (s *StorageAccountSuite) TestAccountGetSetProperties(c *chk.C) {
+	sa := getFSU()
+	setProps := azfile.StorageServiceProperties{}
 	resp, err := sa.SetProperties(context.Background(), setProps)
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.Response().StatusCode, chk.Equals, 202)
@@ -45,86 +25,79 @@ func getStorageAccount(c *chk.C) ServiceURL {
 	c.Assert(props.Response().StatusCode, chk.Equals, 200)
 	c.Assert(props.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(props.Version(), chk.Not(chk.Equals), "")
-	c.Assert(props.Logging, chk.NotNil)
 	c.Assert(props.HourMetrics, chk.NotNil)
 	c.Assert(props.MinuteMetrics, chk.NotNil)
 	c.Assert(props.Cors, chk.HasLen, 0)
-	c.Assert(props.DefaultServiceVersion, chk.IsNil) // TODO: this seems like a bug
 }
 
-func (s *StorageAccountSuite) TestGetStatus(c *chk.C) {
-	sa := getStorageAccount(c)
-	if !strings.Contains(sa.URL().Path, "-secondary") {
-		c.Skip("only applicable on secondary storage accounts")
-	}
-	stats, err := sa.GetStats(context.Background())
-	c.Assert(err, chk.IsNil)
-	c.Assert(stats, chk.NotNil)
-}*/
-
-func (s *StorageAccountSuite) TestListContainers(c *chk.C) {
-	sa := getStorageAccount(c)
-	resp, err := sa.ListContainers(context.Background(), Marker{}, ListContainersOptions{Prefix: containerPrefix})
+func (s *StorageAccountSuite) TestAccountListShares(c *chk.C) {
+	sa := getFSU()
+	ctx := context.Background()
+	resp, err := sa.ListShares(ctx, azfile.Marker{}, azfile.ListSharesOptions{Prefix: sharePrefix})
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.Response().StatusCode, chk.Equals, 200)
 	c.Assert(resp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(resp.Version(), chk.Not(chk.Equals), "")
-	c.Assert(resp.Containers, chk.HasLen, 0)
 	c.Assert(resp.ServiceEndpoint, chk.NotNil)
+	c.Assert(*(resp.Prefix), chk.Equals, sharePrefix)
 
-	container := getContainer(c)
-	defer delContainer(c, container)
+	share, shareName := createNewShare(c, sa)
+	defer delShare(c, share, azfile.DeleteSnapshotsOptionInclude)
 
-	md := Metadata{
+	shareMetadata := azfile.Metadata{
 		"foo": "foovalue",
 		"bar": "barvalue",
 	}
-	_, err = container.SetMetadata(context.Background(), md, ContainerAccessConditions{})
+
+	_, err = share.SetMetadata(ctx, shareMetadata)
 	c.Assert(err, chk.IsNil)
 
-	resp, err = sa.ListContainers(context.Background(), Marker{}, ListContainersOptions{Detail: ListContainersDetail{Metadata: true}, Prefix: containerPrefix})
+	_, err = share.CreateSnapshot(ctx, nil)
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Containers, chk.HasLen, 1)
-	c.Assert(resp.Containers[0].Name, chk.NotNil)
-	c.Assert(resp.Containers[0].Properties, chk.NotNil)
-	c.Assert(resp.Containers[0].Properties.LastModified, chk.NotNil)
-	c.Assert(resp.Containers[0].Properties.Etag, chk.NotNil)
-	c.Assert(resp.Containers[0].Properties.LeaseStatus, chk.Equals, LeaseStatusUnlocked)
-	c.Assert(resp.Containers[0].Properties.LeaseState, chk.Equals, LeaseStateAvailable)
-	c.Assert(string(resp.Containers[0].Properties.LeaseDuration), chk.Equals, "")
-	c.Assert(string(resp.Containers[0].Properties.PublicAccess), chk.Equals, "")
-	c.Assert(resp.Containers[0].Metadata, chk.DeepEquals, md)
+
+	resp, err = sa.ListShares(ctx, azfile.Marker{}, azfile.ListSharesOptions{Detail: azfile.ListSharesDetail{Metadata: true, Snapshots: true}, Prefix: shareName})
+	c.Assert(err, chk.IsNil)
+	c.Assert(resp.Shares, chk.HasLen, 2)
+	c.Assert(resp.Shares[0].Name, chk.NotNil)
+	c.Assert(resp.Shares[0].Properties, chk.NotNil)
+	c.Assert(resp.Shares[0].Properties.LastModified, chk.NotNil)
+	c.Assert(resp.Shares[0].Properties.Etag, chk.NotNil)
+	c.Assert(resp.Shares[0].Properties.Quota, chk.Not(chk.Equals), 0)
+	c.Assert(resp.Shares[0].Metadata, chk.DeepEquals, shareMetadata)
+
+	if resp.Shares[0].Snapshot == nil {
+		c.Assert(resp.Shares[1].Snapshot, chk.NotNil)
+	}
 }
 
-func (s *StorageAccountSuite) TestListContainersPaged(c *chk.C) {
-	sa := getStorageAccount(c)
+func (s *StorageAccountSuite) TestAccountListSharesPaged(c *chk.C) {
+	sa := getFSU()
 
-	const numContainers = 4
+	const numShares = 4
 	const maxResultsPerPage = 2
-	const pagedContainersPrefix = "azblobspagedtest"
+	const pagedSharesPrefix = sharePrefix + "azfilesharepagedtest"
 
-	containers := make([]ContainerURL, numContainers)
-	for i := 0; i < numContainers; i++ {
-		containers[i] = getContainerWithPrefix(c, pagedContainersPrefix)
+	shares := make([]azfile.ShareURL, numShares)
+	for i := 0; i < numShares; i++ {
+		shares[i], _ = createNewShareWithPrefix(c, sa, pagedSharesPrefix)
 	}
 
 	defer func() {
-		for i := range containers {
-			delContainer(c, containers[i])
+		for i := range shares {
+			delShare(c, shares[i], azfile.DeleteSnapshotsOptionNone)
 		}
 	}()
 
-	marker := Marker{}
-	iterations := numContainers / maxResultsPerPage
+	marker := azfile.Marker{}
+	iterations := numShares / maxResultsPerPage
 
 	for i := 0; i < iterations; i++ {
-		resp, err := sa.ListContainers(context.Background(), marker, ListContainersOptions{MaxResults: maxResultsPerPage, Prefix: pagedContainersPrefix})
+		resp, err := sa.ListShares(context.Background(), marker, azfile.ListSharesOptions{MaxResults: maxResultsPerPage, Prefix: pagedSharesPrefix})
 		c.Assert(err, chk.IsNil)
-		c.Assert(resp.Containers, chk.HasLen, maxResultsPerPage)
+		c.Assert(resp.Shares, chk.HasLen, maxResultsPerPage)
 
 		hasMore := i < iterations-1
 		c.Assert(resp.NextMarker.NotDone(), chk.Equals, hasMore)
 		marker = resp.NextMarker
 	}
 }
-*/
