@@ -2766,7 +2766,7 @@
     "ShareSnapshot": {
       "name": "sharesnapshot",
       "in": "query",
-      "description": "The snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot to query to retrieve the properties.",
+      "description": "The snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot to query.",
       "required": false,
       "type": "string",
       "x-ms-parameter-location": "method"
