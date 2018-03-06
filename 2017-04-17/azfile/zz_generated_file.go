@@ -318,8 +318,7 @@ func (client fileClient) getResponder(resp pipeline.Response) (pipeline.Response
 // GetMetadata returns all user-defined metadata for the specified file
 //
 // sharesnapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot
-// to query to retrieve the properties. timeout is the timeout parameter is expressed in seconds. For more information,
-// see <a
+// to query. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
 func (client fileClient) GetMetadata(ctx context.Context, sharesnapshot *string, timeout *int32) (*FileGetMetadataResponse, error) {
@@ -372,8 +371,7 @@ func (client fileClient) getMetadataResponder(resp pipeline.Response) (pipeline.
 // does not return the content of the file.
 //
 // sharesnapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot
-// to query to retrieve the properties. timeout is the timeout parameter is expressed in seconds. For more information,
-// see <a
+// to query. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
 func (client fileClient) GetProperties(ctx context.Context, sharesnapshot *string, timeout *int32) (*FileGetPropertiesResponse, error) {
@@ -424,8 +422,7 @@ func (client fileClient) getPropertiesResponder(resp pipeline.Response) (pipelin
 // ListRanges returns the list of valid ranges for a file.
 //
 // sharesnapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot
-// to query to retrieve the properties. timeout is the timeout parameter is expressed in seconds. For more information,
-// see <a
+// to query. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> rangeParameter is specifies the range of bytes over which to list ranges,
 // inclusively.

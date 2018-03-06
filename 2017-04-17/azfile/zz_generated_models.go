@@ -256,6 +256,14 @@ func (ddr DirectoryDeleteResponse) Version() string {
 	return ddr.rawResponse.Header.Get("x-ms-version")
 }
 
+// DirectoryEntry - Directory entry.
+type DirectoryEntry struct {
+	// XMLName is used for marshalling and is subject to removal in a future release.
+	XMLName xml.Name `xml:"Directory"`
+	// Name - Name of the entry.
+	Name string `xml:"Name"`
+}
+
 // DirectoryGetMetadataResponse ...
 type DirectoryGetMetadataResponse struct {
 	rawResponse *http.Response
@@ -685,6 +693,15 @@ func (fdr FileDeleteResponse) Version() string {
 	return fdr.rawResponse.Header.Get("x-ms-version")
 }
 
+// FileEntry - File entry.
+type FileEntry struct {
+	// XMLName is used for marshalling and is subject to removal in a future release.
+	XMLName xml.Name `xml:"File"`
+	// Name - Name of the entry.
+	Name       string        `xml:"Name"`
+	Properties *FileProperty `xml:"Properties"`
+}
+
 // FileGetMetadataResponse ...
 type FileGetMetadataResponse struct {
 	rawResponse *http.Response
@@ -927,6 +944,12 @@ func (fgpr FileGetPropertiesResponse) NewMetadata() Metadata {
 		}
 	}
 	return md
+}
+
+// FileProperty - File properties.
+type FileProperty struct {
+	// ContentLength - Content length of the file. This value may not be up-to-date since an SMB client may have modified the file locally. The value of Content-Length may not reflect that fact until the handle is closed or the op-lock is broken. To retrieve current property values, call Get File Properties.
+	ContentLength string `xml:"Content-Length"`
 }
 
 // FilePutRangeResponse ...
@@ -1297,6 +1320,66 @@ func (gr GetResponse) NewMetadata() Metadata {
 		}
 	}
 	return md
+}
+
+// ListDirectoriesAndFilesResponse - An enumeration of directories and files.
+type ListDirectoriesAndFilesResponse struct {
+	rawResponse *http.Response
+	// XMLName is used for marshalling and is subject to removal in a future release.
+	XMLName         xml.Name         `xml:"EnumerationResults"`
+	ServiceEndpoint string           `xml:"ServiceEndpoint,attr"`
+	ShareName       string           `xml:"ShareName,attr"`
+	ShareSnapshot   *string          `xml:"ShareSnapshot,attr"`
+	DirectoryPath   string           `xml:"DirectoryPath,attr"`
+	Prefix          string           `xml:"Prefix"`
+	Marker          *string          `xml:"Marker"`
+	MaxResults      *int32           `xml:"MaxResults"`
+	Files           []FileEntry      `xml:"Entries>File"`
+	Directories     []DirectoryEntry `xml:"Entries>Directory"`
+	NextMarker      Marker           `xml:"NextMarker"`
+}
+
+// Response returns the raw HTTP response object.
+func (ldafr ListDirectoriesAndFilesResponse) Response() *http.Response {
+	return ldafr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (ldafr ListDirectoriesAndFilesResponse) StatusCode() int {
+	return ldafr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (ldafr ListDirectoriesAndFilesResponse) Status() string {
+	return ldafr.rawResponse.Status
+}
+
+// ContentType returns the value for header Content-Type.
+func (ldafr ListDirectoriesAndFilesResponse) ContentType() string {
+	return ldafr.rawResponse.Header.Get("Content-Type")
+}
+
+// Date returns the value for header Date.
+func (ldafr ListDirectoriesAndFilesResponse) Date() time.Time {
+	s := ldafr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (ldafr ListDirectoriesAndFilesResponse) RequestID() string {
+	return ldafr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (ldafr ListDirectoriesAndFilesResponse) Version() string {
+	return ldafr.rawResponse.Header.Get("x-ms-version")
 }
 
 // ListSharesResponse - An enumeration of shares.

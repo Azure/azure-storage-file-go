@@ -145,8 +145,7 @@ func (client shareClient) createSnapshotResponder(resp pipeline.Response) (pipel
 // contained within it are later deleted during garbage collection.
 //
 // sharesnapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot
-// to query to retrieve the properties. timeout is the timeout parameter is expressed in seconds. For more information,
-// see <a
+// to query. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> deleteSnapshots is specifies the option include to delete the base share
 // and all of its snapshots.
@@ -266,8 +265,7 @@ func (client shareClient) getACLResponder(resp pipeline.Response) (pipeline.Resp
 // GetMetadata returns all user-defined metadata for the share or share snapshot.
 //
 // sharesnapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot
-// to query to retrieve the properties. timeout is the timeout parameter is expressed in seconds. For more information,
-// see <a
+// to query. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
 func (client shareClient) GetMetadata(ctx context.Context, sharesnapshot *string, timeout *int32) (*ShareGetMetadataResponse, error) {
@@ -321,8 +319,7 @@ func (client shareClient) getMetadataResponder(resp pipeline.Response) (pipeline
 // data returned does not include the share's list of files.
 //
 // sharesnapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot
-// to query to retrieve the properties. timeout is the timeout parameter is expressed in seconds. For more information,
-// see <a
+// to query. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
 func (client shareClient) GetProperties(ctx context.Context, sharesnapshot *string, timeout *int32) (*ShareGetPropertiesResponse, error) {

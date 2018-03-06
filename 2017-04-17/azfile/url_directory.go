@@ -81,4 +81,31 @@ func (d DirectoryURL) SetMetadata(ctx context.Context, metadata Metadata) (*Dire
 	return d.directoryClient.SetMetadata(ctx, nil, metadata)
 }
 
-// TODO: ListDirectoriesAndFiles
+// ListDirectoriesAndFilesOptions defines options available when calling ListDirectoriesAndFiles.
+type ListDirectoriesAndFilesOptions struct {
+	Prefix     string // No Prefix header is produced if ""
+	MaxResults int32  // 0 means unspecified
+}
+
+func (o *ListDirectoriesAndFilesOptions) pointers() (prefix *string, maxResults *int32) {
+	if o.Prefix != "" {
+		prefix = &o.Prefix
+	}
+	if o.MaxResults != 0 {
+		if o.MaxResults < 0 {
+			panic("MaxResults must be >= 0")
+		}
+		maxResults = &o.MaxResults
+	}
+	return
+}
+
+// ListDirectoriesAndFiles returns a single segment of files and directories starting from the specified Marker.
+// Use an empty Marker to start enumeration from the beginning. File and directory names are returned in lexicographic order.
+// After getting a segment, process it, and then call ListDirectoriesAndFiles again (passing the the previously-returned
+// Marker) to get the next segment. This method lists the contents only for a single level of the directory hierarchy.
+// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/list-directories-and-files.
+func (d DirectoryURL) ListDirectoriesAndFiles(ctx context.Context, marker Marker, o ListDirectoriesAndFilesOptions) (*ListDirectoriesAndFilesResponse, error) {
+	prefix, maxResults := o.pointers()
+	return d.directoryClient.ListDirectoriesAndFiles(ctx, prefix, nil, marker.val, maxResults, nil)
+}

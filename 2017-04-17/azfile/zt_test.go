@@ -132,6 +132,26 @@ func createNewShareWithPrefix(c *chk.C, fsu azfile.ServiceURL, prefix string) (s
 	return share, name
 }
 
+func createNewDirectoryWithPrefix(c *chk.C, parentDirectory azfile.DirectoryURL, prefix string) (dir azfile.DirectoryURL, name string) {
+	name = generateName(prefix)
+	dir = parentDirectory.NewDirectoryURL(name)
+
+	cResp, err := dir.Create(ctx, azfile.Metadata{})
+	c.Assert(err, chk.IsNil)
+	c.Assert(cResp.StatusCode(), chk.Equals, 201)
+	return dir, name
+}
+
+func createNewFileWithPrefix(c *chk.C, dir azfile.DirectoryURL, prefix string) (file azfile.FileURL, name string) {
+	name = generateName(prefix)
+	file = dir.NewFileURL(name)
+
+	cResp, err := file.Create(ctx, 0, azfile.FileHTTPHeaders{}, nil)
+	c.Assert(err, chk.IsNil)
+	c.Assert(cResp.StatusCode(), chk.Equals, 201)
+	return file, name
+}
+
 func createNewDirectoryFromShare(c *chk.C, share azfile.ShareURL) (dir azfile.DirectoryURL, name string) {
 	dir, name = getDirectoryURLFromShare(c, share)
 
@@ -155,6 +175,16 @@ func createNewFileFromShare(c *chk.C, share azfile.ShareURL, fileSize int64) (fi
 	dir := share.NewRootDirectoryURL()
 
 	file, name = getFileURLFromDirectory(c, dir)
+
+	cResp, err := file.Create(ctx, fileSize, azfile.FileHTTPHeaders{}, nil)
+	c.Assert(err, chk.IsNil)
+	c.Assert(cResp.StatusCode(), chk.Equals, 201)
+
+	return file, name
+}
+
+func createNewFileFromDirectory(c *chk.C, directory azfile.DirectoryURL, fileSize int64) (file azfile.FileURL, name string) {
+	file, name = getFileURLFromDirectory(c, directory)
 
 	cResp, err := file.Create(ctx, fileSize, azfile.FileHTTPHeaders{}, nil)
 	c.Assert(err, chk.IsNil)

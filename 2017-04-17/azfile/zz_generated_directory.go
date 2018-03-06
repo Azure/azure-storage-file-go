@@ -5,8 +5,10 @@ package azfile
 
 import (
 	"context"
+	"encoding/xml"
 	"fmt"
 	"github.com/Azure/azure-pipeline-go/pipeline"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 )
@@ -126,8 +128,7 @@ func (client directoryClient) deleteResponder(resp pipeline.Response) (pipeline.
 // GetMetadata returns all user-defined metadata for the specified directory.
 //
 // sharesnapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot
-// to query to retrieve the properties. timeout is the timeout parameter is expressed in seconds. For more information,
-// see <a
+// to query. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
 func (client directoryClient) GetMetadata(ctx context.Context, sharesnapshot *string, timeout *int32) (*DirectoryGetMetadataResponse, error) {
@@ -181,8 +182,7 @@ func (client directoryClient) getMetadataResponder(resp pipeline.Response) (pipe
 // of a directory. The data returned does not include the files in the directory or any subdirectories.
 //
 // sharesnapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot
-// to query to retrieve the properties. timeout is the timeout parameter is expressed in seconds. For more information,
-// see <a
+// to query. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
 func (client directoryClient) GetProperties(ctx context.Context, sharesnapshot *string, timeout *int32) (*DirectoryGetPropertiesResponse, error) {
@@ -229,6 +229,93 @@ func (client directoryClient) getPropertiesResponder(resp pipeline.Response) (pi
 		return nil, err
 	}
 	return &DirectoryGetPropertiesResponse{rawResponse: resp.Response()}, err
+}
+
+// ListDirectoriesAndFiles returns a list of files or directories under the specified share or directory. It lists the
+// contents only for a single level of the directory hierarchy.
+//
+// prefix is filters the results to return only entries whose name begins with the specified prefix. sharesnapshot is
+// the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot to query. marker
+// is a string value that identifies the portion of the list to be returned with the next list operation. The operation
+// returns a marker value within the response body if the list returned was not complete. The marker value may then be
+// used in a subsequent call to request the next set of list items. The marker value is opaque to the client.
+// maxresults is specifies the maximum number of entries to return. If the request does not specify maxresults, or
+// specifies a value greater than 5,000, the server will return up to 5,000 items. timeout is the timeout parameter is
+// expressed in seconds. For more information, see <a
+// href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
+// Timeouts for File Service Operations.</a>
+func (client directoryClient) ListDirectoriesAndFiles(ctx context.Context, prefix *string, sharesnapshot *string, marker *string, maxresults *int32, timeout *int32) (*ListDirectoriesAndFilesResponse, error) {
+	if err := validate([]validation{
+		{targetValue: maxresults,
+			constraints: []constraint{{target: "maxresults", name: null, rule: false,
+				chain: []constraint{{target: "maxresults", name: inclusiveMinimum, rule: 1, chain: nil}}}}},
+		{targetValue: timeout,
+			constraints: []constraint{{target: "timeout", name: null, rule: false,
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+		return nil, err
+	}
+	req, err := client.listDirectoriesAndFilesPreparer(prefix, sharesnapshot, marker, maxresults, timeout)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.listDirectoriesAndFilesResponder}, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*ListDirectoriesAndFilesResponse), err
+}
+
+// listDirectoriesAndFilesPreparer prepares the ListDirectoriesAndFiles request.
+func (client directoryClient) listDirectoriesAndFilesPreparer(prefix *string, sharesnapshot *string, marker *string, maxresults *int32, timeout *int32) (pipeline.Request, error) {
+	req, err := pipeline.NewRequest("GET", client.url, nil)
+	if err != nil {
+		return req, pipeline.NewError(err, "failed to create request")
+	}
+	params := req.URL.Query()
+	if prefix != nil {
+		params.Set("prefix", *prefix)
+	}
+	if sharesnapshot != nil {
+		params.Set("sharesnapshot", *sharesnapshot)
+	}
+	if marker != nil {
+		params.Set("marker", *marker)
+	}
+	if maxresults != nil {
+		params.Set("maxresults", fmt.Sprintf("%v", *maxresults))
+	}
+	if timeout != nil {
+		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+	}
+	params.Set("restype", "directory")
+	params.Set("comp", "list")
+	req.URL.RawQuery = params.Encode()
+	req.Header.Set("x-ms-version", ServiceVersion)
+	return req, nil
+}
+
+// listDirectoriesAndFilesResponder handles the response to the ListDirectoriesAndFiles request.
+func (client directoryClient) listDirectoriesAndFilesResponder(resp pipeline.Response) (pipeline.Response, error) {
+	err := validateResponse(resp, http.StatusOK)
+	if resp == nil {
+		return nil, err
+	}
+	result := &ListDirectoriesAndFilesResponse{rawResponse: resp.Response()}
+	if err != nil {
+		return result, err
+	}
+	defer resp.Response().Body.Close()
+	b, err := ioutil.ReadAll(resp.Response().Body)
+	if err != nil {
+		return result, NewResponseError(err, resp.Response(), "failed to read response body")
+	}
+	if len(b) > 0 {
+		err = xml.Unmarshal(b, result)
+		if err != nil {
+			return result, NewResponseError(err, resp.Response(), "failed to unmarshal response body")
+		}
+	}
+	return result, nil
 }
 
 // SetMetadata updates user defined metadata for the specified directory.
