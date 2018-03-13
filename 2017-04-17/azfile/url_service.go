@@ -147,7 +147,6 @@ type ListSharesDetail struct {
 // string produces the Include query parameter's value.
 func (d *ListSharesDetail) toArray() []ListSharesIncludeType {
 	items := make([]ListSharesIncludeType, 0, 2)
-	// NOTE: Multiple strings MUST be appended in alphabetic order or signing the string for authentication fails!
 	if d.Metadata {
 		items = append(items, ListSharesIncludeMetadata)
 	}
