@@ -15,13 +15,13 @@ const (
 // existing URL into its parts by calling NewFileURLParts(). You construct a URL from parts by calling URL().
 // NOTE: Changing any SAS-related field requires computing a new SAS signature.
 type FileURLParts struct {
-	Scheme         string    // Ex: "https://"
-	Host           string    // Ex: "account.share.core.windows.net"
-	ShareName      string    // Share name, Ex: "myshare"
-	Path           string    // Path of directory or file, Ex: "mydirectory/myfile"
-	ShareSnapshot  time.Time // IsZero is true if not a snapshot
-	SAS            SASQueryParameters
-	UnparsedParams string
+	Scheme              string    // Ex: "https://"
+	Host                string    // Ex: "account.share.core.windows.net"
+	ShareName           string    // Share name, Ex: "myshare"
+	DirectoryOrFilePath string    // Path of directory or file, Ex: "mydirectory/myfile"
+	ShareSnapshot       time.Time // IsZero is true if not a snapshot
+	SAS                 SASQueryParameters
+	UnparsedParams      string
 }
 
 // NewFileURLParts parses a URL initializing FileURLParts' fields including any SAS-related & sharesnapshot query parameters. Any other
@@ -45,7 +45,7 @@ func NewFileURLParts(u url.URL) FileURLParts {
 			up.ShareName = path
 		} else { // Slash found; path has share name & path of directory or file
 			up.ShareName = path[:shareEndIndex]
-			up.Path = path[shareEndIndex+1:]
+			up.DirectoryOrFilePath = path[shareEndIndex+1:]
 		}
 	}
 
@@ -81,8 +81,8 @@ func (up FileURLParts) URL() url.URL {
 	// Concatenate share & path of directory or file (if they exist)
 	if up.ShareName != "" {
 		path += "/" + up.ShareName
-		if up.Path != "" {
-			path += "/" + up.Path
+		if up.DirectoryOrFilePath != "" {
+			path += "/" + up.DirectoryOrFilePath
 		}
 	}
 
