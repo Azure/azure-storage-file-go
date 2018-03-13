@@ -91,16 +91,27 @@ func (s *ShareURLSuite) TestShareGetSetPermissions(c *chk.C) {
 	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
 
 	now := time.Now().UTC().Truncate(10000 * time.Millisecond) // Enough resolution
-
-	accessPolicy := azfile.AccessPolicy{}
-	accessPolicy.Start = &now
-	expiryTime := now.Add(5 * time.Minute).UTC()
-	accessPolicy.Expiry = &expiryTime
-	permissionToSet := azfile.AccessPolicyPermission{
+	expiryTIme := now.Add(5 * time.Minute).UTC()
+	permission := azfile.AccessPolicyPermission{
 		Read:  true,
 		Write: true,
 	}.String()
-	accessPolicy.Permission = &permissionToSet
+
+	accessPolicy := azfile.AccessPolicy{
+		Start:      &now,
+		Expiry:     &expiryTIme,
+		Permission: &permission,
+	}
+
+	// TODO: What we want vs what we have to use now.
+	// accessPolicy := azfile.AccessPolicy{
+	// 	Start:      time.Now().UTC().Truncate(10000 * time.Millisecond)
+	// 	Expiry:     time.Now().UTC().Truncate(10000 * time.Millisecond) .Add(5 * time.Minute).UTC(),
+	// 	Permission: azfile.AccessPolicyPermission{
+	// 		Read:  true,
+	// 		Write: true,
+	// 	}.String(),
+	// }
 
 	permissions := []azfile.SignedIdentifier{
 		{
