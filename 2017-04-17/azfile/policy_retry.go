@@ -126,7 +126,7 @@ func NewRetryPolicyFactory(o RetryOptions) pipeline.Factory {
 	return pipeline.FactoryFunc(func(next pipeline.Policy, po *pipeline.PolicyOptions) pipeline.PolicyFunc {
 		return func(ctx context.Context, request pipeline.Request) (response pipeline.Response, err error) {
 			// Exponential retry algorithm: ((2 ^ attempt) - 1) * delay * random(0.8, 1.2)
-			// When to retry: connection failure or an HTTP status code of 500 or greater, except 501 and 505
+			// When to retry: connection failure or an HTTP status code of 500 and 503.
 			for try := int32(1); try <= o.MaxTries; try++ {
 				logf("\n=====> Try=%d\n", try)
 
