@@ -67,7 +67,7 @@ func (s ShareURL) NewRootDirectoryURL() DirectoryURL {
 }
 
 // Create creates a new share within a storage account. If a share with the same name already exists, the operation fails.
-// quotaInGB specifies the maximum size of the share in gigabytes, 0 means no quote and uses service's default value.
+// quotaInGB specifies the maximum size of the share in gigabytes, 0 means you accept service's default quota.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/create-share.
 func (s ShareURL) Create(ctx context.Context, metadata Metadata, quotaInGB int32) (*ShareCreateResponse, error) {
 	var quota *int32
