@@ -40,7 +40,7 @@ func (s *DirectoryURLSuite) TestDirCreateDelete(c *chk.C) {
 	c.Assert(cResp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(cResp.Version(), chk.Not(chk.Equals), "")
 
-	gResp, err := directory.GetPropertiesAndMetadata(context.Background())
+	gResp, err := directory.GetProperties(context.Background())
 	c.Assert(err, chk.IsNil)
 	c.Assert(gResp.StatusCode(), chk.Equals, 200)
 
@@ -58,7 +58,7 @@ func (s *DirectoryURLSuite) TestDirCreateDelete(c *chk.C) {
 	c.Assert(dResp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(dResp.Version(), chk.Not(chk.Equals), "")
 
-	gResp, err = directory.GetPropertiesAndMetadata(context.Background())
+	gResp, err = directory.GetProperties(context.Background())
 	c.Assert(err, chk.NotNil)
 	serr = err.(azfile.StorageError)
 	c.Assert(serr.Response().StatusCode, chk.Equals, 404)
@@ -92,7 +92,7 @@ func (s *DirectoryURLSuite) TestDirCreateMultiLevelDir(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	c.Assert(cResp.Response().StatusCode, chk.Equals, 201)
 
-	gResp, err := subDirURL.GetPropertiesAndMetadata(context.Background())
+	gResp, err := subDirURL.GetProperties(context.Background())
 	c.Assert(err, chk.IsNil)
 	c.Assert(gResp.StatusCode(), chk.Equals, 200)
 
@@ -132,7 +132,7 @@ func (s *DirectoryURLSuite) TestDirCreateEndWithSlash(c *chk.C) {
 	c.Assert(cResp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(cResp.Version(), chk.Not(chk.Equals), "")
 
-	gResp, err := directory.GetPropertiesAndMetadata(context.Background())
+	gResp, err := directory.GetProperties(context.Background())
 	c.Assert(err, chk.IsNil)
 	c.Assert(gResp.StatusCode(), chk.Equals, 200)
 }
@@ -159,7 +159,7 @@ func (s *DirectoryURLSuite) TestDirGetSetMetadata(c *chk.C) {
 	c.Assert(sResp.Version(), chk.Not(chk.Equals), "")
 	c.Assert(sResp.IsServerEncrypted(), chk.NotNil)
 
-	gResp, err := directory.GetPropertiesAndMetadata(context.Background())
+	gResp, err := directory.GetProperties(context.Background())
 	c.Assert(err, chk.IsNil)
 	c.Assert(gResp.Response().StatusCode, chk.Equals, 200)
 	c.Assert(gResp.Date().IsZero(), chk.Equals, false)
@@ -179,7 +179,7 @@ func (s *DirectoryURLSuite) TestDirGetPropertiesWithBaseDirectory(c *chk.C) {
 
 	directory := share.NewRootDirectoryURL()
 
-	gResp, err := directory.GetPropertiesAndMetadata(context.Background())
+	gResp, err := directory.GetProperties(context.Background())
 	c.Assert(err, chk.IsNil)
 	c.Assert(gResp.Response().StatusCode, chk.Equals, 200)
 	c.Assert(gResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
@@ -213,7 +213,7 @@ func (s *DirectoryURLSuite) TestDirGetSetMetadataMergeAndReplace(c *chk.C) {
 	c.Assert(sResp.Version(), chk.Not(chk.Equals), "")
 	c.Assert(sResp.IsServerEncrypted(), chk.NotNil)
 
-	gResp, err := directory.GetPropertiesAndMetadata(context.Background())
+	gResp, err := directory.GetProperties(context.Background())
 	c.Assert(err, chk.IsNil)
 	c.Assert(gResp.Response().StatusCode, chk.Equals, 200)
 	c.Assert(gResp.Date().IsZero(), chk.Equals, false)
@@ -242,7 +242,7 @@ func (s *DirectoryURLSuite) TestDirGetSetMetadataMergeAndReplace(c *chk.C) {
 	c.Assert(sResp.Version(), chk.Not(chk.Equals), "")
 	c.Assert(sResp.IsServerEncrypted(), chk.NotNil)
 
-	gResp, err = directory.GetPropertiesAndMetadata(context.Background())
+	gResp, err = directory.GetProperties(context.Background())
 	c.Assert(err, chk.IsNil)
 	c.Assert(gResp.Response().StatusCode, chk.Equals, 200)
 	c.Assert(gResp.Date().IsZero(), chk.Equals, false)
@@ -269,7 +269,7 @@ func (s *DirectoryURLSuite) TestListFilesAndDirectoriesBasic(c *chk.C) {
 	defer delDirectory(c, dir)
 
 	// Empty directory
-	lResp, err := dir.ListDirectoriesAndFiles(context.Background(), azfile.Marker{}, azfile.ListDirectoriesAndFilesOptions{})
+	lResp, err := dir.ListFilesAndDirectoriesSegment(context.Background(), azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{})
 	c.Assert(err, chk.IsNil)
 	c.Assert(lResp.Response().StatusCode, chk.Equals, 200)
 	c.Assert(lResp.Date().IsZero(), chk.Equals, false)
@@ -291,7 +291,7 @@ func (s *DirectoryURLSuite) TestListFilesAndDirectoriesBasic(c *chk.C) {
 	defer delFile(c, innerFile)
 
 	// List 1 file, 1 directory
-	lResp2, err := dir.ListDirectoriesAndFiles(context.Background(), azfile.Marker{}, azfile.ListDirectoriesAndFilesOptions{})
+	lResp2, err := dir.ListFilesAndDirectoriesSegment(context.Background(), azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{})
 	c.Assert(err, chk.IsNil)
 	c.Assert(lResp2.Response().StatusCode, chk.Equals, 200)
 	c.Assert(lResp2.Directories, chk.HasLen, 1)
@@ -307,7 +307,7 @@ func (s *DirectoryURLSuite) TestListFilesAndDirectoriesBasic(c *chk.C) {
 	defer delFile(c, innerFile2)
 
 	// List 2 files and 2 directories
-	lResp3, err := dir.ListDirectoriesAndFiles(context.Background(), azfile.Marker{}, azfile.ListDirectoriesAndFilesOptions{})
+	lResp3, err := dir.ListFilesAndDirectoriesSegment(context.Background(), azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{})
 	c.Assert(err, chk.IsNil)
 	c.Assert(lResp3.Response().StatusCode, chk.Equals, 200)
 	c.Assert(lResp3.Directories, chk.HasLen, 2)
@@ -347,7 +347,7 @@ func (s *DirectoryURLSuite) TestListFilesAndDirectoriesWithPrefix(c *chk.C) {
 
 	marker := azfile.Marker{}
 
-	lResp, err := dir.ListDirectoriesAndFiles(context.Background(), marker, azfile.ListDirectoriesAndFilesOptions{MaxResults: maxResultsPerPage, Prefix: testPrefix})
+	lResp, err := dir.ListFilesAndDirectoriesSegment(context.Background(), marker, azfile.ListFilesAndDirectoriesOptions{MaxResults: maxResultsPerPage, Prefix: testPrefix})
 	c.Assert(err, chk.IsNil)
 	c.Assert(lResp.Files, chk.HasLen, 1)
 	c.Assert(lResp.Files[0].Name, chk.Equals, file1Name)
@@ -357,7 +357,7 @@ func (s *DirectoryURLSuite) TestListFilesAndDirectoriesWithPrefix(c *chk.C) {
 	c.Assert(lResp.NextMarker.NotDone(), chk.Equals, true)
 	marker = lResp.NextMarker
 
-	lResp, err = dir.ListDirectoriesAndFiles(context.Background(), marker, azfile.ListDirectoriesAndFilesOptions{MaxResults: maxResultsPerPage, Prefix: testPrefix})
+	lResp, err = dir.ListFilesAndDirectoriesSegment(context.Background(), marker, azfile.ListFilesAndDirectoriesOptions{MaxResults: maxResultsPerPage, Prefix: testPrefix})
 	c.Assert(err, chk.IsNil)
 	c.Assert(lResp.Files, chk.HasLen, 1)
 	c.Assert(lResp.Files[0].Name, chk.Equals, file2Name)

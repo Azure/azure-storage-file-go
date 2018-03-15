@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	
+
 	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
@@ -91,7 +91,8 @@ func (client serviceClient) getPropertiesResponder(resp pipeline.Response) (pipe
 	return result, nil
 }
 
-// ListShares the List Shares operation returns a list of the shares and share snapshots under the specified account.
+// ListSharesSegment the List Shares Segment operation returns a list of the shares and share snapshots under the
+// specified account.
 //
 // prefix is filters the results to return only entries whose name begins with the specified prefix. marker is a string
 // value that identifies the portion of the list to be returned with the next list operation. The operation returns a
@@ -103,7 +104,7 @@ func (client serviceClient) getPropertiesResponder(resp pipeline.Response) (pipe
 // information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
-func (client serviceClient) ListShares(ctx context.Context, prefix *string, marker *string, maxresults *int32, include []ListSharesIncludeType, timeout *int32) (*ListSharesResponse, error) {
+func (client serviceClient) ListSharesSegment(ctx context.Context, prefix *string, marker *string, maxresults *int32, include []ListSharesIncludeType, timeout *int32) (*ListSharesResponse, error) {
 	if err := validate([]validation{
 		{targetValue: maxresults,
 			constraints: []constraint{{target: "maxresults", name: null, rule: false,
@@ -113,19 +114,19 @@ func (client serviceClient) ListShares(ctx context.Context, prefix *string, mark
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.listSharesPreparer(prefix, marker, maxresults, include, timeout)
+	req, err := client.listSharesSegmentPreparer(prefix, marker, maxresults, include, timeout)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.listSharesResponder}, req)
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.listSharesSegmentResponder}, req)
 	if err != nil {
 		return nil, err
 	}
 	return resp.(*ListSharesResponse), err
 }
 
-// listSharesPreparer prepares the ListShares request.
-func (client serviceClient) listSharesPreparer(prefix *string, marker *string, maxresults *int32, include []ListSharesIncludeType, timeout *int32) (pipeline.Request, error) {
+// listSharesSegmentPreparer prepares the ListSharesSegment request.
+func (client serviceClient) listSharesSegmentPreparer(prefix *string, marker *string, maxresults *int32, include []ListSharesIncludeType, timeout *int32) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("GET", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -140,7 +141,7 @@ func (client serviceClient) listSharesPreparer(prefix *string, marker *string, m
 	if maxresults != nil {
 		params.Set("maxresults", fmt.Sprintf("%v", *maxresults))
 	}
-	if include != nil {
+	if len(include) != 0 {
 		include := strings.Trim(strings.Replace(fmt.Sprint(include), " ", ",", -1), "[]")
 		params.Set("include", fmt.Sprintf("%v", include))
 	}
@@ -153,8 +154,8 @@ func (client serviceClient) listSharesPreparer(prefix *string, marker *string, m
 	return req, nil
 }
 
-// listSharesResponder handles the response to the ListShares request.
-func (client serviceClient) listSharesResponder(resp pipeline.Response) (pipeline.Response, error) {
+// listSharesSegmentResponder handles the response to the ListSharesSegment request.
+func (client serviceClient) listSharesSegmentResponder(resp pipeline.Response) (pipeline.Response, error) {
 	err := validateResponse(resp, http.StatusOK)
 	if resp == nil {
 		return nil, err

@@ -7,10 +7,11 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"github.com/Azure/azure-pipeline-go/pipeline"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+
+	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
 // directoryClient is the client for the Directory methods of the Azfile service.
@@ -125,59 +126,6 @@ func (client directoryClient) deleteResponder(resp pipeline.Response) (pipeline.
 	return &DirectoryDeleteResponse{rawResponse: resp.Response()}, err
 }
 
-// GetMetadata returns all user-defined metadata for the specified directory.
-//
-// sharesnapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot
-// to query. timeout is the timeout parameter is expressed in seconds. For more information, see <a
-// href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
-// Timeouts for File Service Operations.</a>
-func (client directoryClient) GetMetadata(ctx context.Context, sharesnapshot *string, timeout *int32) (*DirectoryGetMetadataResponse, error) {
-	if err := validate([]validation{
-		{targetValue: timeout,
-			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
-		return nil, err
-	}
-	req, err := client.getMetadataPreparer(sharesnapshot, timeout)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.getMetadataResponder}, req)
-	if err != nil {
-		return nil, err
-	}
-	return resp.(*DirectoryGetMetadataResponse), err
-}
-
-// getMetadataPreparer prepares the GetMetadata request.
-func (client directoryClient) getMetadataPreparer(sharesnapshot *string, timeout *int32) (pipeline.Request, error) {
-	req, err := pipeline.NewRequest("GET", client.url, nil)
-	if err != nil {
-		return req, pipeline.NewError(err, "failed to create request")
-	}
-	params := req.URL.Query()
-	if sharesnapshot != nil {
-		params.Set("sharesnapshot", *sharesnapshot)
-	}
-	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
-	}
-	params.Set("restype", "directory")
-	params.Set("comp", "metadata")
-	req.URL.RawQuery = params.Encode()
-	req.Header.Set("x-ms-version", ServiceVersion)
-	return req, nil
-}
-
-// getMetadataResponder handles the response to the GetMetadata request.
-func (client directoryClient) getMetadataResponder(resp pipeline.Response) (pipeline.Response, error) {
-	err := validateResponse(resp, http.StatusOK, http.StatusAccepted)
-	if resp == nil {
-		return nil, err
-	}
-	return &DirectoryGetMetadataResponse{rawResponse: resp.Response()}, err
-}
-
 // GetProperties returns all system properties for the specified directory, and can also be used to check the existence
 // of a directory. The data returned does not include the files in the directory or any subdirectories.
 //
@@ -231,8 +179,8 @@ func (client directoryClient) getPropertiesResponder(resp pipeline.Response) (pi
 	return &DirectoryGetPropertiesResponse{rawResponse: resp.Response()}, err
 }
 
-// ListDirectoriesAndFiles returns a list of files or directories under the specified share or directory. It lists the
-// contents only for a single level of the directory hierarchy.
+// ListFilesAndDirectoriesSegment returns a list of files or directories under the specified share or directory. It
+// lists the contents only for a single level of the directory hierarchy.
 //
 // prefix is filters the results to return only entries whose name begins with the specified prefix. sharesnapshot is
 // the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot to query. marker
@@ -244,7 +192,7 @@ func (client directoryClient) getPropertiesResponder(resp pipeline.Response) (pi
 // expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
-func (client directoryClient) ListDirectoriesAndFiles(ctx context.Context, prefix *string, sharesnapshot *string, marker *string, maxresults *int32, timeout *int32) (*ListDirectoriesAndFilesResponse, error) {
+func (client directoryClient) ListFilesAndDirectoriesSegment(ctx context.Context, prefix *string, sharesnapshot *string, marker *string, maxresults *int32, timeout *int32) (*ListFilesAndDirectoriesSegmentResponse, error) {
 	if err := validate([]validation{
 		{targetValue: maxresults,
 			constraints: []constraint{{target: "maxresults", name: null, rule: false,
@@ -254,19 +202,19 @@ func (client directoryClient) ListDirectoriesAndFiles(ctx context.Context, prefi
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.listDirectoriesAndFilesPreparer(prefix, sharesnapshot, marker, maxresults, timeout)
+	req, err := client.listFilesAndDirectoriesSegmentPreparer(prefix, sharesnapshot, marker, maxresults, timeout)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.listDirectoriesAndFilesResponder}, req)
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.listFilesAndDirectoriesSegmentResponder}, req)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(*ListDirectoriesAndFilesResponse), err
+	return resp.(*ListFilesAndDirectoriesSegmentResponse), err
 }
 
-// listDirectoriesAndFilesPreparer prepares the ListDirectoriesAndFiles request.
-func (client directoryClient) listDirectoriesAndFilesPreparer(prefix *string, sharesnapshot *string, marker *string, maxresults *int32, timeout *int32) (pipeline.Request, error) {
+// listFilesAndDirectoriesSegmentPreparer prepares the ListFilesAndDirectoriesSegment request.
+func (client directoryClient) listFilesAndDirectoriesSegmentPreparer(prefix *string, sharesnapshot *string, marker *string, maxresults *int32, timeout *int32) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("GET", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -294,13 +242,13 @@ func (client directoryClient) listDirectoriesAndFilesPreparer(prefix *string, sh
 	return req, nil
 }
 
-// listDirectoriesAndFilesResponder handles the response to the ListDirectoriesAndFiles request.
-func (client directoryClient) listDirectoriesAndFilesResponder(resp pipeline.Response) (pipeline.Response, error) {
+// listFilesAndDirectoriesSegmentResponder handles the response to the ListFilesAndDirectoriesSegment request.
+func (client directoryClient) listFilesAndDirectoriesSegmentResponder(resp pipeline.Response) (pipeline.Response, error) {
 	err := validateResponse(resp, http.StatusOK)
 	if resp == nil {
 		return nil, err
 	}
-	result := &ListDirectoriesAndFilesResponse{rawResponse: resp.Response()}
+	result := &ListFilesAndDirectoriesSegmentResponse{rawResponse: resp.Response()}
 	if err != nil {
 		return result, err
 	}

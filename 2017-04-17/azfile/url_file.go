@@ -6,13 +6,18 @@ import (
 	"io"
 	"net/url"
 	"strconv"
-	"time"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
 const (
 	fileType = "file"
+
+	// FileMaxUploadRangeBytes indicates the maximum number of bytes that can be sent in a call to UploadRange.
+	FileMaxUploadRangeBytes = 4 * 1024 * 1024 // 4MB
+
+	// FileMaxSize indicates the maxiumum file size.
+	FileMaxSize = 1 * 1024 * 1024 * 1024 * 1024 // 1TB
 )
 
 // A FileURL represents a URL to an Azure Storage file.
@@ -66,8 +71,8 @@ func (f FileURL) Create(ctx context.Context, size int64, h FileHTTPHeaders, meta
 
 // StartCopy copies the data at the source URL to a file.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/copy-file.
-func (f FileURL) StartCopy(ctx context.Context, source url.URL, metadata Metadata) (*FileCopyResponse, error) {
-	return f.fileClient.Copy(ctx, source.String(), nil, metadata)
+func (f FileURL) StartCopy(ctx context.Context, source url.URL, metadata Metadata) (*FileStartCopyResponse, error) {
+	return f.fileClient.StartCopy(ctx, source.String(), nil, metadata)
 }
 
 // AbortCopy stops a pending copy that was previously started and leaves a destination file with 0 length and metadata.
@@ -76,55 +81,42 @@ func (f FileURL) AbortCopy(ctx context.Context, copyID string) (*FileAbortCopyRe
 	return f.fileClient.AbortCopy(ctx, copyID, "abort", nil)
 }
 
-// FileRange defines a range of bytes within a file, starting at Offset and ending
-// at Offset+Count-1 inclusively. Use a zero-value FileRange to indicate the entire file.
-// TODO: FileRange uses Offset + Count, this is different from Range which contains StartOffset and EndOffset(inclusive).
-// 		 There is possiblity to use these two concepts incorrectly for user.
-type FileRange struct {
-	Offset int64
-	Count  int64
-}
-
-func (dr *FileRange) pointers() *string {
-	if dr.Offset < 0 {
-		panic("The file's range Offset must be >= 0")
-	}
-	if dr.Count < 0 {
-		panic("The file's range Count must be >= 0")
-	}
-	if dr.Offset == 0 && dr.Count == 0 {
-		return nil
-	}
+// toRange makes range string adhere to REST API.
+// A count of zero means count of bytes from offset to the end of file.
+// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/specifying-the-range-header-for-file-service-operations.
+func toRange(offset int64, count int64) *string {
 	endRange := ""
-	if dr.Count > 0 {
-		endRange = strconv.FormatInt((dr.Offset+dr.Count)-1, 10)
+	if count != 0 {
+		endRange = strconv.FormatInt(offset+count-1, 10)
 	}
-	dataRange := fmt.Sprintf("bytes=%v-%s", dr.Offset, endRange)
-	return &dataRange
+	r := fmt.Sprintf("bytes=%d-%s", offset, endRange)
+	return &r
 }
 
-func (r *Range) String() string {
-	if r.Start < 0 {
-		panic("Range's Start value must be greater than or equal to 0")
-	}
-	if r.End <= 0 {
-		panic("Range's End value must be greater than 0")
-	}
-	if r.End <= r.Start {
-		panic("Range's End value must be after the start")
-	}
-	asString := fmt.Sprintf("bytes=%v-%v", r.Start, r.End)
-	return asString
-}
-
-// GetFile reads a range of bytes from a file. The response also includes the file's properties and metadata.
+// Download downloads data start from offset with count bytes.
+// A count of zero means count of bytes from offset to the end of file.
+// If both offset and count is zero, entire file will be downloaded.
+// The response also includes the file's properties.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/get-file.
-func (f FileURL) GetFile(ctx context.Context, fileRange FileRange, rangeGetContentMD5 bool) (*GetResponse, error) {
+func (f FileURL) Download(ctx context.Context, offset int64, count int64, rangeGetContentMD5 bool) (*DownloadResponse, error) {
+	if offset < 0 {
+		panic("offset must be >= 0")
+	}
+	if count < 0 {
+		panic("count must be >= 0")
+	}
+
 	var xRangeGetContentMD5 *bool
 	if rangeGetContentMD5 {
 		xRangeGetContentMD5 = &rangeGetContentMD5
 	}
-	return f.fileClient.Get(ctx, nil, fileRange.pointers(), xRangeGetContentMD5)
+	var rangeToGet *string
+	if offset == 0 && count == 0 {
+		rangeToGet = nil
+	} else {
+		rangeToGet = toRange(offset, count)
+	}
+	return f.fileClient.Download(ctx, nil, rangeToGet, xRangeGetContentMD5)
 }
 
 // Delete immediately removes the file from the storage account.
@@ -133,16 +125,16 @@ func (f FileURL) Delete(ctx context.Context) (*FileDeleteResponse, error) {
 	return f.fileClient.Delete(ctx, nil)
 }
 
-// GetPropertiesAndMetadata returns the file's metadata and properties.
+// GetProperties returns the file's metadata and properties.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/get-file-properties.
-func (f FileURL) GetPropertiesAndMetadata(ctx context.Context) (*FileGetPropertiesResponse, error) {
+func (f FileURL) GetProperties(ctx context.Context) (*FileGetPropertiesResponse, error) {
 	return f.fileClient.GetProperties(ctx, nil, nil)
 }
 
-// SetProperties sets file's system properties.
+// SetHTTPHeaders sets file's system properties.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-file-properties.
-func (f FileURL) SetProperties(ctx context.Context, h FileHTTPHeaders) (*FileSetPropertiesResponse, error) {
-	return f.fileClient.SetProperties(ctx, nil,
+func (f FileURL) SetHTTPHeaders(ctx context.Context, h FileHTTPHeaders) (*FileSetHTTPHeadersResponse, error) {
+	return f.fileClient.SetHTTPHeaders(ctx, nil,
 		nil, &h.ContentType, &h.ContentEncoding, &h.ContentLanguage, &h.CacheControl, h.contentMD5Pointer(), &h.ContentDisposition)
 }
 
@@ -154,27 +146,81 @@ func (f FileURL) SetMetadata(ctx context.Context, metadata Metadata) (*FileSetMe
 
 // Resize resizes the file to the specified size.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-file-properties.
-func (f FileURL) Resize(ctx context.Context, length int64) (*FileSetPropertiesResponse, error) {
-	return f.fileClient.SetProperties(ctx, nil,
+func (f FileURL) Resize(ctx context.Context, length int64) (*FileSetHTTPHeadersResponse, error) {
+	return f.fileClient.SetHTTPHeaders(ctx, nil,
 		&length, nil, nil, nil, nil, nil, nil)
 }
 
-// PutRange writes a range of bytes to a file.
+// getStreamSize gets the size of current stream in bytes.
+// When there is error, -1 would be returned for size. Please check error for error details.
+func getStreamSize(s io.Seeker) (int64, error) {
+	size, err := s.Seek(0, io.SeekEnd)
+	if err != nil {
+		return -1, err
+	}
+
+	_, err = s.Seek(0, io.SeekStart)
+	if err != nil {
+		return -1, err
+	}
+
+	return size, nil
+}
+
+// UploadRange writes bytes to a file.
+// offset indiciates the offset at which to begin writing, in bytes.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/put-range.
-func (f FileURL) PutRange(ctx context.Context, r Range, body io.ReadSeeker) (*FilePutRangeResponse, error) {
-	size := r.End - r.Start + 1
+func (f FileURL) UploadRange(ctx context.Context, offset int64, body io.ReadSeeker) (*FileUploadRangeResponse, error) {
+	if offset < 0 {
+		panic("offset must be >= 0")
+	}
+	if body == nil {
+		panic("body must not be nil")
+	}
+
+	position, err := body.Seek(0, io.SeekCurrent)
+	if err != nil {
+		panic(err)
+	}
+	if position != 0 {
+		panic("position of body stream must be 0")
+	}
+
+	size, err := getStreamSize(body)
+	if err != nil {
+		panic(err)
+	}
+
 	// TransactionalContentMD5 isn't supported in convenience layer.
-	return f.fileClient.PutRange(ctx, r.String(), FileRangeWriteUpdate, size, body, nil, nil)
+	return f.fileClient.UploadRange(ctx, *toRange(offset, size), FileRangeWriteUpdate, size, body, nil, nil)
 }
 
 // ClearRange clears the specified range and releases the space used in storage for that range.
+// The range composed is from offset to offset+count-1.
+// If the range specified by offset and count is not 512-byte aligned, the operation will write zeros to
+// the start or end of the range that is not 512-byte aligned and free the rest of the range inside that is 512-byte aligned.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/put-range.
-func (f FileURL) ClearRange(ctx context.Context, r Range) (*FilePutRangeResponse, error) {
-	return f.fileClient.PutRange(ctx, r.String(), FileRangeWriteClear, 0, nil, nil, nil)
+func (f FileURL) ClearRange(ctx context.Context, offset int64, count int64) (*FileUploadRangeResponse, error) {
+	if offset < 0 {
+		panic("offset must be >= 0")
+	}
+	if count <= 0 {
+		panic("count must be > 0")
+	}
+
+	return f.fileClient.UploadRange(ctx, *toRange(offset, count), FileRangeWriteClear, 0, nil, nil, nil)
 }
 
-// ListRanges returns the list of valid ranges for a file. Use a zero-value FileRange to indicate the entire file.
+// GetRangeList returns the list of valid ranges for a file.
+// Use a zero-value count to indicate the left part of file start from offset.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/list-ranges.
-func (f FileURL) ListRanges(ctx context.Context, fr FileRange) (*Ranges, error) {
-	return f.fileClient.ListRanges(ctx, nil, nil, fr.pointers())
+func (f FileURL) GetRangeList(ctx context.Context, offset int64, count int64) (*Ranges, error) {
+	if offset < 0 {
+		panic("offset must be >= 0")
+	}
+	if count < 0 {
+		panic("count must be >= 0")
+	}
+
+	return f.fileClient.GetRangeList(ctx, nil, nil, toRange(offset, count))
 }

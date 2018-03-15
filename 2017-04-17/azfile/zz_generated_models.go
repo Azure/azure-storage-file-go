@@ -259,83 +259,10 @@ func (ddr DirectoryDeleteResponse) Version() string {
 // DirectoryEntry - Directory entry.
 type DirectoryEntry struct {
 	// XMLName is used for marshalling and is subject to removal in a future release.
-	XMLName xml.Name `xml:"Directory"`
+	XMLName   xml.Name `xml:"Directory"`
+	EntryType string   `xml:"EntryType"`
 	// Name - Name of the entry.
 	Name string `xml:"Name"`
-}
-
-// DirectoryGetMetadataResponse ...
-type DirectoryGetMetadataResponse struct {
-	rawResponse *http.Response
-}
-
-// Response returns the raw HTTP response object.
-func (dgmr DirectoryGetMetadataResponse) Response() *http.Response {
-	return dgmr.rawResponse
-}
-
-// StatusCode returns the HTTP status code of the response, e.g. 200.
-func (dgmr DirectoryGetMetadataResponse) StatusCode() int {
-	return dgmr.rawResponse.StatusCode
-}
-
-// Status returns the HTTP status message of the response, e.g. "200 OK".
-func (dgmr DirectoryGetMetadataResponse) Status() string {
-	return dgmr.rawResponse.Status
-}
-
-// Date returns the value for header Date.
-func (dgmr DirectoryGetMetadataResponse) Date() time.Time {
-	s := dgmr.rawResponse.Header.Get("Date")
-	if s == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
-// ETag returns the value for header ETag.
-func (dgmr DirectoryGetMetadataResponse) ETag() ETag {
-	return ETag(dgmr.rawResponse.Header.Get("ETag"))
-}
-
-// LastModified returns the value for header Last-Modified.
-func (dgmr DirectoryGetMetadataResponse) LastModified() time.Time {
-	s := dgmr.rawResponse.Header.Get("Last-Modified")
-	if s == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
-// RequestID returns the value for header x-ms-request-id.
-func (dgmr DirectoryGetMetadataResponse) RequestID() string {
-	return dgmr.rawResponse.Header.Get("x-ms-request-id")
-}
-
-// Version returns the value for header x-ms-version.
-func (dgmr DirectoryGetMetadataResponse) Version() string {
-	return dgmr.rawResponse.Header.Get("x-ms-version")
-}
-
-// NewMetadata returns user-defined key/value pairs.
-func (dgmr DirectoryGetMetadataResponse) NewMetadata() Metadata {
-	md := Metadata{}
-	for k, v := range dgmr.rawResponse.Header {
-		if len(k) > mdPrefixLen {
-			if prefix := k[0:mdPrefixLen]; strings.EqualFold(prefix, mdPrefix) {
-				md[strings.ToLower(k[mdPrefixLen:])] = v[0]
-			}
-		}
-	}
-	return md
 }
 
 // DirectoryGetPropertiesResponse ...
@@ -470,6 +397,193 @@ func (dsmr DirectorySetMetadataResponse) Version() string {
 	return dsmr.rawResponse.Header.Get("x-ms-version")
 }
 
+// DownloadResponse ...
+type DownloadResponse struct {
+	rawResponse *http.Response
+}
+
+// Response returns the raw HTTP response object.
+func (dr DownloadResponse) Response() *http.Response {
+	return dr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (dr DownloadResponse) StatusCode() int {
+	return dr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (dr DownloadResponse) Status() string {
+	return dr.rawResponse.Status
+}
+
+// Body returns the raw HTTP response object's Body.
+func (dr DownloadResponse) Body() io.ReadCloser {
+	return dr.rawResponse.Body
+}
+
+// AcceptRanges returns the value for header Accept-Ranges.
+func (dr DownloadResponse) AcceptRanges() string {
+	return dr.rawResponse.Header.Get("Accept-Ranges")
+}
+
+// CacheControl returns the value for header Cache-Control.
+func (dr DownloadResponse) CacheControl() string {
+	return dr.rawResponse.Header.Get("Cache-Control")
+}
+
+// ContentDisposition returns the value for header Content-Disposition.
+func (dr DownloadResponse) ContentDisposition() string {
+	return dr.rawResponse.Header.Get("Content-Disposition")
+}
+
+// ContentEncoding returns the value for header Content-Encoding.
+func (dr DownloadResponse) ContentEncoding() string {
+	return dr.rawResponse.Header.Get("Content-Encoding")
+}
+
+// ContentLanguage returns the value for header Content-Language.
+func (dr DownloadResponse) ContentLanguage() string {
+	return dr.rawResponse.Header.Get("Content-Language")
+}
+
+// ContentLength returns the value for header Content-Length.
+func (dr DownloadResponse) ContentLength() int64 {
+	s := dr.rawResponse.Header.Get("Content-Length")
+	if s == "" {
+		return -1
+	}
+	i, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	return i
+}
+
+// ContentMD5 returns the value for header Content-MD5.
+// func (dr DownloadResponse) ContentMD5() string {
+// 	return dr.rawResponse.Header.Get("Content-MD5")
+// }
+
+// ContentRange returns the value for header Content-Range.
+func (dr DownloadResponse) ContentRange() string {
+	return dr.rawResponse.Header.Get("Content-Range")
+}
+
+// ContentType returns the value for header Content-Type.
+func (dr DownloadResponse) ContentType() string {
+	return dr.rawResponse.Header.Get("Content-Type")
+}
+
+// CopyCompletionTime returns the value for header x-ms-copy-completion-time.
+func (dr DownloadResponse) CopyCompletionTime() time.Time {
+	s := dr.rawResponse.Header.Get("x-ms-copy-completion-time")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
+
+// CopyID returns the value for header x-ms-copy-id.
+func (dr DownloadResponse) CopyID() string {
+	return dr.rawResponse.Header.Get("x-ms-copy-id")
+}
+
+// CopyProgress returns the value for header x-ms-copy-progress.
+func (dr DownloadResponse) CopyProgress() string {
+	return dr.rawResponse.Header.Get("x-ms-copy-progress")
+}
+
+// CopySource returns the value for header x-ms-copy-source.
+func (dr DownloadResponse) CopySource() string {
+	return dr.rawResponse.Header.Get("x-ms-copy-source")
+}
+
+// CopyStatus returns the value for header x-ms-copy-status.
+func (dr DownloadResponse) CopyStatus() CopyStatusType {
+	return CopyStatusType(dr.rawResponse.Header.Get("x-ms-copy-status"))
+}
+
+// CopyStatusDescription returns the value for header x-ms-copy-status-description.
+func (dr DownloadResponse) CopyStatusDescription() string {
+	return dr.rawResponse.Header.Get("x-ms-copy-status-description")
+}
+
+// Date returns the value for header Date.
+func (dr DownloadResponse) Date() time.Time {
+	s := dr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
+
+// ETag returns the value for header ETag.
+func (dr DownloadResponse) ETag() ETag {
+	return ETag(dr.rawResponse.Header.Get("ETag"))
+}
+
+// FileContentMD5 returns the value for header x-ms-content-md5.
+// func (dr DownloadResponse) FileContentMD5() string {
+// 	return dr.rawResponse.Header.Get("x-ms-content-md5")
+// }
+
+// IsServerEncrypted returns the value for header x-ms-server-encrypted.
+func (dr DownloadResponse) IsServerEncrypted() string {
+	return dr.rawResponse.Header.Get("x-ms-server-encrypted")
+}
+
+// LastModified returns the value for header Last-Modified.
+func (dr DownloadResponse) LastModified() time.Time {
+	s := dr.rawResponse.Header.Get("Last-Modified")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (dr DownloadResponse) RequestID() string {
+	return dr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (dr DownloadResponse) Version() string {
+	return dr.rawResponse.Header.Get("x-ms-version")
+}
+
+// NewMetadata returns user-defined key/value pairs.
+func (dr DownloadResponse) NewMetadata() Metadata {
+	md := Metadata{}
+	for k, v := range dr.rawResponse.Header {
+		if len(k) > mdPrefixLen {
+			if prefix := k[0:mdPrefixLen]; strings.EqualFold(prefix, mdPrefix) {
+				md[strings.ToLower(k[mdPrefixLen:])] = v[0]
+			}
+		}
+	}
+	return md
+}
+
+// Entry - Abstract for entries that can be listed from Directory.
+type Entry struct {
+	EntryType string `xml:"EntryType"`
+	// Name - Name of the entry.
+	Name string `xml:"Name"`
+}
+
 // FileAbortCopyResponse ...
 type FileAbortCopyResponse struct {
 	rawResponse *http.Response
@@ -511,77 +625,6 @@ func (facr FileAbortCopyResponse) RequestID() string {
 // Version returns the value for header x-ms-version.
 func (facr FileAbortCopyResponse) Version() string {
 	return facr.rawResponse.Header.Get("x-ms-version")
-}
-
-// FileCopyResponse ...
-type FileCopyResponse struct {
-	rawResponse *http.Response
-}
-
-// Response returns the raw HTTP response object.
-func (fcr FileCopyResponse) Response() *http.Response {
-	return fcr.rawResponse
-}
-
-// StatusCode returns the HTTP status code of the response, e.g. 200.
-func (fcr FileCopyResponse) StatusCode() int {
-	return fcr.rawResponse.StatusCode
-}
-
-// Status returns the HTTP status message of the response, e.g. "200 OK".
-func (fcr FileCopyResponse) Status() string {
-	return fcr.rawResponse.Status
-}
-
-// CopyID returns the value for header x-ms-copy-id.
-func (fcr FileCopyResponse) CopyID() string {
-	return fcr.rawResponse.Header.Get("x-ms-copy-id")
-}
-
-// CopyStatus returns the value for header x-ms-copy-status.
-func (fcr FileCopyResponse) CopyStatus() CopyStatusType {
-	return CopyStatusType(fcr.rawResponse.Header.Get("x-ms-copy-status"))
-}
-
-// Date returns the value for header Date.
-func (fcr FileCopyResponse) Date() time.Time {
-	s := fcr.rawResponse.Header.Get("Date")
-	if s == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
-// ETag returns the value for header ETag.
-func (fcr FileCopyResponse) ETag() ETag {
-	return ETag(fcr.rawResponse.Header.Get("ETag"))
-}
-
-// LastModified returns the value for header Last-Modified.
-func (fcr FileCopyResponse) LastModified() time.Time {
-	s := fcr.rawResponse.Header.Get("Last-Modified")
-	if s == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
-// RequestID returns the value for header x-ms-request-id.
-func (fcr FileCopyResponse) RequestID() string {
-	return fcr.rawResponse.Header.Get("x-ms-request-id")
-}
-
-// Version returns the value for header x-ms-version.
-func (fcr FileCopyResponse) Version() string {
-	return fcr.rawResponse.Header.Get("x-ms-version")
 }
 
 // FileCreateResponse ...
@@ -696,89 +739,11 @@ func (fdr FileDeleteResponse) Version() string {
 // FileEntry - File entry.
 type FileEntry struct {
 	// XMLName is used for marshalling and is subject to removal in a future release.
-	XMLName xml.Name `xml:"File"`
+	XMLName   xml.Name `xml:"File"`
+	EntryType string   `xml:"EntryType"`
 	// Name - Name of the entry.
 	Name       string        `xml:"Name"`
 	Properties *FileProperty `xml:"Properties"`
-}
-
-// FileGetMetadataResponse ...
-type FileGetMetadataResponse struct {
-	rawResponse *http.Response
-}
-
-// Response returns the raw HTTP response object.
-func (fgmr FileGetMetadataResponse) Response() *http.Response {
-	return fgmr.rawResponse
-}
-
-// StatusCode returns the HTTP status code of the response, e.g. 200.
-func (fgmr FileGetMetadataResponse) StatusCode() int {
-	return fgmr.rawResponse.StatusCode
-}
-
-// Status returns the HTTP status message of the response, e.g. "200 OK".
-func (fgmr FileGetMetadataResponse) Status() string {
-	return fgmr.rawResponse.Status
-}
-
-// Date returns the value for header Date.
-func (fgmr FileGetMetadataResponse) Date() time.Time {
-	s := fgmr.rawResponse.Header.Get("Date")
-	if s == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
-// ETag returns the value for header ETag.
-func (fgmr FileGetMetadataResponse) ETag() ETag {
-	return ETag(fgmr.rawResponse.Header.Get("ETag"))
-}
-
-// FileType returns the value for header x-ms-type.
-func (fgmr FileGetMetadataResponse) FileType() string {
-	return string(fgmr.rawResponse.Header.Get("x-ms-type"))
-}
-
-// LastModified returns the value for header Last-Modified.
-func (fgmr FileGetMetadataResponse) LastModified() time.Time {
-	s := fgmr.rawResponse.Header.Get("Last-Modified")
-	if s == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
-// RequestID returns the value for header x-ms-request-id.
-func (fgmr FileGetMetadataResponse) RequestID() string {
-	return fgmr.rawResponse.Header.Get("x-ms-request-id")
-}
-
-// Version returns the value for header x-ms-version.
-func (fgmr FileGetMetadataResponse) Version() string {
-	return fgmr.rawResponse.Header.Get("x-ms-version")
-}
-
-// NewMetadata returns user-defined key/value pairs.
-func (fgmr FileGetMetadataResponse) NewMetadata() Metadata {
-	md := Metadata{}
-	for k, v := range fgmr.rawResponse.Header {
-		if len(k) > mdPrefixLen {
-			if prefix := k[0:mdPrefixLen]; strings.EqualFold(prefix, mdPrefix) {
-				md[strings.ToLower(k[mdPrefixLen:])] = v[0]
-			}
-		}
-	}
-	return md
 }
 
 // FileGetPropertiesResponse ...
@@ -949,37 +914,37 @@ func (fgpr FileGetPropertiesResponse) NewMetadata() Metadata {
 // FileProperty - File properties.
 type FileProperty struct {
 	// ContentLength - Content length of the file. This value may not be up-to-date since an SMB client may have modified the file locally. The value of Content-Length may not reflect that fact until the handle is closed or the op-lock is broken. To retrieve current property values, call Get File Properties.
-	ContentLength string `xml:"Content-Length"`
+	ContentLength int64 `xml:"Content-Length"`
 }
 
-// FilePutRangeResponse ...
-type FilePutRangeResponse struct {
+// FileSetHTTPHeadersResponse ...
+type FileSetHTTPHeadersResponse struct {
 	rawResponse *http.Response
 }
 
 // Response returns the raw HTTP response object.
-func (fprr FilePutRangeResponse) Response() *http.Response {
-	return fprr.rawResponse
+func (fshhr FileSetHTTPHeadersResponse) Response() *http.Response {
+	return fshhr.rawResponse
 }
 
 // StatusCode returns the HTTP status code of the response, e.g. 200.
-func (fprr FilePutRangeResponse) StatusCode() int {
-	return fprr.rawResponse.StatusCode
+func (fshhr FileSetHTTPHeadersResponse) StatusCode() int {
+	return fshhr.rawResponse.StatusCode
 }
 
 // Status returns the HTTP status message of the response, e.g. "200 OK".
-func (fprr FilePutRangeResponse) Status() string {
-	return fprr.rawResponse.Status
+func (fshhr FileSetHTTPHeadersResponse) Status() string {
+	return fshhr.rawResponse.Status
 }
 
 // ContentMD5 returns the value for header Content-MD5.
-// func (fprr FilePutRangeResponse) ContentMD5() string {
+// func (fprr FileUploadRangeResponse) ContentMD5() string {
 // 	return fprr.rawResponse.Header.Get("Content-MD5")
 // }
 
 // Date returns the value for header Date.
-func (fprr FilePutRangeResponse) Date() time.Time {
-	s := fprr.rawResponse.Header.Get("Date")
+func (fshhr FileSetHTTPHeadersResponse) Date() time.Time {
+	s := fshhr.rawResponse.Header.Get("Date")
 	if s == "" {
 		return time.Time{}
 	}
@@ -991,18 +956,18 @@ func (fprr FilePutRangeResponse) Date() time.Time {
 }
 
 // ETag returns the value for header ETag.
-func (fprr FilePutRangeResponse) ETag() ETag {
-	return ETag(fprr.rawResponse.Header.Get("ETag"))
+func (fshhr FileSetHTTPHeadersResponse) ETag() ETag {
+	return ETag(fshhr.rawResponse.Header.Get("ETag"))
 }
 
 // IsServerEncrypted returns the value for header x-ms-request-server-encrypted.
-func (fprr FilePutRangeResponse) IsServerEncrypted() string {
-	return fprr.rawResponse.Header.Get("x-ms-request-server-encrypted")
+func (fshhr FileSetHTTPHeadersResponse) IsServerEncrypted() string {
+	return fshhr.rawResponse.Header.Get("x-ms-request-server-encrypted")
 }
 
 // LastModified returns the value for header Last-Modified.
-func (fprr FilePutRangeResponse) LastModified() time.Time {
-	s := fprr.rawResponse.Header.Get("Last-Modified")
+func (fshhr FileSetHTTPHeadersResponse) LastModified() time.Time {
+	s := fshhr.rawResponse.Header.Get("Last-Modified")
 	if s == "" {
 		return time.Time{}
 	}
@@ -1014,13 +979,13 @@ func (fprr FilePutRangeResponse) LastModified() time.Time {
 }
 
 // RequestID returns the value for header x-ms-request-id.
-func (fprr FilePutRangeResponse) RequestID() string {
-	return fprr.rawResponse.Header.Get("x-ms-request-id")
+func (fshhr FileSetHTTPHeadersResponse) RequestID() string {
+	return fshhr.rawResponse.Header.Get("x-ms-request-id")
 }
 
 // Version returns the value for header x-ms-version.
-func (fprr FilePutRangeResponse) Version() string {
-	return fprr.rawResponse.Header.Get("x-ms-version")
+func (fshhr FileSetHTTPHeadersResponse) Version() string {
+	return fshhr.rawResponse.Header.Get("x-ms-version")
 }
 
 // FileSetMetadataResponse ...
@@ -1076,29 +1041,39 @@ func (fsmr FileSetMetadataResponse) Version() string {
 	return fsmr.rawResponse.Header.Get("x-ms-version")
 }
 
-// FileSetPropertiesResponse ...
-type FileSetPropertiesResponse struct {
+// FileStartCopyResponse ...
+type FileStartCopyResponse struct {
 	rawResponse *http.Response
 }
 
 // Response returns the raw HTTP response object.
-func (fspr FileSetPropertiesResponse) Response() *http.Response {
-	return fspr.rawResponse
+func (fscr FileStartCopyResponse) Response() *http.Response {
+	return fscr.rawResponse
 }
 
 // StatusCode returns the HTTP status code of the response, e.g. 200.
-func (fspr FileSetPropertiesResponse) StatusCode() int {
-	return fspr.rawResponse.StatusCode
+func (fscr FileStartCopyResponse) StatusCode() int {
+	return fscr.rawResponse.StatusCode
 }
 
 // Status returns the HTTP status message of the response, e.g. "200 OK".
-func (fspr FileSetPropertiesResponse) Status() string {
-	return fspr.rawResponse.Status
+func (fscr FileStartCopyResponse) Status() string {
+	return fscr.rawResponse.Status
+}
+
+// CopyID returns the value for header x-ms-copy-id.
+func (fscr FileStartCopyResponse) CopyID() string {
+	return fscr.rawResponse.Header.Get("x-ms-copy-id")
+}
+
+// CopyStatus returns the value for header x-ms-copy-status.
+func (fscr FileStartCopyResponse) CopyStatus() CopyStatusType {
+	return CopyStatusType(fscr.rawResponse.Header.Get("x-ms-copy-status"))
 }
 
 // Date returns the value for header Date.
-func (fspr FileSetPropertiesResponse) Date() time.Time {
-	s := fspr.rawResponse.Header.Get("Date")
+func (fscr FileStartCopyResponse) Date() time.Time {
+	s := fscr.rawResponse.Header.Get("Date")
 	if s == "" {
 		return time.Time{}
 	}
@@ -1110,18 +1085,13 @@ func (fspr FileSetPropertiesResponse) Date() time.Time {
 }
 
 // ETag returns the value for header ETag.
-func (fspr FileSetPropertiesResponse) ETag() ETag {
-	return ETag(fspr.rawResponse.Header.Get("ETag"))
-}
-
-// IsServerEncrypted returns the value for header x-ms-request-server-encrypted.
-func (fspr FileSetPropertiesResponse) IsServerEncrypted() string {
-	return fspr.rawResponse.Header.Get("x-ms-request-server-encrypted")
+func (fscr FileStartCopyResponse) ETag() ETag {
+	return ETag(fscr.rawResponse.Header.Get("ETag"))
 }
 
 // LastModified returns the value for header Last-Modified.
-func (fspr FileSetPropertiesResponse) LastModified() time.Time {
-	s := fspr.rawResponse.Header.Get("Last-Modified")
+func (fscr FileStartCopyResponse) LastModified() time.Time {
+	s := fscr.rawResponse.Header.Get("Last-Modified")
 	if s == "" {
 		return time.Time{}
 	}
@@ -1133,134 +1103,53 @@ func (fspr FileSetPropertiesResponse) LastModified() time.Time {
 }
 
 // RequestID returns the value for header x-ms-request-id.
-func (fspr FileSetPropertiesResponse) RequestID() string {
-	return fspr.rawResponse.Header.Get("x-ms-request-id")
+func (fscr FileStartCopyResponse) RequestID() string {
+	return fscr.rawResponse.Header.Get("x-ms-request-id")
 }
 
 // Version returns the value for header x-ms-version.
-func (fspr FileSetPropertiesResponse) Version() string {
-	return fspr.rawResponse.Header.Get("x-ms-version")
+func (fscr FileStartCopyResponse) Version() string {
+	return fscr.rawResponse.Header.Get("x-ms-version")
 }
 
-// GetResponse ...
-type GetResponse struct {
+// FileUploadRangeResponse ...
+type FileUploadRangeResponse struct {
 	rawResponse *http.Response
 }
 
 // Response returns the raw HTTP response object.
-func (gr GetResponse) Response() *http.Response {
-	return gr.rawResponse
+func (furr FileUploadRangeResponse) Response() *http.Response {
+	return furr.rawResponse
 }
 
 // StatusCode returns the HTTP status code of the response, e.g. 200.
-func (gr GetResponse) StatusCode() int {
-	return gr.rawResponse.StatusCode
+func (furr FileUploadRangeResponse) StatusCode() int {
+	return furr.rawResponse.StatusCode
 }
 
 // Status returns the HTTP status message of the response, e.g. "200 OK".
-func (gr GetResponse) Status() string {
-	return gr.rawResponse.Status
-}
-
-// Body returns the raw HTTP response object's Body.
-func (gr GetResponse) Body() io.ReadCloser {
-	return gr.rawResponse.Body
-}
-
-// AcceptRanges returns the value for header Accept-Ranges.
-func (gr GetResponse) AcceptRanges() string {
-	return gr.rawResponse.Header.Get("Accept-Ranges")
-}
-
-// CacheControl returns the value for header Cache-Control.
-func (gr GetResponse) CacheControl() string {
-	return gr.rawResponse.Header.Get("Cache-Control")
-}
-
-// ContentDisposition returns the value for header Content-Disposition.
-func (gr GetResponse) ContentDisposition() string {
-	return gr.rawResponse.Header.Get("Content-Disposition")
-}
-
-// ContentEncoding returns the value for header Content-Encoding.
-func (gr GetResponse) ContentEncoding() string {
-	return gr.rawResponse.Header.Get("Content-Encoding")
-}
-
-// ContentLanguage returns the value for header Content-Language.
-func (gr GetResponse) ContentLanguage() string {
-	return gr.rawResponse.Header.Get("Content-Language")
-}
-
-// ContentLength returns the value for header Content-Length.
-func (gr GetResponse) ContentLength() int64 {
-	s := gr.rawResponse.Header.Get("Content-Length")
-	if s == "" {
-		return -1
-	}
-	i, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		panic(err)
-	}
-	return i
+func (furr FileUploadRangeResponse) Status() string {
+	return furr.rawResponse.Status
 }
 
 // ContentMD5 returns the value for header Content-MD5.
-// func (gr GetResponse) ContentMD5() string {
+// func (gr DownloadResponse) ContentMD5() string {
 // 	return gr.rawResponse.Header.Get("Content-MD5")
 // }
 
 // ContentRange returns the value for header Content-Range.
-func (gr GetResponse) ContentRange() string {
-	return gr.rawResponse.Header.Get("Content-Range")
-}
+// func (gr DownloadResponse) ContentRange() string {
+// 	return gr.rawResponse.Header.Get("Content-Range")
+// }
 
-// ContentType returns the value for header Content-Type.
-func (gr GetResponse) ContentType() string {
-	return gr.rawResponse.Header.Get("Content-Type")
-}
-
-// CopyCompletionTime returns the value for header x-ms-copy-completion-time.
-func (gr GetResponse) CopyCompletionTime() time.Time {
-	s := gr.rawResponse.Header.Get("x-ms-copy-completion-time")
-	if s == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
-// CopyID returns the value for header x-ms-copy-id.
-func (gr GetResponse) CopyID() string {
-	return gr.rawResponse.Header.Get("x-ms-copy-id")
-}
-
-// CopyProgress returns the value for header x-ms-copy-progress.
-func (gr GetResponse) CopyProgress() string {
-	return gr.rawResponse.Header.Get("x-ms-copy-progress")
-}
-
-// CopySource returns the value for header x-ms-copy-source.
-func (gr GetResponse) CopySource() string {
-	return gr.rawResponse.Header.Get("x-ms-copy-source")
-}
-
-// CopyStatus returns the value for header x-ms-copy-status.
-func (gr GetResponse) CopyStatus() CopyStatusType {
-	return CopyStatusType(gr.rawResponse.Header.Get("x-ms-copy-status"))
-}
-
-// CopyStatusDescription returns the value for header x-ms-copy-status-description.
-func (gr GetResponse) CopyStatusDescription() string {
-	return gr.rawResponse.Header.Get("x-ms-copy-status-description")
+// IsServerEncrypted returns the value for header x-ms-request-server-encrypted.
+func (furr FileUploadRangeResponse) IsServerEncrypted() string {
+	return furr.rawResponse.Header.Get("x-ms-request-server-encrypted")
 }
 
 // Date returns the value for header Date.
-func (gr GetResponse) Date() time.Time {
-	s := gr.rawResponse.Header.Get("Date")
+func (furr FileUploadRangeResponse) Date() time.Time {
+	s := furr.rawResponse.Header.Get("Date")
 	if s == "" {
 		return time.Time{}
 	}
@@ -1272,23 +1161,13 @@ func (gr GetResponse) Date() time.Time {
 }
 
 // ETag returns the value for header ETag.
-func (gr GetResponse) ETag() ETag {
-	return ETag(gr.rawResponse.Header.Get("ETag"))
-}
-
-// FileContentMD5 returns the value for header x-ms-content-md5.
-// func (gr GetResponse) FileContentMD5() string {
-// 	return gr.rawResponse.Header.Get("x-ms-content-md5")
-// }
-
-// IsServerEncrypted returns the value for header x-ms-server-encrypted.
-func (gr GetResponse) IsServerEncrypted() string {
-	return gr.rawResponse.Header.Get("x-ms-server-encrypted")
+func (furr FileUploadRangeResponse) ETag() ETag {
+	return ETag(furr.rawResponse.Header.Get("ETag"))
 }
 
 // LastModified returns the value for header Last-Modified.
-func (gr GetResponse) LastModified() time.Time {
-	s := gr.rawResponse.Header.Get("Last-Modified")
+func (furr FileUploadRangeResponse) LastModified() time.Time {
+	s := furr.rawResponse.Header.Get("Last-Modified")
 	if s == "" {
 		return time.Time{}
 	}
@@ -1300,30 +1179,17 @@ func (gr GetResponse) LastModified() time.Time {
 }
 
 // RequestID returns the value for header x-ms-request-id.
-func (gr GetResponse) RequestID() string {
-	return gr.rawResponse.Header.Get("x-ms-request-id")
+func (furr FileUploadRangeResponse) RequestID() string {
+	return furr.rawResponse.Header.Get("x-ms-request-id")
 }
 
 // Version returns the value for header x-ms-version.
-func (gr GetResponse) Version() string {
-	return gr.rawResponse.Header.Get("x-ms-version")
+func (furr FileUploadRangeResponse) Version() string {
+	return furr.rawResponse.Header.Get("x-ms-version")
 }
 
-// NewMetadata returns user-defined key/value pairs.
-func (gr GetResponse) NewMetadata() Metadata {
-	md := Metadata{}
-	for k, v := range gr.rawResponse.Header {
-		if len(k) > mdPrefixLen {
-			if prefix := k[0:mdPrefixLen]; strings.EqualFold(prefix, mdPrefix) {
-				md[strings.ToLower(k[mdPrefixLen:])] = v[0]
-			}
-		}
-	}
-	return md
-}
-
-// ListDirectoriesAndFilesResponse - An enumeration of directories and files.
-type ListDirectoriesAndFilesResponse struct {
+// ListFilesAndDirectoriesSegmentResponse - An enumeration of directories and files.
+type ListFilesAndDirectoriesSegmentResponse struct {
 	rawResponse *http.Response
 	// XMLName is used for marshalling and is subject to removal in a future release.
 	XMLName         xml.Name         `xml:"EnumerationResults"`
@@ -1340,27 +1206,27 @@ type ListDirectoriesAndFilesResponse struct {
 }
 
 // Response returns the raw HTTP response object.
-func (ldafr ListDirectoriesAndFilesResponse) Response() *http.Response {
+func (ldafr ListFilesAndDirectoriesSegmentResponse) Response() *http.Response {
 	return ldafr.rawResponse
 }
 
 // StatusCode returns the HTTP status code of the response, e.g. 200.
-func (ldafr ListDirectoriesAndFilesResponse) StatusCode() int {
+func (ldafr ListFilesAndDirectoriesSegmentResponse) StatusCode() int {
 	return ldafr.rawResponse.StatusCode
 }
 
 // Status returns the HTTP status message of the response, e.g. "200 OK".
-func (ldafr ListDirectoriesAndFilesResponse) Status() string {
+func (ldafr ListFilesAndDirectoriesSegmentResponse) Status() string {
 	return ldafr.rawResponse.Status
 }
 
 // ContentType returns the value for header Content-Type.
-func (ldafr ListDirectoriesAndFilesResponse) ContentType() string {
+func (ldafr ListFilesAndDirectoriesSegmentResponse) ContentType() string {
 	return ldafr.rawResponse.Header.Get("Content-Type")
 }
 
 // Date returns the value for header Date.
-func (ldafr ListDirectoriesAndFilesResponse) Date() time.Time {
+func (ldafr ListFilesAndDirectoriesSegmentResponse) Date() time.Time {
 	s := ldafr.rawResponse.Header.Get("Date")
 	if s == "" {
 		return time.Time{}
@@ -1373,12 +1239,12 @@ func (ldafr ListDirectoriesAndFilesResponse) Date() time.Time {
 }
 
 // RequestID returns the value for header x-ms-request-id.
-func (ldafr ListDirectoriesAndFilesResponse) RequestID() string {
+func (ldafr ListFilesAndDirectoriesSegmentResponse) RequestID() string {
 	return ldafr.rawResponse.Header.Get("x-ms-request-id")
 }
 
 // Version returns the value for header x-ms-version.
-func (ldafr ListDirectoriesAndFilesResponse) Version() string {
+func (ldafr ListFilesAndDirectoriesSegmentResponse) Version() string {
 	return ldafr.rawResponse.Header.Get("x-ms-version")
 }
 
@@ -1730,80 +1596,6 @@ func (sdr ShareDeleteResponse) Version() string {
 	return sdr.rawResponse.Header.Get("x-ms-version")
 }
 
-// ShareGetMetadataResponse ...
-type ShareGetMetadataResponse struct {
-	rawResponse *http.Response
-}
-
-// Response returns the raw HTTP response object.
-func (sgmr ShareGetMetadataResponse) Response() *http.Response {
-	return sgmr.rawResponse
-}
-
-// StatusCode returns the HTTP status code of the response, e.g. 200.
-func (sgmr ShareGetMetadataResponse) StatusCode() int {
-	return sgmr.rawResponse.StatusCode
-}
-
-// Status returns the HTTP status message of the response, e.g. "200 OK".
-func (sgmr ShareGetMetadataResponse) Status() string {
-	return sgmr.rawResponse.Status
-}
-
-// Date returns the value for header Date.
-func (sgmr ShareGetMetadataResponse) Date() time.Time {
-	s := sgmr.rawResponse.Header.Get("Date")
-	if s == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
-// ETag returns the value for header ETag.
-func (sgmr ShareGetMetadataResponse) ETag() ETag {
-	return ETag(sgmr.rawResponse.Header.Get("ETag"))
-}
-
-// LastModified returns the value for header Last-Modified.
-func (sgmr ShareGetMetadataResponse) LastModified() time.Time {
-	s := sgmr.rawResponse.Header.Get("Last-Modified")
-	if s == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
-// RequestID returns the value for header x-ms-request-id.
-func (sgmr ShareGetMetadataResponse) RequestID() string {
-	return sgmr.rawResponse.Header.Get("x-ms-request-id")
-}
-
-// Version returns the value for header x-ms-version.
-func (sgmr ShareGetMetadataResponse) Version() string {
-	return sgmr.rawResponse.Header.Get("x-ms-version")
-}
-
-// NewMetadata returns user-defined key/value pairs.
-func (sgmr ShareGetMetadataResponse) NewMetadata() Metadata {
-	md := Metadata{}
-	for k, v := range sgmr.rawResponse.Header {
-		if len(k) > mdPrefixLen {
-			if prefix := k[0:mdPrefixLen]; strings.EqualFold(prefix, mdPrefix) {
-				md[strings.ToLower(k[mdPrefixLen:])] = v[0]
-			}
-		}
-	}
-	return md
-}
-
 // ShareGetPropertiesResponse ...
 type ShareGetPropertiesResponse struct {
 	rawResponse *http.Response
@@ -1898,29 +1690,29 @@ type ShareProperties struct {
 	Quota        int32     `xml:"Quota"`
 }
 
-// ShareSetACLResponse ...
-type ShareSetACLResponse struct {
+// ShareSetAccessPolicyResponse ...
+type ShareSetAccessPolicyResponse struct {
 	rawResponse *http.Response
 }
 
 // Response returns the raw HTTP response object.
-func (ssar ShareSetACLResponse) Response() *http.Response {
-	return ssar.rawResponse
+func (ssapr ShareSetAccessPolicyResponse) Response() *http.Response {
+	return ssapr.rawResponse
 }
 
 // StatusCode returns the HTTP status code of the response, e.g. 200.
-func (ssar ShareSetACLResponse) StatusCode() int {
-	return ssar.rawResponse.StatusCode
+func (ssapr ShareSetAccessPolicyResponse) StatusCode() int {
+	return ssapr.rawResponse.StatusCode
 }
 
 // Status returns the HTTP status message of the response, e.g. "200 OK".
-func (ssar ShareSetACLResponse) Status() string {
-	return ssar.rawResponse.Status
+func (ssapr ShareSetAccessPolicyResponse) Status() string {
+	return ssapr.rawResponse.Status
 }
 
 // Date returns the value for header Date.
-func (ssar ShareSetACLResponse) Date() time.Time {
-	s := ssar.rawResponse.Header.Get("Date")
+func (ssapr ShareSetAccessPolicyResponse) Date() time.Time {
+	s := ssapr.rawResponse.Header.Get("Date")
 	if s == "" {
 		return time.Time{}
 	}
@@ -1932,13 +1724,13 @@ func (ssar ShareSetACLResponse) Date() time.Time {
 }
 
 // ETag returns the value for header ETag.
-func (ssar ShareSetACLResponse) ETag() ETag {
-	return ETag(ssar.rawResponse.Header.Get("ETag"))
+func (ssapr ShareSetAccessPolicyResponse) ETag() ETag {
+	return ETag(ssapr.rawResponse.Header.Get("ETag"))
 }
 
 // LastModified returns the value for header Last-Modified.
-func (ssar ShareSetACLResponse) LastModified() time.Time {
-	s := ssar.rawResponse.Header.Get("Last-Modified")
+func (ssapr ShareSetAccessPolicyResponse) LastModified() time.Time {
+	s := ssapr.rawResponse.Header.Get("Last-Modified")
 	if s == "" {
 		return time.Time{}
 	}
@@ -1950,13 +1742,13 @@ func (ssar ShareSetACLResponse) LastModified() time.Time {
 }
 
 // RequestID returns the value for header x-ms-request-id.
-func (ssar ShareSetACLResponse) RequestID() string {
-	return ssar.rawResponse.Header.Get("x-ms-request-id")
+func (ssapr ShareSetAccessPolicyResponse) RequestID() string {
+	return ssapr.rawResponse.Header.Get("x-ms-request-id")
 }
 
 // Version returns the value for header x-ms-version.
-func (ssar ShareSetACLResponse) Version() string {
-	return ssar.rawResponse.Header.Get("x-ms-version")
+func (ssapr ShareSetAccessPolicyResponse) Version() string {
+	return ssapr.rawResponse.Header.Get("x-ms-version")
 }
 
 // ShareSetMetadataResponse ...
@@ -2020,29 +1812,29 @@ func (ssmr ShareSetMetadataResponse) Version() string {
 	return ssmr.rawResponse.Header.Get("x-ms-version")
 }
 
-// ShareSetPropertiesResponse ...
-type ShareSetPropertiesResponse struct {
+// ShareSetQuotaResponse ...
+type ShareSetQuotaResponse struct {
 	rawResponse *http.Response
 }
 
 // Response returns the raw HTTP response object.
-func (sspr ShareSetPropertiesResponse) Response() *http.Response {
-	return sspr.rawResponse
+func (ssqr ShareSetQuotaResponse) Response() *http.Response {
+	return ssqr.rawResponse
 }
 
 // StatusCode returns the HTTP status code of the response, e.g. 200.
-func (sspr ShareSetPropertiesResponse) StatusCode() int {
-	return sspr.rawResponse.StatusCode
+func (ssqr ShareSetQuotaResponse) StatusCode() int {
+	return ssqr.rawResponse.StatusCode
 }
 
 // Status returns the HTTP status message of the response, e.g. "200 OK".
-func (sspr ShareSetPropertiesResponse) Status() string {
-	return sspr.rawResponse.Status
+func (ssqr ShareSetQuotaResponse) Status() string {
+	return ssqr.rawResponse.Status
 }
 
 // Date returns the value for header Date.
-func (sspr ShareSetPropertiesResponse) Date() time.Time {
-	s := sspr.rawResponse.Header.Get("Date")
+func (ssqr ShareSetQuotaResponse) Date() time.Time {
+	s := ssqr.rawResponse.Header.Get("Date")
 	if s == "" {
 		return time.Time{}
 	}
@@ -2054,13 +1846,13 @@ func (sspr ShareSetPropertiesResponse) Date() time.Time {
 }
 
 // ETag returns the value for header ETag.
-func (sspr ShareSetPropertiesResponse) ETag() ETag {
-	return ETag(sspr.rawResponse.Header.Get("ETag"))
+func (ssqr ShareSetQuotaResponse) ETag() ETag {
+	return ETag(ssqr.rawResponse.Header.Get("ETag"))
 }
 
 // LastModified returns the value for header Last-Modified.
-func (sspr ShareSetPropertiesResponse) LastModified() time.Time {
-	s := sspr.rawResponse.Header.Get("Last-Modified")
+func (ssqr ShareSetQuotaResponse) LastModified() time.Time {
+	s := ssqr.rawResponse.Header.Get("Last-Modified")
 	if s == "" {
 		return time.Time{}
 	}
@@ -2072,13 +1864,13 @@ func (sspr ShareSetPropertiesResponse) LastModified() time.Time {
 }
 
 // RequestID returns the value for header x-ms-request-id.
-func (sspr ShareSetPropertiesResponse) RequestID() string {
-	return sspr.rawResponse.Header.Get("x-ms-request-id")
+func (ssqr ShareSetQuotaResponse) RequestID() string {
+	return ssqr.rawResponse.Header.Get("x-ms-request-id")
 }
 
 // Version returns the value for header x-ms-version.
-func (sspr ShareSetPropertiesResponse) Version() string {
-	return sspr.rawResponse.Header.Get("x-ms-version")
+func (ssqr ShareSetQuotaResponse) Version() string {
+	return ssqr.rawResponse.Header.Get("x-ms-version")
 }
 
 // ShareStats - Stats for the share.

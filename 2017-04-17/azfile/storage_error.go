@@ -74,7 +74,6 @@ func (e *storageError) Error() string {
 }
 
 // Temporary returns true if the error occurred due to a temporary condition (including an HTTP status of 500 or 503).
-// TODO: Why? It's not aligning to the comments in retry, which is >=500 but not 501 and not 505.
 func (e *storageError) Temporary() bool {
 	if e.response != nil {
 		if (e.response.StatusCode == http.StatusInternalServerError) || (e.response.StatusCode == http.StatusServiceUnavailable) {

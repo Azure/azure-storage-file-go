@@ -198,31 +198,31 @@ func (client shareClient) deleteResponder(resp pipeline.Response) (pipeline.Resp
 	return &ShareDeleteResponse{rawResponse: resp.Response()}, err
 }
 
-// GetACL returns information about stored access policies specified on the share.
+// GetAccessPolicy returns information about stored access policies specified on the share.
 //
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
-func (client shareClient) GetACL(ctx context.Context, timeout *int32) (*SignedIdentifiers, error) {
+func (client shareClient) GetAccessPolicy(ctx context.Context, timeout *int32) (*SignedIdentifiers, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.getACLPreparer(timeout)
+	req, err := client.getAccessPolicyPreparer(timeout)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.getACLResponder}, req)
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.getAccessPolicyResponder}, req)
 	if err != nil {
 		return nil, err
 	}
 	return resp.(*SignedIdentifiers), err
 }
 
-// getACLPreparer prepares the GetACL request.
-func (client shareClient) getACLPreparer(timeout *int32) (pipeline.Request, error) {
+// getAccessPolicyPreparer prepares the GetAccessPolicy request.
+func (client shareClient) getAccessPolicyPreparer(timeout *int32) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("GET", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -238,8 +238,8 @@ func (client shareClient) getACLPreparer(timeout *int32) (pipeline.Request, erro
 	return req, nil
 }
 
-// getACLResponder handles the response to the GetACL request.
-func (client shareClient) getACLResponder(resp pipeline.Response) (pipeline.Response, error) {
+// getAccessPolicyResponder handles the response to the GetAccessPolicy request.
+func (client shareClient) getAccessPolicyResponder(resp pipeline.Response) (pipeline.Response, error) {
 	err := validateResponse(resp, http.StatusOK)
 	if resp == nil {
 		return nil, err
@@ -260,59 +260,6 @@ func (client shareClient) getACLResponder(resp pipeline.Response) (pipeline.Resp
 		}
 	}
 	return result, nil
-}
-
-// GetMetadata returns all user-defined metadata for the share or share snapshot.
-//
-// sharesnapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot
-// to query. timeout is the timeout parameter is expressed in seconds. For more information, see <a
-// href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
-// Timeouts for File Service Operations.</a>
-func (client shareClient) GetMetadata(ctx context.Context, sharesnapshot *string, timeout *int32) (*ShareGetMetadataResponse, error) {
-	if err := validate([]validation{
-		{targetValue: timeout,
-			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
-		return nil, err
-	}
-	req, err := client.getMetadataPreparer(sharesnapshot, timeout)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.getMetadataResponder}, req)
-	if err != nil {
-		return nil, err
-	}
-	return resp.(*ShareGetMetadataResponse), err
-}
-
-// getMetadataPreparer prepares the GetMetadata request.
-func (client shareClient) getMetadataPreparer(sharesnapshot *string, timeout *int32) (pipeline.Request, error) {
-	req, err := pipeline.NewRequest("GET", client.url, nil)
-	if err != nil {
-		return req, pipeline.NewError(err, "failed to create request")
-	}
-	params := req.URL.Query()
-	if sharesnapshot != nil {
-		params.Set("sharesnapshot", *sharesnapshot)
-	}
-	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
-	}
-	params.Set("restype", "share")
-	params.Set("comp", "metadata")
-	req.URL.RawQuery = params.Encode()
-	req.Header.Set("x-ms-version", ServiceVersion)
-	return req, nil
-}
-
-// getMetadataResponder handles the response to the GetMetadata request.
-func (client shareClient) getMetadataResponder(resp pipeline.Response) (pipeline.Response, error) {
-	err := validateResponse(resp, http.StatusOK)
-	if resp == nil {
-		return nil, err
-	}
-	return &ShareGetMetadataResponse{rawResponse: resp.Response()}, err
 }
 
 // GetProperties returns all user-defined metadata and system properties for the specified share or share snapshot. The
@@ -368,31 +315,31 @@ func (client shareClient) getPropertiesResponder(resp pipeline.Response) (pipeli
 	return &ShareGetPropertiesResponse{rawResponse: resp.Response()}, err
 }
 
-// GetStats retrieves statistics related to the share.
+// GetStatistics retrieves statistics related to the share.
 //
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
-func (client shareClient) GetStats(ctx context.Context, timeout *int32) (*ShareStats, error) {
+func (client shareClient) GetStatistics(ctx context.Context, timeout *int32) (*ShareStats, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.getStatsPreparer(timeout)
+	req, err := client.getStatisticsPreparer(timeout)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.getStatsResponder}, req)
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.getStatisticsResponder}, req)
 	if err != nil {
 		return nil, err
 	}
 	return resp.(*ShareStats), err
 }
 
-// getStatsPreparer prepares the GetStats request.
-func (client shareClient) getStatsPreparer(timeout *int32) (pipeline.Request, error) {
+// getStatisticsPreparer prepares the GetStatistics request.
+func (client shareClient) getStatisticsPreparer(timeout *int32) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("GET", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -408,8 +355,8 @@ func (client shareClient) getStatsPreparer(timeout *int32) (pipeline.Request, er
 	return req, nil
 }
 
-// getStatsResponder handles the response to the GetStats request.
-func (client shareClient) getStatsResponder(resp pipeline.Response) (pipeline.Response, error) {
+// getStatisticsResponder handles the response to the GetStatistics request.
+func (client shareClient) getStatisticsResponder(resp pipeline.Response) (pipeline.Response, error) {
 	err := validateResponse(resp, http.StatusOK)
 	if resp == nil {
 		return nil, err
@@ -432,32 +379,32 @@ func (client shareClient) getStatsResponder(resp pipeline.Response) (pipeline.Re
 	return result, nil
 }
 
-// SetACL sets a stored access policy for use with shared access signatures.
+// SetAccessPolicy sets a stored access policy for use with shared access signatures.
 //
 // shareACL is the ACL for the share. timeout is the timeout parameter is expressed in seconds. For more information,
 // see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
-func (client shareClient) SetACL(ctx context.Context, shareACL []SignedIdentifier, timeout *int32) (*ShareSetACLResponse, error) {
+func (client shareClient) SetAccessPolicy(ctx context.Context, shareACL []SignedIdentifier, timeout *int32) (*ShareSetAccessPolicyResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.setACLPreparer(shareACL, timeout)
+	req, err := client.setAccessPolicyPreparer(shareACL, timeout)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.setACLResponder}, req)
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.setAccessPolicyResponder}, req)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(*ShareSetACLResponse), err
+	return resp.(*ShareSetAccessPolicyResponse), err
 }
 
-// setACLPreparer prepares the SetACL request.
-func (client shareClient) setACLPreparer(shareACL []SignedIdentifier, timeout *int32) (pipeline.Request, error) {
+// setAccessPolicyPreparer prepares the SetAccessPolicy request.
+func (client shareClient) setAccessPolicyPreparer(shareACL []SignedIdentifier, timeout *int32) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -482,13 +429,13 @@ func (client shareClient) setACLPreparer(shareACL []SignedIdentifier, timeout *i
 	return req, nil
 }
 
-// setACLResponder handles the response to the SetACL request.
-func (client shareClient) setACLResponder(resp pipeline.Response) (pipeline.Response, error) {
+// setAccessPolicyResponder handles the response to the SetAccessPolicy request.
+func (client shareClient) setAccessPolicyResponder(resp pipeline.Response) (pipeline.Response, error) {
 	err := validateResponse(resp, http.StatusOK)
 	if resp == nil {
 		return nil, err
 	}
-	return &ShareSetACLResponse{rawResponse: resp.Response()}, err
+	return &ShareSetAccessPolicyResponse{rawResponse: resp.Response()}, err
 }
 
 // SetMetadata sets one or more user-defined name-value pairs for the specified share.
@@ -546,12 +493,12 @@ func (client shareClient) setMetadataResponder(resp pipeline.Response) (pipeline
 	return &ShareSetMetadataResponse{rawResponse: resp.Response()}, err
 }
 
-// SetProperties sets service-defined properties for the specified share.
+// SetQuota sets quota for the specified share.
 //
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> quota is specifies the maximum size of the share, in gigabytes.
-func (client shareClient) SetProperties(ctx context.Context, timeout *int32, quota *int32) (*ShareSetPropertiesResponse, error) {
+func (client shareClient) SetQuota(ctx context.Context, timeout *int32, quota *int32) (*ShareSetQuotaResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
@@ -561,19 +508,19 @@ func (client shareClient) SetProperties(ctx context.Context, timeout *int32, quo
 				chain: []constraint{{target: "quota", name: inclusiveMinimum, rule: 1, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.setPropertiesPreparer(timeout, quota)
+	req, err := client.setQuotaPreparer(timeout, quota)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.setPropertiesResponder}, req)
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.setQuotaResponder}, req)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(*ShareSetPropertiesResponse), err
+	return resp.(*ShareSetQuotaResponse), err
 }
 
-// setPropertiesPreparer prepares the SetProperties request.
-func (client shareClient) setPropertiesPreparer(timeout *int32, quota *int32) (pipeline.Request, error) {
+// setQuotaPreparer prepares the SetQuota request.
+func (client shareClient) setQuotaPreparer(timeout *int32, quota *int32) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -592,11 +539,11 @@ func (client shareClient) setPropertiesPreparer(timeout *int32, quota *int32) (p
 	return req, nil
 }
 
-// setPropertiesResponder handles the response to the SetProperties request.
-func (client shareClient) setPropertiesResponder(resp pipeline.Response) (pipeline.Response, error) {
+// setQuotaResponder handles the response to the SetQuota request.
+func (client shareClient) setQuotaResponder(resp pipeline.Response) (pipeline.Response, error) {
 	err := validateResponse(resp, http.StatusOK)
 	if resp == nil {
 		return nil, err
 	}
-	return &ShareSetPropertiesResponse{rawResponse: resp.Response()}, err
+	return &ShareSetQuotaResponse{rawResponse: resp.Response()}, err
 }

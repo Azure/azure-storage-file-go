@@ -69,9 +69,9 @@ func (d DirectoryURL) Delete(ctx context.Context) (*DirectoryDeleteResponse, err
 	return d.directoryClient.Delete(ctx, nil)
 }
 
-// GetPropertiesAndMetadata returns the directory's metadata and system properties.
+// GetProperties returns the directory's metadata and system properties.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/get-directory-properties.
-func (d DirectoryURL) GetPropertiesAndMetadata(ctx context.Context) (*DirectoryGetPropertiesResponse, error) {
+func (d DirectoryURL) GetProperties(ctx context.Context) (*DirectoryGetPropertiesResponse, error) {
 	return d.directoryClient.GetProperties(ctx, nil, nil)
 }
 
@@ -81,13 +81,13 @@ func (d DirectoryURL) SetMetadata(ctx context.Context, metadata Metadata) (*Dire
 	return d.directoryClient.SetMetadata(ctx, nil, metadata)
 }
 
-// ListDirectoriesAndFilesOptions defines options available when calling ListDirectoriesAndFiles.
-type ListDirectoriesAndFilesOptions struct {
+// ListFilesAndDirectoriesOptions defines options available when calling ListFilesAndDirectoriesSegment.
+type ListFilesAndDirectoriesOptions struct {
 	Prefix     string // No Prefix header is produced if ""
 	MaxResults int32  // 0 means unspecified
 }
 
-func (o *ListDirectoriesAndFilesOptions) pointers() (prefix *string, maxResults *int32) {
+func (o *ListFilesAndDirectoriesOptions) pointers() (prefix *string, maxResults *int32) {
 	if o.Prefix != "" {
 		prefix = &o.Prefix
 	}
@@ -100,12 +100,12 @@ func (o *ListDirectoriesAndFilesOptions) pointers() (prefix *string, maxResults 
 	return
 }
 
-// ListDirectoriesAndFiles returns a single segment of files and directories starting from the specified Marker.
+// ListFilesAndDirectoriesSegment returns a single segment of files and directories starting from the specified Marker.
 // Use an empty Marker to start enumeration from the beginning. File and directory names are returned in lexicographic order.
-// After getting a segment, process it, and then call ListDirectoriesAndFiles again (passing the the previously-returned
+// After getting a segment, process it, and then call ListFilesAndDirectoriesSegment again (passing the the previously-returned
 // Marker) to get the next segment. This method lists the contents only for a single level of the directory hierarchy.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/list-directories-and-files.
-func (d DirectoryURL) ListDirectoriesAndFiles(ctx context.Context, marker Marker, o ListDirectoriesAndFilesOptions) (*ListDirectoriesAndFilesResponse, error) {
+func (d DirectoryURL) ListFilesAndDirectoriesSegment(ctx context.Context, marker Marker, o ListFilesAndDirectoriesOptions) (*ListFilesAndDirectoriesSegmentResponse, error) {
 	prefix, maxResults := o.pointers()
-	return d.directoryClient.ListDirectoriesAndFiles(ctx, prefix, nil, marker.val, maxResults, nil)
+	return d.directoryClient.ListFilesAndDirectoriesSegment(ctx, prefix, nil, marker.val, maxResults, nil)
 }

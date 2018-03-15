@@ -108,17 +108,17 @@ func appendToURLPath(u url.URL, name string) url.URL {
 	return u
 }
 
-// ListShares returns a single segment of shares starting from the specified Marker. Use an empty
+// ListSharesSegment returns a single segment of shares starting from the specified Marker. Use an empty
 // Marker to start enumeration from the beginning. Share names are returned in lexicographic order.
-// After getting a segment, process it, and then call ListShares again (passing the the previously-returned
+// After getting a segment, process it, and then call ListSharesSegment again (passing the the previously-returned
 // Marker) to get the next segment. For more information, see
 // https://docs.microsoft.com/en-us/rest/api/storageservices/list-shares.
-func (s ServiceURL) ListShares(ctx context.Context, marker Marker, o ListSharesOptions) (*ListSharesResponse, error) {
+func (s ServiceURL) ListSharesSegment(ctx context.Context, marker Marker, o ListSharesOptions) (*ListSharesResponse, error) {
 	prefix, include, maxResults := o.pointers()
-	return s.client.ListShares(ctx, prefix, marker.val, maxResults, include, nil)
+	return s.client.ListSharesSegment(ctx, prefix, marker.val, maxResults, include, nil)
 }
 
-// ListSharesOptions defines options available when calling ListShares.
+// ListSharesOptions defines options available when calling ListSharesSegment.
 type ListSharesOptions struct {
 	Detail     ListSharesDetail // No IncludeType header is produced if ""
 	Prefix     string           // No Prefix header is produced if ""

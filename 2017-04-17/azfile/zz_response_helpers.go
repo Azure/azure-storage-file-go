@@ -6,7 +6,6 @@ import (
 )
 
 // FileHTTPHeaders contains read/writeable file properties.
-// TODO: Consult why ContentMD5 is designed as byte array.
 type FileHTTPHeaders struct {
 	ContentType        string
 	ContentMD5         [md5.Size]byte
@@ -25,7 +24,7 @@ func (h FileHTTPHeaders) contentMD5Pointer() *string {
 }
 
 // NewHTTPHeaders returns the user-modifiable properties for this file.
-func (fgr GetResponse) NewHTTPHeaders() FileHTTPHeaders {
+func (fgr DownloadResponse) NewHTTPHeaders() FileHTTPHeaders {
 	return FileHTTPHeaders{
 		ContentType:        fgr.ContentType(),
 		ContentEncoding:    fgr.ContentEncoding(),
@@ -66,16 +65,16 @@ func (fgpr FileGetPropertiesResponse) ContentMD5() [md5.Size]byte {
 }
 
 // ContentMD5 returns the value for header Content-MD5.
-func (bpr FilePutRangeResponse) ContentMD5() [md5.Size]byte {
+func (bpr FileUploadRangeResponse) ContentMD5() [md5.Size]byte {
 	return md5StringToMD5(bpr.rawResponse.Header.Get("Content-MD5"))
 }
 
 // FileContentMD5 returns the value for header x-ms-content-md5.
-func (fgr GetResponse) FileContentMD5() [md5.Size]byte {
+func (fgr DownloadResponse) FileContentMD5() [md5.Size]byte {
 	return md5StringToMD5(fgr.rawResponse.Header.Get("x-ms-content-md5"))
 }
 
 // ContentMD5 returns the value for header Content-MD5.
-func (fgr GetResponse) ContentMD5() [md5.Size]byte {
+func (fgr DownloadResponse) ContentMD5() [md5.Size]byte {
 	return md5StringToMD5(fgr.rawResponse.Header.Get("Content-MD5"))
 }

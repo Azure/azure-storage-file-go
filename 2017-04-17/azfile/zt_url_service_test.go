@@ -33,7 +33,7 @@ func (s *StorageAccountSuite) TestAccountGetSetProperties(c *chk.C) {
 func (s *StorageAccountSuite) TestAccountListShares(c *chk.C) {
 	sa := getFSU()
 	ctx := context.Background()
-	resp, err := sa.ListShares(ctx, azfile.Marker{}, azfile.ListSharesOptions{Prefix: sharePrefix})
+	resp, err := sa.ListSharesSegment(ctx, azfile.Marker{}, azfile.ListSharesOptions{Prefix: sharePrefix})
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.Response().StatusCode, chk.Equals, 200)
 	c.Assert(resp.RequestID(), chk.Not(chk.Equals), "")
@@ -55,7 +55,7 @@ func (s *StorageAccountSuite) TestAccountListShares(c *chk.C) {
 	_, err = share.CreateSnapshot(ctx, nil)
 	c.Assert(err, chk.IsNil)
 
-	resp, err = sa.ListShares(ctx, azfile.Marker{}, azfile.ListSharesOptions{Detail: azfile.ListSharesDetail{Metadata: true, Snapshots: true}, Prefix: shareName})
+	resp, err = sa.ListSharesSegment(ctx, azfile.Marker{}, azfile.ListSharesOptions{Detail: azfile.ListSharesDetail{Metadata: true, Snapshots: true}, Prefix: shareName})
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.Shares, chk.HasLen, 2)
 	c.Assert(resp.Shares[0].Name, chk.NotNil)
@@ -92,7 +92,7 @@ func (s *StorageAccountSuite) TestAccountListSharesPaged(c *chk.C) {
 	iterations := numShares / maxResultsPerPage
 
 	for i := 0; i < iterations; i++ {
-		resp, err := sa.ListShares(context.Background(), marker, azfile.ListSharesOptions{MaxResults: maxResultsPerPage, Prefix: pagedSharesPrefix})
+		resp, err := sa.ListSharesSegment(context.Background(), marker, azfile.ListSharesOptions{MaxResults: maxResultsPerPage, Prefix: pagedSharesPrefix})
 		c.Assert(err, chk.IsNil)
 		c.Assert(resp.Shares, chk.HasLen, maxResultsPerPage)
 
