@@ -2,6 +2,7 @@ package azfile
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -178,13 +179,7 @@ func (f FileURL) UploadRange(ctx context.Context, offset int64, body io.ReadSeek
 		panic("body must not be nil")
 	}
 
-	position, err := body.Seek(0, io.SeekCurrent)
-	if err != nil {
-		panic(err)
-	}
-	if position != 0 {
-		panic("position of body stream must be 0")
-	}
+	validateSeekableStreamAt0(body)
 
 	size, err := getStreamSize(body)
 	if err != nil {
@@ -223,4 +218,16 @@ func (f FileURL) GetRangeList(ctx context.Context, offset int64, count int64) (*
 	}
 
 	return f.fileClient.GetRangeList(ctx, nil, nil, toRange(offset, count))
+}
+
+func validateSeekableStreamAt0(body io.ReadSeeker) {
+	if body == nil { // nil body's are "logically" seekable to 0
+		return
+	}
+	if pos, err := body.Seek(0, io.SeekCurrent); pos != 0 || err != nil {
+		if err != nil {
+			panic(err)
+		}
+		panic(errors.New("stream must be set to position 0"))
+	}
 }

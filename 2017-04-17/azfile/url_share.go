@@ -92,8 +92,6 @@ func (s ShareURL) Delete(ctx context.Context, deleteSnapshotsOption DeleteSnapsh
 // GetProperties returns all user-defined metadata and system properties for the specified share or share snapshot.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/get-share-properties.
 func (s ShareURL) GetProperties(ctx context.Context) (*ShareGetPropertiesResponse, error) {
-	// NOTE: GetMetadata actually calls GetProperties internally because GetProperties returns the metadata AND the properties.
-	// This allows us to not expose a GetProperties method at all simplifying the API.
 	return s.shareClient.GetProperties(ctx, nil, nil)
 }
 

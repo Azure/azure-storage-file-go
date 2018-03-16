@@ -9,13 +9,13 @@ import (
 
 // FileSASSignatureValues is used to generate a Shared Access Signature (SAS) for an Azure Storage share or file.
 type FileSASSignatureValues struct {
-	Version            string    `param:"sv"`  // If not specified, this defaults to SASVersion
-	Protocol           string    `param:"spr"` // See the SASProtocol* constants
-	StartTime          time.Time `param:"st"`  // Not specified if IsZero
-	ExpiryTime         time.Time `param:"se"`  // Not specified if IsZero
-	Permissions        string    `param:"sp"`  // Create by initializing a ShareSASPermissions or FileSASPermissions and then call String()
-	IPRange            IPRange   `param:"sip"`
-	Identifier         string    `param:"si"`
+	Version            string      `param:"sv"`  // If not specified, this defaults to SASVersion
+	Protocol           SASProtocol `param:"spr"` // See the SASProtocol* constants
+	StartTime          time.Time   `param:"st"`  // Not specified if IsZero
+	ExpiryTime         time.Time   `param:"se"`  // Not specified if IsZero
+	Permissions        string      `param:"sp"`  // Create by initializing a ShareSASPermissions or FileSASPermissions and then call String()
+	IPRange            IPRange     `param:"sip"`
+	Identifier         string      `param:"si"`
 	ShareName          string
 	FilePath           string // Ex: "directory/FileName". Use "" to create a Share SAS.
 	CacheControl       string // rscc
@@ -62,7 +62,7 @@ func (v FileSASSignatureValues) NewSASQueryParameters(sharedKeyCredential *Share
 		getCanonicalName(sharedKeyCredential.AccountName(), v.ShareName, v.FilePath),
 		v.Identifier,
 		v.IPRange.String(),
-		v.Protocol,
+		string(v.Protocol),
 		v.Version,
 		v.CacheControl,       // rscc
 		v.ContentDisposition, // rscd

@@ -55,7 +55,7 @@ func NewFileURLParts(u url.URL) FileURLParts {
 		// If we recognized the query parameter, remove it from the map
 		delete(paramsMap, shareSnapshot)
 	}
-	up.SAS = NewSASQueryParameters(paramsMap, true)
+	up.SAS = newSASQueryParameters(paramsMap, true)
 	up.UnparsedParams = paramsMap.Encode()
 	return up
 }
