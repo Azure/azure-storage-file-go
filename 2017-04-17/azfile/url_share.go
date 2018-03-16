@@ -41,7 +41,7 @@ func (s ShareURL) WithPipeline(p pipeline.Pipeline) ShareURL {
 
 // WithSnapshot creates a new ShareURL object identical to the source but with the specified snapshot timestamp.
 // Pass time.Time{} to remove the snapshot returning a URL to the base share.
-func (s ShareURL) WithSnapshot(snapshot time.Time) ShareURL {
+func (s ShareURL) WithSnapshot(snapshot string) ShareURL {
 	p := NewFileURLParts(s.URL())
 	p.ShareSnapshot = snapshot
 	return NewShareURL(p.URL(), s.shareClient.Pipeline())

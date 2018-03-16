@@ -3,23 +3,21 @@ package azfile
 import (
 	"net/url"
 	"strings"
-	"time"
 )
 
 const (
-	snapshotTimeFormat = "2006-01-02T15:04:05.0000000Z07:00"
-	shareSnapshot      = "sharesnapshot"
+	shareSnapshot = "sharesnapshot"
 )
 
 // A FileURLParts object represents the components that make up an Azure Storage Share/Directory/File URL. You parse an
 // existing URL into its parts by calling NewFileURLParts(). You construct a URL from parts by calling URL().
 // NOTE: Changing any SAS-related field requires computing a new SAS signature.
 type FileURLParts struct {
-	Scheme              string    // Ex: "https://"
-	Host                string    // Ex: "account.share.core.windows.net"
-	ShareName           string    // Share name, Ex: "myshare"
-	DirectoryOrFilePath string    // Path of directory or file, Ex: "mydirectory/myfile"
-	ShareSnapshot       time.Time // IsZero is true if not a snapshot
+	Scheme              string // Ex: "https://"
+	Host                string // Ex: "account.share.core.windows.net"
+	ShareName           string // Share name, Ex: "myshare"
+	DirectoryOrFilePath string // Path of directory or file, Ex: "mydirectory/myfile"
+	ShareSnapshot       string // IsZero is true if not a snapshot
 	SAS                 SASQueryParameters
 	UnparsedParams      string
 }
@@ -52,9 +50,8 @@ func NewFileURLParts(u url.URL) FileURLParts {
 	// Convert the query parameters to a case-sensitive map & trim whitespace
 	paramsMap := u.Query()
 
-	up.ShareSnapshot = time.Time{} // Assume no snapshot
 	if snapshotStr, ok := caseInsensitiveValues(paramsMap).Get(shareSnapshot); ok {
-		up.ShareSnapshot, _ = time.Parse(snapshotTimeFormat, snapshotStr[0])
+		up.ShareSnapshot = snapshotStr[0]
 		// If we recognized the query parameter, remove it from the map
 		delete(paramsMap, shareSnapshot)
 	}
@@ -89,11 +86,11 @@ func (up FileURLParts) URL() url.URL {
 	rawQuery := up.UnparsedParams
 
 	// Concatenate share snapshot query parameter (if it exists)
-	if !up.ShareSnapshot.IsZero() {
+	if up.ShareSnapshot != "" {
 		if len(rawQuery) > 0 {
 			rawQuery += "&"
 		}
-		rawQuery += shareSnapshot + "=" + up.ShareSnapshot.Format(snapshotTimeFormat)
+		rawQuery += shareSnapshot + "=" + up.ShareSnapshot
 	}
 	sas := up.SAS.Encode()
 	if sas != "" {
