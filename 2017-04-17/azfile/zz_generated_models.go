@@ -397,58 +397,58 @@ func (dsmr DirectorySetMetadataResponse) Version() string {
 	return dsmr.rawResponse.Header.Get("x-ms-version")
 }
 
-// DownloadResponse ...
-type DownloadResponse struct {
+// downloadResponse ...
+type downloadResponse struct {
 	rawResponse *http.Response
 }
 
 // Response returns the raw HTTP response object.
-func (dr DownloadResponse) Response() *http.Response {
+func (dr downloadResponse) Response() *http.Response {
 	return dr.rawResponse
 }
 
 // StatusCode returns the HTTP status code of the response, e.g. 200.
-func (dr DownloadResponse) StatusCode() int {
+func (dr downloadResponse) StatusCode() int {
 	return dr.rawResponse.StatusCode
 }
 
 // Status returns the HTTP status message of the response, e.g. "200 OK".
-func (dr DownloadResponse) Status() string {
+func (dr downloadResponse) Status() string {
 	return dr.rawResponse.Status
 }
 
 // Body returns the raw HTTP response object's Body.
-func (dr DownloadResponse) Body() io.ReadCloser {
+func (dr downloadResponse) Body() io.ReadCloser {
 	return dr.rawResponse.Body
 }
 
 // AcceptRanges returns the value for header Accept-Ranges.
-func (dr DownloadResponse) AcceptRanges() string {
+func (dr downloadResponse) AcceptRanges() string {
 	return dr.rawResponse.Header.Get("Accept-Ranges")
 }
 
 // CacheControl returns the value for header Cache-Control.
-func (dr DownloadResponse) CacheControl() string {
+func (dr downloadResponse) CacheControl() string {
 	return dr.rawResponse.Header.Get("Cache-Control")
 }
 
 // ContentDisposition returns the value for header Content-Disposition.
-func (dr DownloadResponse) ContentDisposition() string {
+func (dr downloadResponse) ContentDisposition() string {
 	return dr.rawResponse.Header.Get("Content-Disposition")
 }
 
 // ContentEncoding returns the value for header Content-Encoding.
-func (dr DownloadResponse) ContentEncoding() string {
+func (dr downloadResponse) ContentEncoding() string {
 	return dr.rawResponse.Header.Get("Content-Encoding")
 }
 
 // ContentLanguage returns the value for header Content-Language.
-func (dr DownloadResponse) ContentLanguage() string {
+func (dr downloadResponse) ContentLanguage() string {
 	return dr.rawResponse.Header.Get("Content-Language")
 }
 
 // ContentLength returns the value for header Content-Length.
-func (dr DownloadResponse) ContentLength() int64 {
+func (dr downloadResponse) ContentLength() int64 {
 	s := dr.rawResponse.Header.Get("Content-Length")
 	if s == "" {
 		return -1
@@ -461,22 +461,22 @@ func (dr DownloadResponse) ContentLength() int64 {
 }
 
 // ContentMD5 returns the value for header Content-MD5.
-// func (dr DownloadResponse) ContentMD5() string {
+// func (dr downloadResponse) ContentMD5() string {
 // 	return dr.rawResponse.Header.Get("Content-MD5")
 // }
 
 // ContentRange returns the value for header Content-Range.
-func (dr DownloadResponse) ContentRange() string {
+func (dr downloadResponse) ContentRange() string {
 	return dr.rawResponse.Header.Get("Content-Range")
 }
 
 // ContentType returns the value for header Content-Type.
-func (dr DownloadResponse) ContentType() string {
+func (dr downloadResponse) ContentType() string {
 	return dr.rawResponse.Header.Get("Content-Type")
 }
 
 // CopyCompletionTime returns the value for header x-ms-copy-completion-time.
-func (dr DownloadResponse) CopyCompletionTime() time.Time {
+func (dr downloadResponse) CopyCompletionTime() time.Time {
 	s := dr.rawResponse.Header.Get("x-ms-copy-completion-time")
 	if s == "" {
 		return time.Time{}
@@ -489,32 +489,32 @@ func (dr DownloadResponse) CopyCompletionTime() time.Time {
 }
 
 // CopyID returns the value for header x-ms-copy-id.
-func (dr DownloadResponse) CopyID() string {
+func (dr downloadResponse) CopyID() string {
 	return dr.rawResponse.Header.Get("x-ms-copy-id")
 }
 
 // CopyProgress returns the value for header x-ms-copy-progress.
-func (dr DownloadResponse) CopyProgress() string {
+func (dr downloadResponse) CopyProgress() string {
 	return dr.rawResponse.Header.Get("x-ms-copy-progress")
 }
 
 // CopySource returns the value for header x-ms-copy-source.
-func (dr DownloadResponse) CopySource() string {
+func (dr downloadResponse) CopySource() string {
 	return dr.rawResponse.Header.Get("x-ms-copy-source")
 }
 
 // CopyStatus returns the value for header x-ms-copy-status.
-func (dr DownloadResponse) CopyStatus() CopyStatusType {
+func (dr downloadResponse) CopyStatus() CopyStatusType {
 	return CopyStatusType(dr.rawResponse.Header.Get("x-ms-copy-status"))
 }
 
 // CopyStatusDescription returns the value for header x-ms-copy-status-description.
-func (dr DownloadResponse) CopyStatusDescription() string {
+func (dr downloadResponse) CopyStatusDescription() string {
 	return dr.rawResponse.Header.Get("x-ms-copy-status-description")
 }
 
 // Date returns the value for header Date.
-func (dr DownloadResponse) Date() time.Time {
+func (dr downloadResponse) Date() time.Time {
 	s := dr.rawResponse.Header.Get("Date")
 	if s == "" {
 		return time.Time{}
@@ -527,22 +527,22 @@ func (dr DownloadResponse) Date() time.Time {
 }
 
 // ETag returns the value for header ETag.
-func (dr DownloadResponse) ETag() ETag {
+func (dr downloadResponse) ETag() ETag {
 	return ETag(dr.rawResponse.Header.Get("ETag"))
 }
 
 // FileContentMD5 returns the value for header x-ms-content-md5.
-// func (dr DownloadResponse) FileContentMD5() string {
+// func (dr downloadResponse) FileContentMD5() string {
 // 	return dr.rawResponse.Header.Get("x-ms-content-md5")
 // }
 
 // IsServerEncrypted returns the value for header x-ms-server-encrypted.
-func (dr DownloadResponse) IsServerEncrypted() string {
+func (dr downloadResponse) IsServerEncrypted() string {
 	return dr.rawResponse.Header.Get("x-ms-server-encrypted")
 }
 
 // LastModified returns the value for header Last-Modified.
-func (dr DownloadResponse) LastModified() time.Time {
+func (dr downloadResponse) LastModified() time.Time {
 	s := dr.rawResponse.Header.Get("Last-Modified")
 	if s == "" {
 		return time.Time{}
@@ -555,17 +555,17 @@ func (dr DownloadResponse) LastModified() time.Time {
 }
 
 // RequestID returns the value for header x-ms-request-id.
-func (dr DownloadResponse) RequestID() string {
+func (dr downloadResponse) RequestID() string {
 	return dr.rawResponse.Header.Get("x-ms-request-id")
 }
 
 // Version returns the value for header x-ms-version.
-func (dr DownloadResponse) Version() string {
+func (dr downloadResponse) Version() string {
 	return dr.rawResponse.Header.Get("x-ms-version")
 }
 
 // NewMetadata returns user-defined key/value pairs.
-func (dr DownloadResponse) NewMetadata() Metadata {
+func (dr downloadResponse) NewMetadata() Metadata {
 	md := Metadata{}
 	for k, v := range dr.rawResponse.Header {
 		if len(k) > mdPrefixLen {
@@ -1133,12 +1133,12 @@ func (furr FileUploadRangeResponse) Status() string {
 }
 
 // ContentMD5 returns the value for header Content-MD5.
-// func (gr DownloadResponse) ContentMD5() string {
+// func (gr downloadResponse) ContentMD5() string {
 // 	return gr.rawResponse.Header.Get("Content-MD5")
 // }
 
 // ContentRange returns the value for header Content-Range.
-// func (gr DownloadResponse) ContentRange() string {
+// func (gr downloadResponse) ContentRange() string {
 // 	return gr.rawResponse.Header.Get("Content-Range")
 // }
 

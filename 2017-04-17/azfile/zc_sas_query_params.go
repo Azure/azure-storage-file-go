@@ -8,7 +8,7 @@ import (
 )
 
 // SASVersion indicates the SAS version.
-const SASVersion = "2015-04-05"
+const SASVersion = ServiceVersion
 
 type SASProtocol string
 

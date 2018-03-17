@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -127,123 +126,32 @@ func (f FileURL) Download(ctx context.Context, offset int64, count int64, rangeG
 	if rangeGetContentMD5 {
 		xRangeGetContentMD5 = &rangeGetContentMD5
 	}
-	return f.fileClient.Download(ctx, nil, (&FileRange{Offset: offset, Count: count}).pointers(), xRangeGetContentMD5)
+	dr, err := f.fileClient.Download(ctx, nil, (&FileRange{Offset: offset, Count: count}).pointers(), xRangeGetContentMD5)
+	return &DownloadResponse{
+		f:       f,
+		dr:      dr,
+		ctx:     ctx,
+		getInfo: GetInfo{offset: offset, count: count, eTag: dr.ETag()}, // TODO: Note conditional header is not currently supported in Azure File.
+	}, err
 }
 
-//=====================================================
-//=====================================================
-type DownloadOption struct {
-	StreamReadRetryCount int64
-	doInjectError        bool
-	doInjectErrorRound   int64
-}
-
-func (f FileURL) DownloadToStream(ctx context.Context, offset int64, count int64, rangeGetContentMD5 bool, option DownloadOption) (*DownloadResponse, error) {
-	var xRangeGetContentMD5 *bool
-	if rangeGetContentMD5 {
-		xRangeGetContentMD5 = &rangeGetContentMD5
+// Body constructs a stream to read data from with a resilient reader option.
+// A zero-value option means to get a raw stream.
+func (dr *DownloadResponse) Body(o ResilientReaderOptions) io.ReadCloser {
+	if o.MaxRetryRequests == 0 {
+		return dr.Response().Body
 	}
 
-	downloadResponse, error := f.fileClient.Download(ctx, nil, (&FileRange{Offset: offset, Count: count}).pointers(), xRangeGetContentMD5)
-
-	copy := *downloadResponse.Response()
-	if downloadResponse != nil && downloadResponse.Body() != nil {
-		retryStream := retryStream2{
-			ctx:            ctx,
-			fileURL:        f,
-			offset:         offset,
-			count:          count,
-			downloadOption: option,
-			response:       &copy,
-			eTag:           downloadResponse.ETag()}
-		downloadResponse.setBody(&retryStream)
-	}
-
-	return downloadResponse, error
+	return NewResilientReader(
+		dr.ctx,
+		dr.Response(),
+		func(ctx context.Context, getInfo GetInfo) (*http.Response, error) {
+			resp, err := dr.f.Download(ctx, getInfo.offset, getInfo.count, false)
+			return resp.Response(), err
+		},
+		dr.getInfo,
+		o)
 }
-
-func (gr DownloadResponse) setBody(readCloser io.ReadCloser) {
-	gr.rawResponse.Body = readCloser
-}
-
-// TODO: Name it as retryStream2, until decision finalized, and the retryStream in highlevel.go is removed.
-type retryStream2 struct {
-	ctx            context.Context
-	fileURL        FileURL
-	offset, count  int64
-	downloadOption DownloadOption
-	response       *http.Response
-	eTag           ETag
-}
-
-func (s *retryStream2) Read(p []byte) (n int, err error) {
-	try := int64(0)
-	for ; try <= s.downloadOption.StreamReadRetryCount; try++ {
-		//fmt.Println(try) // TODO: Just for fun.
-
-		// TODO: Ensure whether response could be nil, when there is no error returned.
-		n, err := s.response.Body.Read(p) // Read from the stream
-
-		if s.downloadOption.doInjectError && try == s.downloadOption.doInjectErrorRound {
-			err = &net.DNSError{IsTemporary: true}
-		}
-
-		if err == nil || err == io.EOF { // We successfully read data or end EOF
-			s.offset += int64(n) // Increments the start offset in case we need to make a new HTTP request in the future
-			if s.count != 0 {
-				s.count -= int64(n) // Decrement the count in case we need to make a new HTTP request in the future
-			}
-			return n, err // Return the Read result to the caller
-		}
-		// Something went wrong; our stream is no longer good, close it.
-		s.Close()
-		s.response = nil
-
-		// Check the retry count and error code, and decide whether to retry.
-		if try == s.downloadOption.StreamReadRetryCount {
-			return n, err // No retry, or retry exhausted
-		} else if netErr, ok := err.(net.Error); ok {
-			if !netErr.Timeout() && !netErr.Temporary() {
-				return n, err // Not retryable
-			}
-		} else {
-			return n, err // Not retryable, just return
-		}
-
-		// Do retry and try to get a response stream to read from.
-		response, err := s.fileURL.Download(s.ctx, s.offset, s.count, false)
-		if err != nil {
-			return 0, err
-		}
-		if response.ETag() != ETag("") && response.ETag() != s.eTag {
-			return 0, fmt.Errorf("invalid status, source file has been changed, please restart the download")
-		}
-
-		// Successful GET; this is the network stream we'll read from
-		s.response = response.Response()
-
-		// Loop around and try to read from this stream
-	}
-
-	if s.downloadOption.doInjectError &&
-		s.downloadOption.doInjectErrorRound <= s.downloadOption.StreamReadRetryCount &&
-		s.downloadOption.doInjectErrorRound > 0 &&
-		try < s.downloadOption.doInjectErrorRound {
-		panic("invalid status, internal error, stream read retry is not working properly.")
-	}
-
-	return 0, nil // The compiler is wrong; we never actually get here
-}
-
-func (s *retryStream2) Close() error {
-	if s.response != nil && s.response.Body != nil {
-		return s.response.Body.Close()
-	}
-	return nil
-}
-
-//==========================================================================================
-//==========================================================================================
 
 // Delete immediately removes the file from the storage account.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/delete-file2.

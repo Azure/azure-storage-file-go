@@ -24,7 +24,6 @@ const (
 	sharePrefix     = "go"
 	directoryPrefix = "gotestdirectory"
 	filePrefix      = "gotestfile"
-	//checkedVersion  = "0.1"
 )
 
 func delFile(c *chk.C, file FileURL) {
@@ -140,7 +139,7 @@ func createNewFileFromShare(c *chk.C, share ShareURL, fileSize int64) (file File
 	return file, name
 }
 
-func (b *uploadDownloadSuite) TestDownloadToStreamBasic(c *chk.C) {
+func (b *uploadDownloadSuite) TestDownloadBasic(c *chk.C) {
 	fsu := getFSU()
 	share, _ := createNewShare(c, fsu)
 	defer delShare(c, share, DeleteSnapshotsOptionNone)
@@ -165,14 +164,14 @@ func (b *uploadDownloadSuite) TestDownloadToStreamBasic(c *chk.C) {
 
 	// Get with rangeGetContentMD5 enabled.
 	// Partial data, check status code 206.
-	resp, err := file.DownloadToStream(context.Background(), 0, 1024, true, DownloadOption{})
+	resp, err := file.Download(context.Background(), 0, 1024, true)
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusPartialContent)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(1024))
 	c.Assert(resp.ContentMD5(), chk.Not(chk.Equals), [md5.Size]byte{})
 	c.Assert(resp.ContentType(), chk.Equals, "application/octet-stream")
 
-	download, err := ioutil.ReadAll(resp.Response().Body)
+	download, err := ioutil.ReadAll(resp.Body(ResilientReaderOptions{}))
 	c.Assert(err, chk.IsNil)
 	c.Assert(download, chk.DeepEquals, contentD[:1024])
 
@@ -181,14 +180,15 @@ func (b *uploadDownloadSuite) TestDownloadToStreamBasic(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 
 	// Test get with another type of range index, and validate if FileContentMD5 can be get correclty.
-	resp, err = file.DownloadToStream(context.Background(), 1024, 0, false, DownloadOption{StreamReadRetryCount: 1})
+	resp, err = file.Download(context.Background(), 1024, 0, false)
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusPartialContent)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(1024))
 	c.Assert(resp.ContentMD5(), chk.Equals, [md5.Size]byte{})
 	c.Assert(resp.FileContentMD5(), chk.DeepEquals, pResp.ContentMD5())
 
-	download, err = ioutil.ReadAll(resp.Response().Body)
+	// TODO: need to prevent user to call ioutil.ReadAll(resp.Response().Body)?
+	download, err = ioutil.ReadAll(resp.Body(ResilientReaderOptions{MaxRetryRequests: 1}))
 	c.Assert(err, chk.IsNil)
 	c.Assert(download, chk.DeepEquals, contentD[1024:])
 
@@ -213,14 +213,14 @@ func (b *uploadDownloadSuite) TestDownloadToStreamBasic(c *chk.C) {
 	c.Assert(resp.IsServerEncrypted(), chk.NotNil)
 
 	// Get entire file, check status code 200.
-	resp, err = file.DownloadToStream(context.Background(), 0, 0, false, DownloadOption{})
+	resp, err = file.Download(context.Background(), 0, 0, false)
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusOK)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(2048))
 	c.Assert(resp.ContentMD5(), chk.Equals, pResp.ContentMD5())   // Note: This case is inted to get entire file, entire file's MD5 will be returned.
 	c.Assert(resp.FileContentMD5(), chk.Equals, [md5.Size]byte{}) // Note: FileContentMD5 is returned, only when range is specified explicitly.
 
-	download, err = ioutil.ReadAll(resp.Response().Body)
+	download, err = ioutil.ReadAll(resp.Body(ResilientReaderOptions{MaxRetryRequests: 2}))
 	c.Assert(err, chk.IsNil)
 	c.Assert(download, chk.DeepEquals, contentD[:])
 
@@ -245,7 +245,7 @@ func (b *uploadDownloadSuite) TestDownloadToStreamBasic(c *chk.C) {
 	c.Assert(resp.IsServerEncrypted(), chk.NotNil)
 }
 
-func (b *uploadDownloadSuite) TestDownloadToStreamRetry(c *chk.C) {
+func (b *uploadDownloadSuite) TestDownloadRetry(c *chk.C) {
 	fsu := getFSU()
 	share, _ := createNewShare(c, fsu)
 	defer delShare(c, share, DeleteSnapshotsOptionNone)
@@ -272,14 +272,14 @@ func (b *uploadDownloadSuite) TestDownloadToStreamRetry(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 
 	// Download entire file with retry, check status code 200.
-	resp, err := file.DownloadToStream(context.Background(), 0, 0, false, DownloadOption{StreamReadRetryCount: 2, doInjectError: true, doInjectErrorRound: 0})
+	resp, err := file.Download(context.Background(), 0, 0, false)
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusOK)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(102400))
 	c.Assert(resp.ContentMD5(), chk.Equals, pResp.ContentMD5())   // Note: This case is intend to get entire file, entire file's MD5 will be returned.
 	c.Assert(resp.FileContentMD5(), chk.Equals, [md5.Size]byte{}) // Note: FileContentMD5 is returned, only when range is specified explicitly.
 
-	download, err := ioutil.ReadAll(resp.Response().Body)
+	download, err := ioutil.ReadAll(resp.Body(ResilientReaderOptions{MaxRetryRequests: 2, doInjectError: true, doInjectErrorRound: 0}))
 	c.Assert(err, chk.IsNil)
 	c.Assert(download, chk.DeepEquals, contentD[:])
 

@@ -208,7 +208,7 @@ func (client fileClient) deleteResponder(resp pipeline.Response) (pipeline.Respo
 // Timeouts for File Service Operations.</a> rangeParameter is return file data only from the specified byte range.
 // rangeGetContentMD5 is when this header is set to true and specified together with the Range header, the service
 // returns the MD5 hash for the range, as long as the range is less than or equal to 4 MB in size.
-func (client fileClient) Download(ctx context.Context, timeout *int32, rangeParameter *string, rangeGetContentMD5 *bool) (*DownloadResponse, error) {
+func (client fileClient) Download(ctx context.Context, timeout *int32, rangeParameter *string, rangeGetContentMD5 *bool) (*downloadResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
@@ -223,7 +223,7 @@ func (client fileClient) Download(ctx context.Context, timeout *int32, rangePara
 	if err != nil {
 		return nil, err
 	}
-	return resp.(*DownloadResponse), err
+	return resp.(*downloadResponse), err
 }
 
 // downloadPreparer prepares the Download request.
@@ -253,7 +253,7 @@ func (client fileClient) downloadResponder(resp pipeline.Response) (pipeline.Res
 	if resp == nil {
 		return nil, err
 	}
-	return &DownloadResponse{rawResponse: resp.Response()}, err
+	return &downloadResponse{rawResponse: resp.Response()}, err
 }
 
 // GetProperties returns all user-defined metadata, standard HTTP properties, and system properties for the file. It
