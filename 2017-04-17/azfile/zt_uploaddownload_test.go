@@ -51,6 +51,8 @@ func getRandomDataAndReader(n int) (*bytes.Reader, []byte) {
 	return bytes.NewReader(data), data
 }
 
+// TODO: getRandomWithMD5
+
 func createNewShare(c *chk.C, fsu ServiceURL) (share ShareURL, name string) {
 	share, name = getShareURL(c, fsu)
 
@@ -302,4 +304,78 @@ func (b *uploadDownloadSuite) TestDownloadRetry(c *chk.C) {
 	c.Assert(resp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(resp.Version(), chk.Not(chk.Equals), "")
 	c.Assert(resp.IsServerEncrypted(), chk.NotNil)
+}
+
+// Following are testings for highlevel APIs.
+func (b *uploadDownloadSuite) TestHighLevelUploadDownloadBasic(c *chk.C) {
+	fsu := getFSU()
+	share, _ := createNewShare(c, fsu)
+	defer delShare(c, share, DeleteSnapshotsOptionNone)
+
+	fileSize := 2048 //2048 bytes
+
+	file, _ := createNewFileFromShare(c, share, int64(fileSize))
+	defer delFile(c, file)
+
+	ctx = context.Background()
+	_, srcBytes := getRandomDataAndReader(fileSize)
+
+	md5Str := "MDAwMDAwMDA="
+	var testMd5 [md5.Size]byte
+	copy(testMd5[:], md5Str)
+
+	headers := FileHTTPHeaders{
+		ContentType:        "application/octet-stream",
+		ContentEncoding:    "ContentEncoding",
+		ContentLanguage:    "tr,en",
+		ContentMD5:         testMd5,
+		CacheControl:       "no-transform",
+		ContentDisposition: "attachment",
+	}
+
+	metadata := Metadata{
+		"foo": "foovalue",
+		"bar": "barvalue",
+	}
+
+	err := UploadBufferToAzureFile(ctx, srcBytes, file, UploadToAzureFileOptions{FileHTTPHeaders: headers, Metadata: metadata})
+	c.Assert(err, chk.IsNil)
+
+	destBytes := make([]byte, fileSize)
+	resp, err := DownloadAzureFileToBuffer(ctx, file, destBytes, DownloadFromAzureFileOptions{})
+	c.Assert(err, chk.IsNil)
+	c.Assert(resp.ContentType(), chk.Equals, "application/octet-stream")
+	c.Assert(resp.ContentLength(), chk.Equals, int64(fileSize))
+	c.Assert(resp.ContentEncoding(), chk.Equals, "ContentEncoding")
+	c.Assert(resp.ContentLanguage(), chk.Equals, "tr,en")
+	c.Assert(resp.ContentMD5(), chk.Equals, testMd5)
+	c.Assert(resp.CacheControl(), chk.Equals, "no-transform")
+	c.Assert(resp.ContentDisposition(), chk.Equals, "attachment")
+	c.Assert(resp.NewMetadata(), chk.DeepEquals, metadata)
+
+	c.Assert(destBytes, chk.DeepEquals, srcBytes)
+}
+
+func (b *uploadDownloadSuite) TestHighLevelUploadDownloadParallel(c *chk.C) {
+	fsu := getFSU()
+	share, _ := createNewShare(c, fsu)
+	defer delShare(c, share, DeleteSnapshotsOptionNone)
+
+	fileSize := 4 * 1024 * 1024 //4MB
+	blockSize := 512 * 1024     // 512KB
+
+	file, _ := createNewFileFromShare(c, share, int64(fileSize))
+	defer delFile(c, file)
+
+	ctx = context.Background()
+	_, srcBytes := getRandomDataAndReader(fileSize)
+
+	err := UploadBufferToAzureFile(ctx, srcBytes, file, UploadToAzureFileOptions{RangeSize: int64(blockSize), Parallelism: 3})
+	c.Assert(err, chk.IsNil)
+
+	destBytes := make([]byte, fileSize)
+	_, err = DownloadAzureFileToBuffer(ctx, file, destBytes, DownloadFromAzureFileOptions{RangeSize: int64(blockSize), Parallelism: 3})
+	c.Assert(err, chk.IsNil)
+
+	c.Assert(destBytes, chk.DeepEquals, srcBytes)
 }
