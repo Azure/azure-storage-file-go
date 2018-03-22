@@ -15,8 +15,8 @@ func init() {
 	responseErrorFactory = newStorageError
 }
 
-// ServiceCodeType is a string identifying a specific share or file error.
-// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/file-service-error-codes
+// ServiceCodeType is a string identifying a storage service error.
+// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/status-and-error-codes2
 type ServiceCodeType string
 
 // StorageError identifies a responder-generated network or response parsing error.

@@ -2,7 +2,6 @@ package azfile
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -244,16 +243,4 @@ func (f FileURL) ClearRange(ctx context.Context, offset int64, count int64) (*Fi
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/list-ranges.
 func (f FileURL) GetRangeList(ctx context.Context, offset int64, count int64) (*Ranges, error) {
 	return f.fileClient.GetRangeList(ctx, nil, nil, (&FileRange{Offset: offset, Count: count}).pointers())
-}
-
-func validateSeekableStreamAt0(body io.ReadSeeker) {
-	if body == nil { // nil body's are "logically" seekable to 0
-		return
-	}
-	if pos, err := body.Seek(0, io.SeekCurrent); pos != 0 || err != nil {
-		if err != nil {
-			panic(err)
-		}
-		panic(errors.New("stream must be set to position 0"))
-	}
 }
