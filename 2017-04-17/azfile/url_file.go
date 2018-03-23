@@ -116,16 +116,26 @@ func (dr *FileRange) pointers() *string {
 }
 
 // Download downloads data start from offset with count bytes.
-// A count of zero means count of bytes from offset to the end of file.
 // If both offset and count is zero, entire file will be downloaded.
+// To get MD5 of the partial data downloaded, set rangeGetContentMD5 to true, and set offset and count accordingly,
+// make sure the parital data's size is equal to or less than 4MB, and check ContentMD5 for the MD5 of the partial file,
+// in this case, you can also check MD5 of entire file with FileContentMD5.
+// To get MD5 of the entire file, set offset and count both to zero to download entire file, and check ContentMD5 for
+// the MD5 of entire file.
 // The response also includes the file's properties.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/get-file.
 func (f FileURL) Download(ctx context.Context, offset int64, count int64, rangeGetContentMD5 bool) (*DownloadResponse, error) {
 	var xRangeGetContentMD5 *bool
 	if rangeGetContentMD5 {
+		if offset == 0 && count == 0 {
+			panic("rangeGetContentMD5 only work with partial data downloading")
+		}
 		xRangeGetContentMD5 = &rangeGetContentMD5
 	}
 	dr, err := f.fileClient.Download(ctx, nil, (&FileRange{Offset: offset, Count: count}).pointers(), xRangeGetContentMD5)
+	if err != nil {
+		return nil, err
+	}
 	return &DownloadResponse{
 		f:       f,
 		dr:      dr,
