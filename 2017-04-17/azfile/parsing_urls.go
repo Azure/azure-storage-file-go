@@ -3,25 +3,23 @@ package azfile
 import (
 	"net/url"
 	"strings"
-	"time"
 )
 
 const (
-	snapshotTimeFormat = "2006-01-02T15:04:05.0000000Z07:00"
-	shareSnapshot      = "sharesnapshot"
+	shareSnapshot = "sharesnapshot"
 )
 
 // A FileURLParts object represents the components that make up an Azure Storage Share/Directory/File URL. You parse an
 // existing URL into its parts by calling NewFileURLParts(). You construct a URL from parts by calling URL().
 // NOTE: Changing any SAS-related field requires computing a new SAS signature.
 type FileURLParts struct {
-	Scheme         string    // Ex: "https://"
-	Host           string    // Ex: "account.share.core.windows.net"
-	ShareName      string    // Share name, Ex: "myshare"
-	Path           string    // Path of directory or file, Ex: "mydirectory/myfile"
-	ShareSnapshot  time.Time // IsZero is true if not a snapshot
-	SAS            SASQueryParameters
-	UnparsedParams string
+	Scheme              string // Ex: "https://"
+	Host                string // Ex: "account.share.core.windows.net"
+	ShareName           string // Share name, Ex: "myshare"
+	DirectoryOrFilePath string // Path of directory or file, Ex: "mydirectory/myfile"
+	ShareSnapshot       string // IsZero is true if not a snapshot
+	SAS                 SASQueryParameters
+	UnparsedParams      string
 }
 
 // NewFileURLParts parses a URL initializing FileURLParts' fields including any SAS-related & sharesnapshot query parameters. Any other
@@ -45,20 +43,19 @@ func NewFileURLParts(u url.URL) FileURLParts {
 			up.ShareName = path
 		} else { // Slash found; path has share name & path of directory or file
 			up.ShareName = path[:shareEndIndex]
-			up.Path = path[shareEndIndex+1:]
+			up.DirectoryOrFilePath = path[shareEndIndex+1:]
 		}
 	}
 
 	// Convert the query parameters to a case-sensitive map & trim whitespace
 	paramsMap := u.Query()
 
-	up.ShareSnapshot = time.Time{} // Assume no snapshot
 	if snapshotStr, ok := caseInsensitiveValues(paramsMap).Get(shareSnapshot); ok {
-		up.ShareSnapshot, _ = time.Parse(snapshotTimeFormat, snapshotStr[0])
+		up.ShareSnapshot = snapshotStr[0]
 		// If we recognized the query parameter, remove it from the map
 		delete(paramsMap, shareSnapshot)
 	}
-	up.SAS = NewSASQueryParameters(paramsMap, true)
+	up.SAS = newSASQueryParameters(paramsMap, true)
 	up.UnparsedParams = paramsMap.Encode()
 	return up
 }
@@ -81,19 +78,19 @@ func (up FileURLParts) URL() url.URL {
 	// Concatenate share & path of directory or file (if they exist)
 	if up.ShareName != "" {
 		path += "/" + up.ShareName
-		if up.Path != "" {
-			path += "/" + up.Path
+		if up.DirectoryOrFilePath != "" {
+			path += "/" + up.DirectoryOrFilePath
 		}
 	}
 
 	rawQuery := up.UnparsedParams
 
 	// Concatenate share snapshot query parameter (if it exists)
-	if !up.ShareSnapshot.IsZero() {
+	if up.ShareSnapshot != "" {
 		if len(rawQuery) > 0 {
 			rawQuery += "&"
 		}
-		rawQuery += shareSnapshot + "=" + up.ShareSnapshot.Format(snapshotTimeFormat)
+		rawQuery += shareSnapshot + "=" + up.ShareSnapshot
 	}
 	sas := up.SAS.Encode()
 	if sas != "" {

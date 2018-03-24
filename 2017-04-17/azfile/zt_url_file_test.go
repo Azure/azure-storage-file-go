@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/Azure/azure-storage-file-go/2017-04-17/azfile"
@@ -104,7 +106,7 @@ func (b *FileURLSuite) TestGetSetProperties(c *chk.C) {
 		CacheControl:       "no-transform",
 		ContentDisposition: "attachment",
 	}
-	setResp, err := file.SetProperties(context.Background(), properties)
+	setResp, err := file.SetHTTPHeaders(context.Background(), properties)
 	c.Assert(err, chk.IsNil)
 	c.Assert(setResp.Response().StatusCode, chk.Equals, 200)
 	c.Assert(setResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
@@ -114,7 +116,7 @@ func (b *FileURLSuite) TestGetSetProperties(c *chk.C) {
 	c.Assert(setResp.Date().IsZero(), chk.Equals, false)
 	c.Assert(setResp.IsServerEncrypted(), chk.NotNil)
 
-	getResp, err := file.GetPropertiesAndMetadata(context.Background())
+	getResp, err := file.GetProperties(context.Background())
 	c.Assert(err, chk.IsNil)
 	c.Assert(getResp.Response().StatusCode, chk.Equals, 200)
 	c.Assert(setResp.LastModified().IsZero(), chk.Equals, false)
@@ -156,7 +158,7 @@ func (b *FileURLSuite) TestGetSetMetadata(c *chk.C) {
 	c.Assert(setResp.Date().IsZero(), chk.Equals, false)
 	c.Assert(setResp.IsServerEncrypted(), chk.NotNil)
 
-	getResp, err := file.GetPropertiesAndMetadata(context.Background())
+	getResp, err := file.GetProperties(context.Background())
 	c.Assert(err, chk.IsNil)
 	c.Assert(getResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
 	c.Assert(getResp.LastModified().IsZero(), chk.Equals, false)
@@ -178,7 +180,7 @@ func (b *FileURLSuite) TestCopy(c *chk.C) {
 	destFile, _ := getFileURLFromShare(c, share)
 	defer delFile(c, destFile)
 
-	_, err := srcFile.PutRange(context.Background(), azfile.Range{Start: 0, End: 2047}, getReaderToRandomBytes(2048))
+	_, err := srcFile.UploadRange(context.Background(), 0, getReaderToRandomBytes(2048))
 	c.Assert(err, chk.IsNil)
 
 	copyResp, err := destFile.StartCopy(context.Background(), srcFile.URL(), nil)
@@ -199,7 +201,7 @@ func (b *FileURLSuite) TestCopy(c *chk.C) {
 	var getResp *azfile.FileGetPropertiesResponse
 
 	for copyStatus != azfile.CopyStatusSuccess && time.Now().Sub(start) < timeout {
-		getResp, err = destFile.GetPropertiesAndMetadata(context.Background())
+		getResp, err = destFile.GetProperties(context.Background())
 		c.Assert(err, chk.IsNil)
 		c.Assert(getResp.CopyID(), chk.Equals, copyResp.CopyID())
 		c.Assert(getResp.CopyStatus(), chk.Not(chk.Equals), azfile.CopyStatusNone)
@@ -230,11 +232,11 @@ func (b *FileURLSuite) TestPutGetFileRange(c *chk.C) {
 
 	contentR, contentD := getRandomDataAndReader(2048)
 
-	pResp, err := file.PutRange(context.Background(), azfile.Range{Start: 0, End: 2047}, contentR)
+	pResp, err := file.UploadRange(context.Background(), 0, contentR)
 	c.Assert(err, chk.IsNil)
 	c.Assert(pResp.ContentMD5(), chk.Not(chk.Equals), [md5.Size]byte{})
 	c.Assert(pResp.StatusCode(), chk.Equals, http.StatusCreated)
-	c.Assert(pResp.IsServerEncrypted, chk.NotNil)
+	c.Assert(pResp.IsServerEncrypted(), chk.NotNil)
 	c.Assert(pResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
 	c.Assert(pResp.LastModified().IsZero(), chk.Equals, false)
 	c.Assert(pResp.RequestID(), chk.Not(chk.Equals), "")
@@ -243,7 +245,7 @@ func (b *FileURLSuite) TestPutGetFileRange(c *chk.C) {
 
 	// Get with rangeGetContentMD5 enabled.
 	// Partial data, check status code 206.
-	resp, err := file.GetFile(context.Background(), azfile.FileRange{Offset: 0, Count: 1024}, true)
+	resp, err := file.Download(context.Background(), 0, 1024, true)
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusPartialContent)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(1024))
@@ -255,11 +257,11 @@ func (b *FileURLSuite) TestPutGetFileRange(c *chk.C) {
 	c.Assert(download, chk.DeepEquals, contentD[:1024])
 
 	// Set ContentMD5 for the entire file.
-	_, err = file.SetProperties(context.Background(), azfile.FileHTTPHeaders{ContentMD5: pResp.ContentMD5()})
+	_, err = file.SetHTTPHeaders(context.Background(), azfile.FileHTTPHeaders{ContentMD5: pResp.ContentMD5()})
 	c.Assert(err, chk.IsNil)
 
 	// Test get with another type of range index, and validate if FileContentMD5 can be get correclty.
-	resp, err = file.GetFile(context.Background(), azfile.FileRange{Offset: 1024}, false)
+	resp, err = file.Download(context.Background(), 1024, 0, false)
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusPartialContent)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(1024))
@@ -275,7 +277,7 @@ func (b *FileURLSuite) TestPutGetFileRange(c *chk.C) {
 	c.Assert(resp.ContentDisposition(), chk.Equals, "")
 	c.Assert(resp.ContentEncoding(), chk.Equals, "")
 	c.Assert(resp.ContentRange(), chk.Equals, "bytes 1024-2047/2048")
-	c.Assert(resp.ContentType(), chk.Equals, "") // Note ContentType is set during SetProperties, TODO: discuss this behavior with azfile.FileHTTPHeaders.
+	c.Assert(resp.ContentType(), chk.Equals, "") // Note ContentType is set during SetHTTPHeaders, TODO: discuss this behavior with azfile.FileHTTPHeaders.
 	c.Assert(resp.CopyCompletionTime().IsZero(), chk.Equals, true)
 	c.Assert(resp.CopyID(), chk.Equals, "")
 	c.Assert(resp.CopyProgress(), chk.Equals, "")
@@ -291,7 +293,7 @@ func (b *FileURLSuite) TestPutGetFileRange(c *chk.C) {
 	c.Assert(resp.IsServerEncrypted(), chk.NotNil)
 
 	// Get entire file, check status code 200.
-	resp, err = file.GetFile(context.Background(), azfile.FileRange{}, false)
+	resp, err = file.Download(context.Background(), 0, 0, false)
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusOK)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(2048))
@@ -336,7 +338,7 @@ func (b *FileURLSuite) TestListRanges(c *chk.C) {
 
 	defer delFile(c, file)
 
-	putResp, err := file.PutRange(context.Background(), azfile.Range{Start: 0, End: 1023}, getReaderToRandomBytes(1024))
+	putResp, err := file.UploadRange(context.Background(), 0, getReaderToRandomBytes(1024))
 	c.Assert(err, chk.IsNil)
 	c.Assert(putResp.Response().StatusCode, chk.Equals, 201)
 	c.Assert(putResp.LastModified().IsZero(), chk.Equals, false)
@@ -346,7 +348,7 @@ func (b *FileURLSuite) TestListRanges(c *chk.C) {
 	c.Assert(putResp.Version(), chk.Not(chk.Equals), "")
 	c.Assert(putResp.Date().IsZero(), chk.Equals, false)
 
-	rangeList, err := file.ListRanges(context.Background(), azfile.FileRange{Offset: 0, Count: 1023})
+	rangeList, err := file.GetRangeList(context.Background(), 0, 1023)
 	c.Assert(err, chk.IsNil)
 	c.Assert(rangeList.Response().StatusCode, chk.Equals, 200)
 	c.Assert(rangeList.LastModified().IsZero(), chk.Equals, false)
@@ -367,14 +369,14 @@ func (b *FileURLSuite) TestClearRange(c *chk.C) {
 	file, _ := createNewFileFromShare(c, share, 4096)
 	defer delFile(c, file)
 
-	_, err := file.PutRange(context.Background(), azfile.Range{Start: 2048, End: 4095}, getReaderToRandomBytes(2048))
+	_, err := file.UploadRange(context.Background(), 2048, getReaderToRandomBytes(2048))
 	c.Assert(err, chk.IsNil)
 
-	clearResp, err := file.ClearRange(context.Background(), azfile.Range{Start: 2048, End: 4095})
+	clearResp, err := file.ClearRange(context.Background(), 2048, 2048)
 	c.Assert(err, chk.IsNil)
 	c.Assert(clearResp.Response().StatusCode, chk.Equals, 201)
 
-	rangeList, err := file.ListRanges(context.Background(), azfile.FileRange{})
+	rangeList, err := file.GetRangeList(context.Background(), 0, 0)
 	c.Assert(err, chk.IsNil)
 	c.Assert(rangeList.Value, chk.HasLen, 0)
 }
@@ -386,7 +388,7 @@ func (b *FileURLSuite) TestResizeFile(c *chk.C) {
 
 	file, _ := createNewFileFromShare(c, share, 1234)
 
-	gResp, err := file.GetPropertiesAndMetadata(ctx)
+	gResp, err := file.GetProperties(ctx)
 	c.Assert(err, chk.IsNil)
 	c.Assert(gResp.ContentLength(), chk.Equals, int64(1234))
 
@@ -394,9 +396,89 @@ func (b *FileURLSuite) TestResizeFile(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	c.Assert(rResp.Response().StatusCode, chk.Equals, 200)
 
-	gResp, err = file.GetPropertiesAndMetadata(ctx)
+	gResp, err = file.GetProperties(ctx)
 	c.Assert(err, chk.IsNil)
 	c.Assert(gResp.ContentLength(), chk.Equals, int64(4096))
 }
 
-// TODO: Test get Properties, Metadata and ListRanges with share snapshot
+func (f *FileURLSuite) TestServiceSASShareSAS(c *chk.C) {
+	fsu := getFSU()
+	share, shareName := createNewShare(c, fsu)
+	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
+
+	credential, accountName := getCredential()
+
+	sasQueryParams := azfile.FileSASSignatureValues{
+		Protocol:    azfile.SASProtocolHTTPS,
+		ExpiryTime:  time.Now().UTC().Add(48 * time.Hour),
+		ShareName:   shareName,
+		Permissions: azfile.ShareSASPermissions{Create: true, Read: true, Write: true, Delete: true, List: true}.String(),
+	}.NewSASQueryParameters(credential)
+
+	qp := sasQueryParams.Encode()
+
+	fileName := "testFile"
+	dirName := "testDir"
+	fileUrlStr := fmt.Sprintf("https://%s.file.core.windows.net/%s/%s?%s",
+		accountName, shareName, fileName, qp)
+	fu, _ := url.Parse(fileUrlStr)
+
+	dirUrlStr := fmt.Sprintf("https://%s.file.core.windows.net/%s/%s?%s",
+		accountName, shareName, dirName, qp)
+	du, _ := url.Parse(dirUrlStr)
+
+	fileURL := azfile.NewFileURL(*fu, azfile.NewPipeline(azfile.NewAnonymousCredential(), azfile.PipelineOptions{}))
+	dirURL := azfile.NewDirectoryURL(*du, azfile.NewPipeline(azfile.NewAnonymousCredential(), azfile.PipelineOptions{}))
+
+	s := "Hello"
+	_, err := fileURL.Create(ctx, int64(len(s)), azfile.FileHTTPHeaders{}, azfile.Metadata{})
+	c.Assert(err, chk.IsNil)
+	_, err = fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte(s)))
+	c.Assert(err, chk.IsNil)
+	_, err = fileURL.Download(ctx, 0, 0, false)
+	c.Assert(err, chk.IsNil)
+	_, err = fileURL.Delete(ctx)
+	c.Assert(err, chk.IsNil)
+
+	_, err = dirURL.Create(ctx, azfile.Metadata{})
+	c.Assert(err, chk.IsNil)
+
+	_, err = dirURL.ListFilesAndDirectoriesSegment(ctx, azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{})
+	c.Assert(err, chk.IsNil)
+}
+
+func (f *FileURLSuite) TestServiceSASFileSAS(c *chk.C) {
+	fsu := getFSU()
+	share, shareName := createNewShare(c, fsu)
+	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
+
+	credential, accountName := getCredential()
+
+	sasQueryParams := azfile.FileSASSignatureValues{
+		Protocol:    azfile.SASProtocolHTTPS,
+		ExpiryTime:  time.Now().UTC().Add(48 * time.Hour),
+		ShareName:   shareName,
+		Permissions: azfile.FileSASPermissions{Create: true, Read: true, Write: true, Delete: true}.String(),
+	}.NewSASQueryParameters(credential)
+
+	qp := sasQueryParams.Encode()
+
+	fileName := "testFile"
+	urlWithSAS := fmt.Sprintf("https://%s.file.core.windows.net/%s/%s?%s",
+		accountName, shareName, fileName, qp)
+	u, _ := url.Parse(urlWithSAS)
+
+	fileURL := azfile.NewFileURL(*u, azfile.NewPipeline(azfile.NewAnonymousCredential(), azfile.PipelineOptions{}))
+
+	s := "Hello"
+	_, err := fileURL.Create(ctx, int64(len(s)), azfile.FileHTTPHeaders{}, azfile.Metadata{})
+	c.Assert(err, chk.IsNil)
+	_, err = fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte(s)))
+	c.Assert(err, chk.IsNil)
+	_, err = fileURL.Download(ctx, 0, 0, false)
+	c.Assert(err, chk.IsNil)
+	_, err = fileURL.Delete(ctx)
+	c.Assert(err, chk.IsNil)
+}
+
+// TODO: Share snapshot tests for get Properties, Metadata and GetRangeList.

@@ -7,42 +7,17 @@ import (
 	"time"
 )
 
-// SASVersion indicates the SAS version.
-const SASVersion = "2015-04-05"
-
-const (
-	// SASProtocolHTTPS can be specified for a SAS protocol
-	SASProtocolHTTPS = "https"
-
-	// SASProtocolHTTPSandHTTP can be specified for a SAS protocol
-	SASProtocolHTTPSandHTTP = "https,http"
-)
-
-// FormatTimesForSASSigning converts a time.Time to a snapshotTimeFormat string suitable for a
-// SASField's StartTime or ExpiryTime fields. Returns "" if value.IsZero().
-func FormatTimesForSASSigning(startTime, expiryTime time.Time) (string, string) {
-	ss := ""
-	if !startTime.IsZero() {
-		ss = startTime.Format(SASTimeFormat) // "yyyy-MM-ddTHH:mm:ssZ"
-	}
-	se := ""
-	if !expiryTime.IsZero() {
-		se = expiryTime.Format(SASTimeFormat) // "yyyy-MM-ddTHH:mm:ssZ"
-	}
-	return ss, se
-}
-
 // AccountSASSignatureValues is used to generate a Shared Access Signature (SAS) for an Azure Storage account.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/constructing-an-account-sas
 type AccountSASSignatureValues struct {
-	Version       string    `param:"sv"`  // If not specified, this defaults to SASVersion
-	Protocol      string    `param:"spr"` // See the SASProtocol* constants
-	StartTime     time.Time `param:"st"`  // Not specified if IsZero
-	ExpiryTime    time.Time `param:"se"`  // Not specified if IsZero
-	Permissions   string    `param:"sp"`  // Create by initializing a AccountSASPermissions and then call String()
-	IPRange       IPRange   `param:"sip"`
-	Services      string    `param:"ss"`  // Create by initializing AccountSASServices and then call String()
-	ResourceTypes string    `param:"srt"` // Create by initializing AccountSASResourceTypes and then call String()
+	Version       string      `param:"sv"`  // If not specified, this defaults to SASVersion
+	Protocol      SASProtocol `param:"spr"` // See the SASProtocol* constants
+	StartTime     time.Time   `param:"st"`  // Not specified if IsZero
+	ExpiryTime    time.Time   `param:"se"`  // Not specified if IsZero
+	Permissions   string      `param:"sp"`  // Create by initializing a AccountSASPermissions and then call String()
+	IPRange       IPRange     `param:"sip"`
+	Services      string      `param:"ss"`  // Create by initializing AccountSASServices and then call String()
+	ResourceTypes string      `param:"srt"` // Create by initializing AccountSASResourceTypes and then call String()
 }
 
 // NewSASQueryParameters uses an account's shared key credential to sign this signature values to produce
@@ -71,7 +46,7 @@ func (v AccountSASSignatureValues) NewSASQueryParameters(sharedKeyCredential *Sh
 		startTime,
 		expiryTime,
 		v.IPRange.String(),
-		v.Protocol,
+		string(v.Protocol),
 		v.Version,
 		""}, // That right, the account SAS requires a terminating extra newline
 		"\n")

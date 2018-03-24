@@ -23,8 +23,8 @@ func (credentialFunc) credentialMarker() {}
 
 //////////////////////////////
 
-// NewAnonymousCredential creates an anonymous credential for use with HTTP(S)
-// requests that read files with Shared Access Signatures (SAS).
+// NewAnonymousCredential creates an anonymous credential for use with HTTP(S) requests that read public resource
+// or for use with Shared Access Signatures (SAS).
 func NewAnonymousCredential() Credential {
 	return anonymousCredentialFactory
 }

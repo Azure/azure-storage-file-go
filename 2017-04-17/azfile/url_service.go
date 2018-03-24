@@ -7,47 +7,6 @@ import (
 	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
-// PipelineOptions is used to configure a request policy pipeline's retry policy and logging.
-type PipelineOptions struct {
-	// Log configures the pipeline's logging infrastructure indicating what information is logged and where.
-	Log pipeline.LogOptions
-
-	// Retry configures the built-in retry policy behavior.
-	Retry RetryOptions
-
-	// RequestLog configures the built-in request logging policy.
-	RequestLog RequestLogOptions
-
-	// Telemetry configures the built-in telemetry policy behavior.
-	Telemetry TelemetryOptions
-}
-
-// NewPipeline creates a Pipeline using the specified credentials and options.
-func NewPipeline(c Credential, o PipelineOptions) pipeline.Pipeline {
-	if c == nil {
-		panic("c can't be nil")
-	}
-
-	// Closest to API goes first; closest to the wire goes last
-	f := []pipeline.Factory{
-		NewTelemetryPolicyFactory(o.Telemetry),
-		NewUniqueRequestIDPolicyFactory(),
-		NewRetryPolicyFactory(o.Retry),
-	}
-
-	if _, ok := c.(*anonymousCredentialPolicyFactory); !ok {
-		// For AnonymousCredential, we optimize out the policy factory since it doesn't do anything
-		// NOTE: The credential's policy factory must appear close to the wire so it can sign any
-		// changes made by other factories (like UniqueRequestIDPolicyFactory)
-		f = append(f, c)
-	}
-	f = append(f,
-		pipeline.MethodFactoryMarker(), // indicates at what stage in the pipeline the method factory is invoked
-		NewRequestLogPolicyFactory(o.RequestLog))
-
-	return pipeline.NewPipeline(f, pipeline.Options{HTTPSender: nil, Log: o.Log})
-}
-
 // A ServiceURL represents a URL to the Azure Storage File service allowing you to manipulate file shares.
 type ServiceURL struct {
 	client serviceClient
@@ -108,17 +67,17 @@ func appendToURLPath(u url.URL, name string) url.URL {
 	return u
 }
 
-// ListShares returns a single segment of shares starting from the specified Marker. Use an empty
+// ListSharesSegment returns a single segment of shares starting from the specified Marker. Use an empty
 // Marker to start enumeration from the beginning. Share names are returned in lexicographic order.
-// After getting a segment, process it, and then call ListShares again (passing the the previously-returned
+// After getting a segment, process it, and then call ListSharesSegment again (passing the the previously-returned
 // Marker) to get the next segment. For more information, see
 // https://docs.microsoft.com/en-us/rest/api/storageservices/list-shares.
-func (s ServiceURL) ListShares(ctx context.Context, marker Marker, o ListSharesOptions) (*ListSharesResponse, error) {
+func (s ServiceURL) ListSharesSegment(ctx context.Context, marker Marker, o ListSharesOptions) (*ListSharesResponse, error) {
 	prefix, include, maxResults := o.pointers()
-	return s.client.ListShares(ctx, prefix, marker.val, maxResults, include, nil)
+	return s.client.ListSharesSegment(ctx, prefix, marker.val, maxResults, include, nil)
 }
 
-// ListSharesOptions defines options available when calling ListShares.
+// ListSharesOptions defines options available when calling ListSharesSegment.
 type ListSharesOptions struct {
 	Detail     ListSharesDetail // No IncludeType header is produced if ""
 	Prefix     string           // No Prefix header is produced if ""
@@ -147,7 +106,6 @@ type ListSharesDetail struct {
 // string produces the Include query parameter's value.
 func (d *ListSharesDetail) toArray() []ListSharesIncludeType {
 	items := make([]ListSharesIncludeType, 0, 2)
-	// NOTE: Multiple strings MUST be appended in alphabetic order or signing the string for authentication fails!
 	if d.Metadata {
 		items = append(items, ListSharesIncludeMetadata)
 	}

@@ -24,21 +24,34 @@ const (
 	sharePrefix     = "go"
 	directoryPrefix = "gotestdirectory"
 	filePrefix      = "gotestfile"
+	//checkedVersion  = "0.1"
 )
 
 var ctx = context.Background()
 
-func getFSU() azfile.ServiceURL {
+func getAccountAndKey() (string, string) {
 	name := os.Getenv("ACCOUNT_NAME")
 	key := os.Getenv("ACCOUNT_KEY")
 	if name == "" || key == "" {
 		panic("ACCOUNT_NAME and ACCOUNT_KEY environment vars must be set before running tests")
 	}
+
+	return name, key
+}
+
+func getFSU() azfile.ServiceURL {
+	name, key := getAccountAndKey()
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/", name))
 
 	credential := azfile.NewSharedKeyCredential(name, key)
 	pipeline := azfile.NewPipeline(credential, azfile.PipelineOptions{})
 	return azfile.NewServiceURL(*u, pipeline)
+}
+
+func getCredential() (*azfile.SharedKeyCredential, string) {
+	name, key := getAccountAndKey()
+
+	return azfile.NewSharedKeyCredential(name, key), name
 }
 
 // This function generates an entity name by concatenating the passed prefix,

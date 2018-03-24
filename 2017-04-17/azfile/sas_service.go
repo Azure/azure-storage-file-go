@@ -7,17 +7,17 @@ import (
 	"time"
 )
 
-// BlobSASSignatureValues is used to generate a Shared Access Signature (SAS) for an Azure Storage container or blob.
-type BlobSASSignatureValues struct {
-	Version            string    `param:"sv"`  // If not specified, this defaults to SASVersion
-	Protocol           string    `param:"spr"` // See the SASProtocol* constants
-	StartTime          time.Time `param:"st"`  // Not specified if IsZero
-	ExpiryTime         time.Time `param:"se"`  // Not specified if IsZero
-	Permissions        string    `param:"sp"`  // Create by initializing a ContainerSASPermissions or BlobSASPermissions and then call String()
-	IPRange            IPRange   `param:"sip"`
-	Identifier         string    `param:"si"`
-	ContainerName      string
-	BlobName           string // Use "" to create a Container SAS
+// FileSASSignatureValues is used to generate a Shared Access Signature (SAS) for an Azure Storage share or file.
+type FileSASSignatureValues struct {
+	Version            string      `param:"sv"`  // If not specified, this defaults to SASVersion
+	Protocol           SASProtocol `param:"spr"` // See the SASProtocol* constants
+	StartTime          time.Time   `param:"st"`  // Not specified if IsZero
+	ExpiryTime         time.Time   `param:"se"`  // Not specified if IsZero
+	Permissions        string      `param:"sp"`  // Create by initializing a ShareSASPermissions or FileSASPermissions and then call String()
+	IPRange            IPRange     `param:"sip"`
+	Identifier         string      `param:"si"`
+	ShareName          string
+	FilePath           string // Ex: "directory/FileName". Use "" to create a Share SAS.
 	CacheControl       string // rscc
 	ContentDisposition string // rscd
 	ContentEncoding    string // rsce
@@ -27,23 +27,23 @@ type BlobSASSignatureValues struct {
 
 // NewSASQueryParameters uses an account's shared key credential to sign this signature values to produce
 // the proper SAS query parameters.
-func (v BlobSASSignatureValues) NewSASQueryParameters(sharedKeyCredential *SharedKeyCredential) SASQueryParameters {
+func (v FileSASSignatureValues) NewSASQueryParameters(sharedKeyCredential *SharedKeyCredential) SASQueryParameters {
 	if sharedKeyCredential == nil {
 		panic("sharedKeyCredential can't be nil")
 	}
 
-	resource := "c"
-	if v.BlobName == "" {
+	resource := "s"
+	if v.FilePath == "" {
 		// Make sure the permission characters are in the correct order
-		perms := &ContainerSASPermissions{}
+		perms := &ShareSASPermissions{}
 		if err := perms.Parse(v.Permissions); err != nil {
 			panic(err)
 		}
 		v.Permissions = perms.String()
 	} else {
-		resource = "b"
+		resource = "f"
 		// Make sure the permission characters are in the correct order
-		perms := &BlobSASPermissions{}
+		perms := &FileSASPermissions{}
 		if err := perms.Parse(v.Permissions); err != nil {
 			panic(err)
 		}
@@ -59,10 +59,10 @@ func (v BlobSASSignatureValues) NewSASQueryParameters(sharedKeyCredential *Share
 		v.Permissions,
 		startTime,
 		expiryTime,
-		getCanonicalName(sharedKeyCredential.AccountName(), v.ContainerName, v.BlobName),
+		getCanonicalName(sharedKeyCredential.AccountName(), v.ShareName, v.FilePath),
 		v.Identifier,
 		v.IPRange.String(),
-		v.Protocol,
+		string(v.Protocol),
 		v.Version,
 		v.CacheControl,       // rscc
 		v.ContentDisposition, // rscd
@@ -81,7 +81,7 @@ func (v BlobSASSignatureValues) NewSASQueryParameters(sharedKeyCredential *Share
 		permissions: v.Permissions,
 		ipRange:     v.IPRange,
 
-		// Container/Blob-specific SAS parameters
+		// Share/File-specific SAS parameters
 		resource:   resource,
 		identifier: v.Identifier,
 
@@ -91,32 +91,34 @@ func (v BlobSASSignatureValues) NewSASQueryParameters(sharedKeyCredential *Share
 	return p
 }
 
-// getCanonicalName computes the canonical name for a container or blob resource for SAS signing.
-func getCanonicalName(account string, containerName string, blobName string) string {
-	// Container: "/blob/account/containername"
-	// Blob:      "/blob/account/containername/blobname"
-	elements := []string{"/blob/", account, "/", containerName}
-	if blobName != "" {
-		elements = append(elements, "/", strings.Replace(blobName, "\\", "/", -1))
+// getCanonicalName computes the canonical name for a share or file resource for SAS signing.
+func getCanonicalName(account string, shareName string, filePath string) string {
+	// Share: "/file/account/sharename"
+	// File:  "/file/account/sharename/filename"
+	// File:  "/file/account/sharename/directoryname/filename"
+	elements := []string{"/file/", account, "/", shareName}
+	if filePath != "" {
+		dfp := strings.Replace(filePath, "\\", "/", -1)
+		if dfp[0] == '/' {
+			dfp = dfp[1:]
+		}
+		elements = append(elements, "/", dfp)
 	}
 	return strings.Join(elements, "")
 }
 
-// The ContainerSASPermissions type simplifies creating the permissions string for an Azure Storage container SAS.
-// Initialize an instance of this type and then call its String method to set BlobSASSignatureValues's Permissions field.
-type ContainerSASPermissions struct {
-	Read, Add, Create, Write, Delete, List bool
+// The ShareSASPermissions type simplifies creating the permissions string for an Azure Storage share SAS.
+// Initialize an instance of this type and then call its String method to set FileSASSignatureValues's Permissions field.
+type ShareSASPermissions struct {
+	Read, Create, Write, Delete, List bool
 }
 
-// String produces the SAS permissions string for an Azure Storage container.
-// Call this method to set BlobSASSignatureValues's Permissions field.
-func (p ContainerSASPermissions) String() string {
+// String produces the SAS permissions string for an Azure Storage share.
+// Call this method to set FileSASSignatureValues's Permissions field.
+func (p ShareSASPermissions) String() string {
 	var b bytes.Buffer
 	if p.Read {
 		b.WriteRune('r')
-	}
-	if p.Add {
-		b.WriteRune('a')
 	}
 	if p.Create {
 		b.WriteRune('c')
@@ -133,15 +135,13 @@ func (p ContainerSASPermissions) String() string {
 	return b.String()
 }
 
-// Parse initializes the ContainerSASPermissions's fields from a string.
-func (p *ContainerSASPermissions) Parse(s string) error {
-	*p = ContainerSASPermissions{} // Clear the flags
+// Parse initializes the ShareSASPermissions's fields from a string.
+func (p *ShareSASPermissions) Parse(s string) error {
+	*p = ShareSASPermissions{} // Clear the flags
 	for _, r := range s {
 		switch r {
 		case 'r':
 			p.Read = true
-		case 'a':
-			p.Add = true
 		case 'c':
 			p.Create = true
 		case 'w':
@@ -157,19 +157,16 @@ func (p *ContainerSASPermissions) Parse(s string) error {
 	return nil
 }
 
-// The BlobSASPermissions type simplifies creating the permissions string for an Azure Storage blob SAS.
-// Initialize an instance of this type and then call its String method to set BlobSASSignatureValues's Permissions field.
-type BlobSASPermissions struct{ Read, Add, Create, Write, Delete bool }
+// The FileSASPermissions type simplifies creating the permissions string for an Azure Storage file SAS.
+// Initialize an instance of this type and then call its String method to set FileSASSignatureValues's Permissions field.
+type FileSASPermissions struct{ Read, Create, Write, Delete bool }
 
-// String produces the SAS permissions string for an Azure Storage blob.
-// Call this method to set BlobSASSignatureValues's Permissions field.
-func (p BlobSASPermissions) String() string {
+// String produces the SAS permissions string for an Azure Storage file.
+// Call this method to set FileSASSignatureValues's Permissions field.
+func (p FileSASPermissions) String() string {
 	var b bytes.Buffer
 	if p.Read {
 		b.WriteRune('r')
-	}
-	if p.Add {
-		b.WriteRune('a')
 	}
 	if p.Create {
 		b.WriteRune('c')
@@ -183,15 +180,13 @@ func (p BlobSASPermissions) String() string {
 	return b.String()
 }
 
-// Parse initializes the BlobSASPermissions's fields from a string.
-func (p *BlobSASPermissions) Parse(s string) error {
-	*p = BlobSASPermissions{} // Clear the flags
+// Parse initializes the FileSASPermissions's fields from a string.
+func (p *FileSASPermissions) Parse(s string) error {
+	*p = FileSASPermissions{} // Clear the flags
 	for _, r := range s {
 		switch r {
 		case 'r':
 			p.Read = true
-		case 'a':
-			p.Add = true
 		case 'c':
 			p.Create = true
 		case 'w':
