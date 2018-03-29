@@ -5,10 +5,11 @@ package azfile
 
 import (
 	"fmt"
-	"github.com/Azure/azure-pipeline-go/pipeline"
 	"reflect"
 	"regexp"
 	"strings"
+
+	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
 // Constraint stores constraint name, target field name
@@ -59,6 +60,8 @@ func validate(m []validation) error {
 		for _, constraint := range item.constraints {
 			var err error
 			switch v.Kind() {
+			case reflect.Bool:
+				err = validateBool()
 			case reflect.Ptr:
 				err = validatePtr(v, constraint)
 			case reflect.String:
@@ -79,6 +82,11 @@ func validate(m []validation) error {
 			}
 		}
 	}
+	return nil
+}
+
+// TODO: Temporarily use this as workaround for AutoRest code generating issue.
+func validateBool() error {
 	return nil
 }
 

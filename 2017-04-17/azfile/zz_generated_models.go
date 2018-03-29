@@ -1289,12 +1289,26 @@ func (lsr ListSharesResponse) Version() string {
 // Metrics - Storage Analytics metrics for file service.
 type Metrics struct {
 	// Version - The version of Storage Analytics to configure.
-	Version *string `xml:"Version"`
+	Version string `xml:"Version"` // TODO: this is actually mandatory
 	// Enabled - Indicates whether metrics are enabled for the File service.
 	Enabled bool `xml:"Enabled"`
 	// IncludeAPIs - Indicates whether metrics should generate summary statistics for called API operations.
 	IncludeAPIs     *bool            `xml:"IncludeAPIs"`
-	RetentionPolicy *RetentionPolicy `xml:"RetentionPolicy"`
+	RetentionPolicy *RetentionPolicy `xml:"RetentionPolicy"` // TODO: this is actually manadatory
+}
+
+// MetricProperties definies convenience struct for Metrics,
+type MetricProperties struct {
+	// MetricEnabled - Indicates whether metrics are enabled for the File service.
+	MetricEnabled bool
+	// Version - The version of Storage Analytics to configure.
+	// Version string, comment out version, as it's mandatory and should be 1.0
+	// IncludeAPIs - Indicates whether metrics should generate summary statistics for called API operations.
+	IncludeAPIs bool
+	// RetentionPolicyEnabled - Indicates whether a rentention policy is enabled for the File service.
+	RetentionPolicyEnabled bool
+	// RetentionDays - Indicates the number of days that metrics data should be retained.
+	RetentionDays int32
 }
 
 // Range - An Azure Storage file range.
@@ -2040,4 +2054,40 @@ func (ssp StorageServiceProperties) RequestID() string {
 // Version returns the value for header x-ms-version.
 func (ssp StorageServiceProperties) Version() string {
 	return ssp.rawResponse.Header.Get("x-ms-version")
+}
+
+// FileServiceProperties defines convenience struct for StorageServiceProperties
+type FileServiceProperties struct {
+	rawResponse *http.Response
+	// HourMetrics - A summary of request statistics grouped by API in hourly aggregates for files.
+	HourMetrics MetricProperties
+	// MinuteMetrics - A summary of request statistics grouped by API in minute aggregates for files.
+	MinuteMetrics MetricProperties
+	// Cors - The set of CORS rules.
+	Cors []CorsRule
+}
+
+// Response returns the raw HTTP response object.
+func (fsp FileServiceProperties) Response() *http.Response {
+	return fsp.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (fsp FileServiceProperties) StatusCode() int {
+	return fsp.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (fsp FileServiceProperties) Status() string {
+	return fsp.rawResponse.Status
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (fsp FileServiceProperties) RequestID() string {
+	return fsp.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (fsp FileServiceProperties) Version() string {
+	return fsp.rawResponse.Header.Get("x-ms-version")
 }
