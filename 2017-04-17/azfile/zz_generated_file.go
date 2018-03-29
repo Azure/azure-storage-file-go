@@ -86,12 +86,15 @@ func (client fileClient) abortCopyResponder(resp pipeline.Response) (pipeline.Re
 // the file. fileContentLanguage is specifies the natural languages used by this resource. fileCacheControl is sets the
 // file's cache control. The File service stores this value but does not use or modify it. fileContentMD5 is sets the
 // file's MD5 hash. fileContentDisposition is sets the file's Content-Disposition header. metadata is a name-value pair
-// to associate with a file storage object. Metadata names must adhere to the naming rules for C# identifiers.
+// to associate with a file storage object.
 func (client fileClient) Create(ctx context.Context, fileContentLength int64, fileTypeConstant string, timeout *int32, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 *string, fileContentDisposition *string, metadata map[string]string) (*FileCreateResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}},
+		{targetValue: metadata,
+			constraints: []constraint{{target: "metadata", name: null, rule: false,
+				chain: []constraint{{target: "metadata", name: pattern, rule: `^[a-zA-Z]+$`, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
 	req, err := client.createPreparer(fileContentLength, fileTypeConstant, timeout, fileContentType, fileContentEncoding, fileContentLanguage, fileCacheControl, fileContentMD5, fileContentDisposition, metadata)
@@ -459,12 +462,14 @@ func (client fileClient) setHTTPHeadersResponder(resp pipeline.Response) (pipeli
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-// Metadata names must adhere to the naming rules for C# identifiers.
 func (client fileClient) SetMetadata(ctx context.Context, timeout *int32, metadata map[string]string) (*FileSetMetadataResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}},
+		{targetValue: metadata,
+			constraints: []constraint{{target: "metadata", name: null, rule: false,
+				chain: []constraint{{target: "metadata", name: pattern, rule: `^[a-zA-Z]+$`, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
 	req, err := client.setMetadataPreparer(timeout, metadata)
@@ -518,12 +523,14 @@ func (client fileClient) setMetadataResponder(resp pipeline.Response) (pipeline.
 // copy source. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-// Metadata names must adhere to the naming rules for C# identifiers.
 func (client fileClient) StartCopy(ctx context.Context, copySource string, timeout *int32, metadata map[string]string) (*FileStartCopyResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}},
+		{targetValue: metadata,
+			constraints: []constraint{{target: "metadata", name: null, rule: false,
+				chain: []constraint{{target: "metadata", name: pattern, rule: `^[a-zA-Z]+$`, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
 	req, err := client.startCopyPreparer(copySource, timeout, metadata)

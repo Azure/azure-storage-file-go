@@ -2,7 +2,11 @@ package azfile_test
 
 import (
 	"context"
+	"errors"
+	"os"
+	"time"
 
+	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-file-go/2017-04-17/azfile"
 	chk "gopkg.in/check.v1"
 )
@@ -11,9 +15,81 @@ type StorageAccountSuite struct{}
 
 var _ = chk.Suite(&StorageAccountSuite{})
 
-func (s *StorageAccountSuite) TestAccountGetSetProperties(c *chk.C) {
+func (s *StorageAccountSuite) TestNewShareURLValidName(c *chk.C) {
+	fsu := getFSU()
+	testURL := fsu.NewShareURL(sharePrefix)
+
+	correctURL := "https://" + os.Getenv("ACCOUNT_NAME") + ".file.core.windows.net/" + sharePrefix
+	temp := testURL.URL()
+	c.Assert(temp.String(), chk.Equals, correctURL)
+}
+
+type testPipeline struct{}
+
+const testPipelineMessage string = "Test factory invoked"
+
+func (tm testPipeline) Do(ctx context.Context, methodFactory pipeline.Factory, request pipeline.Request) (pipeline.Response, error) {
+	return nil, errors.New(testPipelineMessage)
+}
+
+func (s *aztestsSuite) TestAccountWithPipeline(c *chk.C) {
+	fsu := getFSU()
+	fsu = fsu.WithPipeline(testPipeline{}) // testPipeline returns an identifying message as an error
+	shareURL := fsu.NewShareURL("name")
+
+	_, err := shareURL.Create(ctx, azfile.Metadata{}, 0)
+
+	c.Assert(err.Error(), chk.Equals, testPipelineMessage)
+}
+
+func (s *StorageAccountSuite) TestAccountGetSetPropertiesDefault(c *chk.C) {
 	sa := getFSU()
-	setProps := azfile.StorageServiceProperties{}
+	setProps := azfile.FileServiceProperties{}
+	resp, err := sa.SetProperties(context.Background(), setProps)
+	c.Assert(err, chk.IsNil)
+	c.Assert(resp.Response().StatusCode, chk.Equals, 202)
+	c.Assert(resp.RequestID(), chk.Not(chk.Equals), "")
+	c.Assert(resp.Version(), chk.Not(chk.Equals), "")
+
+	time.Sleep(time.Second * 5)
+
+	// Note: service side is 202, might depend on timing
+	props, err := sa.GetProperties(context.Background())
+	c.Assert(err, chk.IsNil)
+	c.Assert(props.Response().StatusCode, chk.Equals, 200)
+	c.Assert(props.RequestID(), chk.Not(chk.Equals), "")
+	c.Assert(props.Version(), chk.Not(chk.Equals), "")
+	c.Assert(props.HourMetrics, chk.NotNil)
+	c.Assert(props.MinuteMetrics, chk.NotNil)
+	c.Assert(props.Cors, chk.HasLen, 0)
+}
+
+func (s *StorageAccountSuite) TestAccountGetSetPropertiesNonDefaultWithEnable(c *chk.C) {
+	sa := getFSU()
+
+	setProps := azfile.FileServiceProperties{
+		HourMetrics: azfile.MetricProperties{
+			MetricEnabled:          true,
+			IncludeAPIs:            true,
+			RetentionPolicyEnabled: true,
+			RetentionDays:          1,
+		},
+		MinuteMetrics: azfile.MetricProperties{
+			MetricEnabled:          true,
+			IncludeAPIs:            false,
+			RetentionPolicyEnabled: true,
+			RetentionDays:          2,
+		},
+		Cors: []azfile.CorsRule{
+			azfile.CorsRule{
+				AllowedOrigins:  "*",
+				AllowedMethods:  "PUT",
+				AllowedHeaders:  "x-ms-client-request-id",
+				ExposedHeaders:  "x-ms-*",
+				MaxAgeInSeconds: 2,
+			},
+		},
+	}
 	resp, err := sa.SetProperties(context.Background(), setProps)
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.Response().StatusCode, chk.Equals, 202)
@@ -25,12 +101,73 @@ func (s *StorageAccountSuite) TestAccountGetSetProperties(c *chk.C) {
 	c.Assert(props.Response().StatusCode, chk.Equals, 200)
 	c.Assert(props.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(props.Version(), chk.Not(chk.Equals), "")
-	c.Assert(props.HourMetrics, chk.NotNil)
-	c.Assert(props.MinuteMetrics, chk.NotNil)
-	c.Assert(props.Cors, chk.HasLen, 0)
+	c.Assert(props.HourMetrics, chk.DeepEquals, azfile.MetricProperties{
+		MetricEnabled:          true,
+		IncludeAPIs:            true,
+		RetentionPolicyEnabled: true,
+		RetentionDays:          1,
+	})
+	c.Assert(props.MinuteMetrics, chk.DeepEquals, azfile.MetricProperties{
+		MetricEnabled:          true,
+		IncludeAPIs:            false,
+		RetentionPolicyEnabled: true,
+		RetentionDays:          2,
+	})
+	c.Assert(props.Cors, chk.DeepEquals, []azfile.CorsRule{
+		azfile.CorsRule{
+			AllowedOrigins:  "*",
+			AllowedMethods:  "PUT",
+			AllowedHeaders:  "x-ms-client-request-id",
+			ExposedHeaders:  "x-ms-*",
+			MaxAgeInSeconds: 2,
+		},
+	})
 }
 
-func (s *StorageAccountSuite) TestAccountListShares(c *chk.C) {
+// TODO: This case is not stable... As SetProperties returns 202 Accepted, it depends on server side how fast properties would be set.
+// func (s *StorageAccountSuite) TestAccountGetSetPropertiesNonDefaultWithDisable(c *chk.C) {
+// 	sa := getFSU()
+
+// 	setProps := azfile.FileServiceProperties{
+// 		HourMetrics: azfile.MetricProperties{
+// 			MetricEnabled: false,
+// 		},
+// 		MinuteMetrics: azfile.MetricProperties{
+// 			MetricEnabled: false,
+// 		},
+// 	}
+// 	resp, err := sa.SetProperties(context.Background(), setProps)
+// 	c.Assert(err, chk.IsNil)
+// 	c.Assert(resp.Response().StatusCode, chk.Equals, 202)
+// 	c.Assert(resp.RequestID(), chk.Not(chk.Equals), "")
+// 	c.Assert(resp.Version(), chk.Not(chk.Equals), "")
+
+// 	time.Sleep(time.Second * 5)
+
+// 	props, err := sa.GetProperties(context.Background())
+// 	c.Assert(err, chk.IsNil)
+// 	c.Assert(props.Response().StatusCode, chk.Equals, 200)
+// 	c.Assert(props.RequestID(), chk.Not(chk.Equals), "")
+// 	c.Assert(props.Version(), chk.Not(chk.Equals), "")
+// 	c.Assert(props.HourMetrics, chk.DeepEquals, azfile.MetricProperties{MetricEnabled: false})
+// 	c.Assert(props.MinuteMetrics, chk.DeepEquals, azfile.MetricProperties{MetricEnabled: false})
+// 	c.Assert(props.Cors, chk.IsNil)
+// }
+
+func (s *StorageAccountSuite) TestAccountListSharesDefault(c *chk.C) {
+	fsu := getFSU()
+	shareURL1, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL1, azfile.DeleteSnapshotsOptionNone)
+	shareURL2, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL2, azfile.DeleteSnapshotsOptionNone)
+
+	response, err := fsu.ListSharesSegment(ctx, azfile.Marker{}, azfile.ListSharesOptions{})
+
+	c.Assert(err, chk.IsNil)
+	c.Assert(len(response.Shares) >= 2, chk.Equals, true) // The response should contain at least the two created containers. Probably many more
+}
+
+func (s *StorageAccountSuite) TestAccountListSharesNonDefault(c *chk.C) {
 	sa := getFSU()
 	ctx := context.Background()
 	resp, err := sa.ListSharesSegment(ctx, azfile.Marker{}, azfile.ListSharesOptions{Prefix: sharePrefix})
@@ -70,6 +207,20 @@ func (s *StorageAccountSuite) TestAccountListShares(c *chk.C) {
 	}
 }
 
+func (s *StorageAccountSuite) TestAccountListSharesMaxResultsZero(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	// Max Results = 0 means the value will be ignored, the header not set, and the server default used
+	resp, err := fsu.ListSharesSegment(ctx,
+		azfile.Marker{}, azfile.ListSharesOptions{Prefix: sharePrefix, MaxResults: 0})
+
+	c.Assert(err, chk.IsNil)
+	c.Assert(len(resp.Shares) >= 1, chk.Equals, true) // At least 1 share.
+}
+
 func (s *StorageAccountSuite) TestAccountListSharesPaged(c *chk.C) {
 	sa := getFSU()
 
@@ -100,4 +251,20 @@ func (s *StorageAccountSuite) TestAccountListSharesPaged(c *chk.C) {
 		c.Assert(resp.NextMarker.NotDone(), chk.Equals, hasMore)
 		marker = resp.NextMarker
 	}
+}
+
+func (s *StorageAccountSuite) TestAccountListSharesNegativeMaxResults(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+	// The library should panic if MaxResults < -1
+	defer func() {
+		recover()
+	}()
+
+	fsu.ListSharesSegment(ctx,
+		azfile.Marker{}, *(&azfile.ListSharesOptions{Prefix: sharePrefix, MaxResults: -2}))
+
+	c.Fail() // If the list call doesn't panic, we fail
 }

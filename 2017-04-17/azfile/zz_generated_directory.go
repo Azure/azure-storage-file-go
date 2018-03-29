@@ -7,11 +7,10 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"github.com/Azure/azure-pipeline-go/pipeline"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-
-	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
 // directoryClient is the client for the Directory methods of the Azfile service.
@@ -29,12 +28,14 @@ func newDirectoryClient(url url.URL, p pipeline.Pipeline) directoryClient {
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-// Metadata names must adhere to the naming rules for C# identifiers.
 func (client directoryClient) Create(ctx context.Context, timeout *int32, metadata map[string]string) (*DirectoryCreateResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}},
+		{targetValue: metadata,
+			constraints: []constraint{{target: "metadata", name: null, rule: false,
+				chain: []constraint{{target: "metadata", name: pattern, rule: `^[a-zA-Z]+$`, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
 	req, err := client.createPreparer(timeout, metadata)
@@ -271,12 +272,14 @@ func (client directoryClient) listFilesAndDirectoriesSegmentResponder(resp pipel
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-// Metadata names must adhere to the naming rules for C# identifiers.
 func (client directoryClient) SetMetadata(ctx context.Context, timeout *int32, metadata map[string]string) (*DirectorySetMetadataResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}},
+		{targetValue: metadata,
+			constraints: []constraint{{target: "metadata", name: null, rule: false,
+				chain: []constraint{{target: "metadata", name: pattern, rule: `^[a-zA-Z]+$`, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
 	req, err := client.setMetadataPreparer(timeout, metadata)

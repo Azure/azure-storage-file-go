@@ -21,9 +21,10 @@ type aztestsSuite struct{}
 var _ = chk.Suite(&aztestsSuite{})
 
 const (
-	sharePrefix     = "go"
-	directoryPrefix = "gotestdirectory"
-	filePrefix      = "gotestfile"
+	sharePrefix              = "go"
+	directoryPrefix          = "gotestdirectory"
+	filePrefix               = "gotestfile"
+	validationErrorSubstring = "validation failed"
 	//checkedVersion  = "0.1"
 )
 
@@ -204,4 +205,11 @@ func createNewFileFromDirectory(c *chk.C, directory azfile.DirectoryURL, fileSiz
 	c.Assert(cResp.StatusCode(), chk.Equals, 201)
 
 	return file, name
+}
+
+func validateStorageError(c *chk.C, err error, code azfile.ServiceCodeType) {
+	c.Assert(err, chk.NotNil)
+
+	serr, _ := err.(azfile.StorageError)
+	c.Assert(serr.ServiceCode(), chk.Equals, code)
 }

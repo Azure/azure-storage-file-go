@@ -30,13 +30,15 @@ func newShareClient(url url.URL, p pipeline.Pipeline) shareClient {
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-// Metadata names must adhere to the naming rules for C# identifiers. quota is specifies the maximum size of the share,
-// in gigabytes.
+// quota is specifies the maximum size of the share, in gigabytes.
 func (client shareClient) Create(ctx context.Context, timeout *int32, metadata map[string]string, quota *int32) (*ShareCreateResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}},
+		{targetValue: metadata,
+			constraints: []constraint{{target: "metadata", name: null, rule: false,
+				chain: []constraint{{target: "metadata", name: pattern, rule: `^[a-zA-Z]+$`, chain: nil}}}}},
 		{targetValue: quota,
 			constraints: []constraint{{target: "quota", name: null, rule: false,
 				chain: []constraint{{target: "quota", name: inclusiveMinimum, rule: 1, chain: nil}}}}}}); err != nil {
@@ -91,12 +93,14 @@ func (client shareClient) createResponder(resp pipeline.Response) (pipeline.Resp
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-// Metadata names must adhere to the naming rules for C# identifiers.
 func (client shareClient) CreateSnapshot(ctx context.Context, timeout *int32, metadata map[string]string) (*ShareCreateSnapshotResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}},
+		{targetValue: metadata,
+			constraints: []constraint{{target: "metadata", name: null, rule: false,
+				chain: []constraint{{target: "metadata", name: pattern, rule: `^[a-zA-Z]+$`, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
 	req, err := client.createSnapshotPreparer(timeout, metadata)
@@ -443,12 +447,14 @@ func (client shareClient) setAccessPolicyResponder(resp pipeline.Response) (pipe
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-// Metadata names must adhere to the naming rules for C# identifiers.
 func (client shareClient) SetMetadata(ctx context.Context, timeout *int32, metadata map[string]string) (*ShareSetMetadataResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}},
+		{targetValue: metadata,
+			constraints: []constraint{{target: "metadata", name: null, rule: false,
+				chain: []constraint{{target: "metadata", name: pattern, rule: `^[a-zA-Z]+$`, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
 	req, err := client.setMetadataPreparer(timeout, metadata)
