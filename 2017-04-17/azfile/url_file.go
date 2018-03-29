@@ -83,11 +83,11 @@ func (f FileURL) AbortCopy(ctx context.Context, copyID string) (*FileAbortCopyRe
 }
 
 // toRange makes range string adhere to REST API.
-// A count of zero means count of bytes from offset to the end of file.
+// A count with value CountToEnd (-1) means count of bytes from offset to the end of file.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/specifying-the-range-header-for-file-service-operations.
 func toRange(offset int64, count int64) *string {
 	endRange := ""
-	if count != 0 {
+	if count != CountToEnd {
 		endRange = strconv.FormatInt(offset+count-1, 10)
 	}
 	r := fmt.Sprintf("bytes=%d-%s", offset, endRange)
@@ -95,7 +95,7 @@ func toRange(offset int64, count int64) *string {
 }
 
 // FileRange defines a range of bytes within a file, starting at Offset and ending
-// at Offset+Count-1 inclusively. Use a zero-value FileRange to indicate the entire file..
+// at Offset+Count-1 inclusively. Use a zero-value FileRange to indicate the entire file.
 type FileRange struct {
 	Offset int64
 	Count  int64
@@ -105,29 +105,24 @@ func (dr *FileRange) pointers() *string {
 	if dr.Offset < 0 {
 		panic("The file's range Offset must be >= 0")
 	}
-	if dr.Count < 0 {
-		panic("The file's range Count must be >= 0")
+	if dr.Count <= 0 && dr.Count != CountToEnd {
+		panic("The file's range Count must be either equal to CountToEnd (-1) or > 0")
 	}
-	if dr.Offset == 0 && dr.Count == 0 {
+	if dr.Offset == 0 && dr.Count == CountToEnd {
 		return nil
 	}
 
 	return toRange(dr.Offset, dr.Count)
 }
 
-// Download downloads data start from offset with count bytes.
-// If both offset and count is zero, entire file will be downloaded.
-// To get MD5 of the partial data downloaded, set rangeGetContentMD5 to true, and set offset and count accordingly,
-// make sure the parital data's size is equal to or less than 4MB, and check ContentMD5 for the MD5 of the partial file,
-// in this case, you can also check MD5 of entire file with FileContentMD5.
-// To get MD5 of the entire file, set offset and count both to zero to download entire file, and check ContentMD5 for
-// the MD5 of entire file.
-// The response also includes the file's properties.
+// Download downloads count bytes of data from the start offset. If count is CountToEnd (-1), then data is read from specified offset to the end.
+// The response includes all of the file’s properties. However, passing true for rangeGetContentMD5 returns the range’s MD5 in the ContentMD5
+// response header/property if the range is <= 4MB; the HTTP request fails with 400 (Bad Request) if the requested range is greater than 4MB.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/get-file.
 func (f FileURL) Download(ctx context.Context, offset int64, count int64, rangeGetContentMD5 bool) (*DownloadResponse, error) {
 	var xRangeGetContentMD5 *bool
 	if rangeGetContentMD5 {
-		if offset == 0 && count == 0 {
+		if offset == 0 && count == CountToEnd {
 			panic("rangeGetContentMD5 only work with partial data downloading")
 		}
 		xRangeGetContentMD5 = &rangeGetContentMD5
@@ -136,30 +131,31 @@ func (f FileURL) Download(ctx context.Context, offset int64, count int64, rangeG
 	if err != nil {
 		return nil, err
 	}
+
 	return &DownloadResponse{
-		f:       f,
-		dr:      dr,
-		ctx:     ctx,
-		getInfo: GetInfo{offset: offset, count: count, eTag: dr.ETag()}, // TODO: Note conditional header is not currently supported in Azure File.
+		f:    f,
+		dr:   dr,
+		ctx:  ctx,
+		info: HTTPGetterInfo{Offset: offset, Count: dr.ContentLength(), ETag: dr.ETag()}, // TODO: Note conditional header is not currently supported in Azure File.
 	}, err
 }
 
 // Body constructs a stream to read data from with a resilient reader option.
 // A zero-value option means to get a raw stream.
-func (dr *DownloadResponse) Body(o ResilientReaderOptions) io.ReadCloser {
+func (dr *DownloadResponse) Body(o RetryReaderOptions) io.ReadCloser {
 	if o.MaxRetryRequests == 0 {
 		return dr.Response().Body
 	}
 
-	return NewResilientReader(
+	return NewRetryReader(
 		dr.ctx,
 		dr.Response(),
-		func(ctx context.Context, getInfo GetInfo) (*http.Response, error) {
-			resp, err := dr.f.Download(ctx, getInfo.offset, getInfo.count, false)
+		dr.info,
+		o,
+		func(ctx context.Context, info HTTPGetterInfo) (*http.Response, error) {
+			resp, err := dr.f.Download(ctx, info.Offset, info.Count, false)
 			return resp.Response(), err
-		},
-		dr.getInfo,
-		o)
+		})
 }
 
 // Delete immediately removes the file from the storage account.
@@ -249,7 +245,7 @@ func (f FileURL) ClearRange(ctx context.Context, offset int64, count int64) (*Fi
 }
 
 // GetRangeList returns the list of valid ranges for a file.
-// Use a zero-value count to indicate the left part of file start from offset.
+// Use a count with value CountToEnd (-1) to indicate the left part of file start from offset.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/list-ranges.
 func (f FileURL) GetRangeList(ctx context.Context, offset int64, count int64) (*Ranges, error) {
 	return f.fileClient.GetRangeList(ctx, nil, nil, (&FileRange{Offset: offset, Count: count}).pointers())

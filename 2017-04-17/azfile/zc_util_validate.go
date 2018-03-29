@@ -5,6 +5,12 @@ import (
 	"io"
 )
 
+const (
+	// CountToEnd indiciates a flag for count parameter. It means the count of bytes
+	// from start offset to the end of file.
+	CountToEnd = -1
+)
+
 func validateSeekableStreamAt0AndGetCount(body io.ReadSeeker) int64 {
 	if body == nil { // nil body's are "logically" seekable to 0 and are 0 bytes long
 		return 0

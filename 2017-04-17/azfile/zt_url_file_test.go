@@ -261,7 +261,7 @@ func (b *FileURLSuite) TestPutGetFileRange(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 
 	// Test get with another type of range index, and validate if FileContentMD5 can be get correclty.
-	resp, err = file.Download(context.Background(), 1024, 0, false)
+	resp, err = file.Download(context.Background(), 1024, azfile.CountToEnd, false)
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusPartialContent)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(1024))
@@ -293,7 +293,7 @@ func (b *FileURLSuite) TestPutGetFileRange(c *chk.C) {
 	c.Assert(resp.IsServerEncrypted(), chk.NotNil)
 
 	// Get entire file, check status code 200.
-	resp, err = file.Download(context.Background(), 0, 0, false)
+	resp, err = file.Download(context.Background(), 0, azfile.CountToEnd, false)
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusOK)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(2048))
@@ -435,7 +435,7 @@ func (f *FileURLSuite) TestServiceSASShareSAS(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	_, err = fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte(s)))
 	c.Assert(err, chk.IsNil)
-	_, err = fileURL.Download(ctx, 0, 0, false)
+	_, err = fileURL.Download(ctx, 0, azfile.CountToEnd, false)
 	c.Assert(err, chk.IsNil)
 	_, err = fileURL.Delete(ctx)
 	c.Assert(err, chk.IsNil)
@@ -475,7 +475,7 @@ func (f *FileURLSuite) TestServiceSASFileSAS(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	_, err = fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte(s)))
 	c.Assert(err, chk.IsNil)
-	_, err = fileURL.Download(ctx, 0, 0, false)
+	_, err = fileURL.Download(ctx, 0, azfile.CountToEnd, false)
 	c.Assert(err, chk.IsNil)
 	_, err = fileURL.Delete(ctx)
 	c.Assert(err, chk.IsNil)

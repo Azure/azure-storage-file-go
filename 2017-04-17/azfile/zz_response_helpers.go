@@ -77,9 +77,9 @@ type DownloadResponse struct {
 	dr *downloadResponse
 
 	// Fields need for retry.
-	ctx     context.Context
-	f       FileURL
-	getInfo GetInfo
+	ctx  context.Context
+	f    FileURL
+	info HTTPGetterInfo
 }
 
 // Response returns the raw HTTP response object.
