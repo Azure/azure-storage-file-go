@@ -17,7 +17,7 @@ type FileSASSignatureValues struct {
 	IPRange            IPRange     `param:"sip"`
 	Identifier         string      `param:"si"`
 	ShareName          string
-	FilePath           string // Ex: "directory/FileName". Use "" to create a Share SAS.
+	FilePath           string // Ex: "directory/FileName" or "FileName". Use "" to create a Share SAS.
 	CacheControl       string // rscc
 	ContentDisposition string // rscd
 	ContentEncoding    string // rsce
