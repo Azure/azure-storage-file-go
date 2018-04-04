@@ -23,7 +23,7 @@ func delShare(c *chk.C, share azfile.ShareURL, option azfile.DeleteSnapshotsOpti
 	c.Assert(resp.Response().StatusCode, chk.Equals, 202)
 }
 
-func (s *ShareURLSuite) TestCreateRootDirectoryURL(c *chk.C) {
+func (s *ShareURLSuite) TestShareCreateRootDirectoryURL(c *chk.C) {
 	fsu := getFSU()
 	testURL := fsu.NewShareURL(sharePrefix).NewRootDirectoryURL()
 
@@ -32,13 +32,18 @@ func (s *ShareURLSuite) TestCreateRootDirectoryURL(c *chk.C) {
 	c.Assert(temp.String(), chk.Equals, correctURL)
 }
 
-func (s *ShareURLSuite) TestCreateDirectoryURL(c *chk.C) {
+func (s *ShareURLSuite) TestShareCreateDirectoryURL(c *chk.C) {
 	fsu := getFSU()
 	testURL := fsu.NewShareURL(sharePrefix).NewDirectoryURL(directoryPrefix)
 
 	correctURL := "https://" + os.Getenv("ACCOUNT_NAME") + ".file.core.windows.net/" + sharePrefix + "/" + directoryPrefix
 	temp := testURL.URL()
 	c.Assert(temp.String(), chk.Equals, correctURL)
+	c.Assert(testURL.String(), chk.Equals, correctURL)
+}
+
+func (s *ShareURLSuite) TestShareNewShareURLNegative(c *chk.C) {
+	c.Assert(func() { azfile.NewShareURL(url.URL{}, nil) }, chk.Panics, "p can't be nil")
 }
 
 func (s *ShareURLSuite) TestShareWithNewPipeline(c *chk.C) {
@@ -212,10 +217,18 @@ func (s *ShareURLSuite) TestShareGetSetPermissionsNonDefault(c *chk.C) {
 
 	now := time.Now().UTC().Truncate(10000 * time.Millisecond) // Enough resolution
 	expiryTIme := now.Add(5 * time.Minute).UTC()
-	permission := azfile.AccessPolicyPermission{
-		Read:  true,
-		Write: true,
-	}.String()
+	pS := azfile.AccessPolicyPermission{
+		Read:   true,
+		Write:  true,
+		Create: true,
+		Delete: true,
+		List:   true,
+	}
+	pS2 := &azfile.AccessPolicyPermission{}
+	pS2.Parse("ldcwr")
+	c.Assert(*pS2, chk.DeepEquals, pS)
+
+	permission := pS.String()
 
 	permissions := []azfile.SignedIdentifier{
 		{
@@ -620,7 +633,7 @@ func (s *ShareURLSuite) TestShareCreateSnapshotNonDefault(c *chk.C) {
 
 }
 
-func (s *ShareURLSuite) TestShareSnapshotDefault(c *chk.C) {
+func (s *ShareURLSuite) TestShareCreateSnapshotDefault(c *chk.C) {
 	credential, accountName := getCredential()
 
 	ctx := context.Background()
@@ -670,9 +683,12 @@ func (s *ShareURLSuite) TestShareSnapshotDefault(c *chk.C) {
 	// Do restore.
 	_, err = fileURL.StartCopy(ctx, sourceURL, azfile.Metadata{})
 	c.Assert(err, chk.IsNil)
+
+	_, err = shareURL.WithSnapshot(snapshotShare.Snapshot()).Delete(ctx, azfile.DeleteSnapshotsOptionNone)
+	c.Assert(err, chk.IsNil)
 }
 
-func (s *ShareURLSuite) TestShareCreateShareNegative(c *chk.C) {
+func (s *ShareURLSuite) TestShareCreateSnapshotNegativeShareNotExist(c *chk.C) {
 	fsu := getFSU()
 	share, _ := getShareURL(c, fsu)
 
@@ -680,3 +696,75 @@ func (s *ShareURLSuite) TestShareCreateShareNegative(c *chk.C) {
 	c.Assert(err, chk.NotNil)
 	validateStorageError(c, err, azfile.ServiceCodeShareNotFound)
 }
+
+func (s *ShareURLSuite) TestShareCreateSnapshotNegativeMetadataInvalid(c *chk.C) {
+	fsu := getFSU()
+	share, _ := createNewShare(c, fsu)
+	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
+
+	_, err := share.CreateSnapshot(ctx, azfile.Metadata{"Invalid Field!": "value"})
+	c.Assert(err, chk.NotNil)
+	c.Assert(strings.Contains(err.Error(), validationErrorSubstring), chk.Equals, true)
+}
+
+// Note behavior is different from blob's snapshot.
+func (s *ShareURLSuite) TestShareCreateSnapshotNegativeSnapshotOfSnapshot(c *chk.C) {
+	fsu := getFSU()
+	share, _ := createNewShare(c, fsu)
+	defer delShare(c, share, azfile.DeleteSnapshotsOptionInclude)
+
+	snapshotURL := share.WithSnapshot(time.Now().UTC().String())
+	cResp, err := snapshotURL.CreateSnapshot(ctx, nil)
+	c.Assert(err, chk.IsNil) //TODO: this would not fail, snapshot would be ignored.
+
+	snapshotRecursiveURL := share.WithSnapshot(cResp.Snapshot())
+	_, err = snapshotRecursiveURL.CreateSnapshot(ctx, nil)
+	c.Assert(err, chk.IsNil) //TODO: this would not fail, snapshot would be ignored.
+}
+
+func validateShareDeleted(c *chk.C, shareURL azfile.ShareURL) {
+	_, err := shareURL.GetProperties(ctx)
+	validateStorageError(c, err, azfile.ServiceCodeShareNotFound)
+}
+
+func (s *ShareURLSuite) TestShareDeleteSnapshot(c *chk.C) {
+	fsu := getFSU()
+	share, _ := createNewShare(c, fsu)
+	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
+
+	resp, err := share.CreateSnapshot(ctx, nil)
+	c.Assert(err, chk.IsNil)
+	snapshotURL := share.WithSnapshot(resp.Snapshot())
+
+	_, err = snapshotURL.Delete(ctx, azfile.DeleteSnapshotsOptionNone)
+	c.Assert(err, chk.IsNil)
+
+	validateShareDeleted(c, snapshotURL)
+}
+
+func (s *ShareURLSuite) TestShareDeleteSnapshotsInclude(c *chk.C) {
+	fsu := getFSU()
+	share, shareName := createNewShare(c, fsu)
+	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
+
+	_, err := share.CreateSnapshot(ctx, nil)
+	c.Assert(err, chk.IsNil)
+	_, err = share.Delete(ctx, azfile.DeleteSnapshotsOptionInclude)
+	c.Assert(err, chk.IsNil)
+
+	lResp, _ := fsu.ListSharesSegment(ctx, azfile.Marker{}, azfile.ListSharesOptions{Detail: azfile.ListSharesDetail{Snapshots: true}, Prefix: shareName})
+	c.Assert(lResp.Shares, chk.HasLen, 0)
+}
+
+func (s *ShareURLSuite) TestShareDeleteSnapshotsNoneWithSnapshots(c *chk.C) {
+	fsu := getFSU()
+	share, _ := createNewShare(c, fsu)
+	defer delShare(c, share, azfile.DeleteSnapshotsOptionInclude)
+
+	_, err := share.CreateSnapshot(ctx, nil)
+	c.Assert(err, chk.IsNil)
+	_, err = share.Delete(ctx, azfile.DeleteSnapshotsOptionNone)
+	validateStorageError(c, err, azfile.ServiceCodeShareHasSnapshots)
+}
+
+// TODO: si with list for file SAS, check if it can work properly for other operations.
