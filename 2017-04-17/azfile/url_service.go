@@ -141,10 +141,10 @@ func (ssp *StorageServiceProperties) toFsp() *FileServiceProperties {
 // This method is added considering protocol layer's swagger unification purpose.
 func (m *Metrics) toMp() MetricProperties {
 	mp := MetricProperties{}
-	if m.Enabled { //TODO: Temporaily work around Autorest issue
+	if m.Enabled {
 		mp.MetricEnabled = true
 		mp.IncludeAPIs = *m.IncludeAPIs
-		if m.RetentionPolicy != nil && m.RetentionPolicy.Enabled { //TODO: Temporaily work around Autorest issue
+		if m.RetentionPolicy != nil && m.RetentionPolicy.Enabled {
 			mp.RetentionPolicyEnabled = true
 			mp.RetentionDays = *m.RetentionPolicy.Days
 		}
@@ -176,7 +176,7 @@ func (mp MetricProperties) toM() *Metrics {
 		RetentionPolicy: &RetentionPolicy{}} // Note: Version and RetentionPolicy are actually mandatory.
 
 	if mp.MetricEnabled {
-		m.Enabled = true //TODO: Temporaily work around Autorest issue
+		m.Enabled = true
 		m.IncludeAPIs = &mp.IncludeAPIs
 		if mp.RetentionPolicyEnabled {
 			m.RetentionPolicy.Enabled = true
