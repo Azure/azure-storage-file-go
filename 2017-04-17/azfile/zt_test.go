@@ -2,6 +2,8 @@ package azfile_test
 
 import (
 	"context"
+	"crypto/md5"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -25,10 +27,13 @@ const (
 	directoryPrefix          = "gotestdirectory"
 	filePrefix               = "gotestfile"
 	validationErrorSubstring = "validation failed"
-	//checkedVersion  = "0.1"
+	fileDefaultData          = "file default data"
 )
 
 var ctx = context.Background()
+var basicHeaders = azfile.FileHTTPHeaders{ContentType: "my_type", ContentDisposition: "my_disposition",
+	CacheControl: "control", ContentMD5: md5.Sum([]byte("")), ContentLanguage: "my_language", ContentEncoding: "my_encoding"}
+var basicMetadata = azfile.Metadata{"foo": "bar"}
 
 func getAccountAndKey() (string, string) {
 	name := os.Getenv("ACCOUNT_NAME")
@@ -47,6 +52,19 @@ func getFSU() azfile.ServiceURL {
 	credential := azfile.NewSharedKeyCredential(name, key)
 	pipeline := azfile.NewPipeline(credential, azfile.PipelineOptions{})
 	return azfile.NewServiceURL(*u, pipeline)
+}
+
+func getAlternateFSU() (azfile.ServiceURL, error) {
+	secondaryAccountName, secondaryAccountKey := os.Getenv("SECONDARY_ACCOUNT_NAME"), os.Getenv("SECONDARY_ACCOUNT_KEY")
+	if secondaryAccountName == "" || secondaryAccountKey == "" {
+		return azfile.ServiceURL{}, errors.New("SECONDARY_ACCOUNT_NAME and/or SECONDARY_ACCOUNT_KEY environment variables not specified.")
+	}
+	fsURL, _ := url.Parse("https://" + secondaryAccountName + ".file.core.windows.net/")
+
+	credentials := azfile.NewSharedKeyCredential(secondaryAccountName, secondaryAccountKey)
+	pipeline := azfile.NewPipeline(credentials, azfile.PipelineOptions{ /*Log: pipeline.NewLogWrapper(pipeline.LogInfo, log.New(os.Stderr, "", log.LstdFlags))*/ })
+
+	return azfile.NewServiceURL(*fsURL, pipeline), nil
 }
 
 func getCredential() (*azfile.SharedKeyCredential, string) {
@@ -156,11 +174,11 @@ func createNewDirectoryWithPrefix(c *chk.C, parentDirectory azfile.DirectoryURL,
 	return dir, name
 }
 
-func createNewFileWithPrefix(c *chk.C, dir azfile.DirectoryURL, prefix string) (file azfile.FileURL, name string) {
+func createNewFileWithPrefix(c *chk.C, dir azfile.DirectoryURL, prefix string, size int64) (file azfile.FileURL, name string) {
 	name = generateName(prefix)
 	file = dir.NewFileURL(name)
 
-	cResp, err := file.Create(ctx, 0, azfile.FileHTTPHeaders{}, nil)
+	cResp, err := file.Create(ctx, size, azfile.FileHTTPHeaders{}, nil)
 	c.Assert(err, chk.IsNil)
 	c.Assert(cResp.StatusCode(), chk.Equals, 201)
 	return file, name
@@ -193,6 +211,22 @@ func createNewFileFromShare(c *chk.C, share azfile.ShareURL, fileSize int64) (fi
 	cResp, err := file.Create(ctx, fileSize, azfile.FileHTTPHeaders{}, nil)
 	c.Assert(err, chk.IsNil)
 	c.Assert(cResp.StatusCode(), chk.Equals, 201)
+
+	return file, name
+}
+
+// This is a convenience method, No public API to create file URL from share now. This method uses share's root directory.
+func createNewFileFromShareWithDefaultData(c *chk.C, share azfile.ShareURL) (file azfile.FileURL, name string) {
+	dir := share.NewRootDirectoryURL()
+
+	file, name = getFileURLFromDirectory(c, dir)
+
+	cResp, err := file.Create(ctx, int64(len(fileDefaultData)), azfile.FileHTTPHeaders{}, nil)
+	c.Assert(err, chk.IsNil)
+	c.Assert(cResp.StatusCode(), chk.Equals, 201)
+
+	_, err = file.UploadRange(ctx, 0, strings.NewReader(fileDefaultData))
+	c.Assert(err, chk.IsNil)
 
 	return file, name
 }
