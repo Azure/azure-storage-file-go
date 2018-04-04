@@ -17,8 +17,8 @@ const (
 	// FileMaxUploadRangeBytes indicates the maximum number of bytes that can be sent in a call to UploadRange.
 	FileMaxUploadRangeBytes = 4 * 1024 * 1024 // 4MB
 
-	// FileMaxSize indicates the maxiumum file size.
-	FileMaxSize = 1 * 1024 * 1024 * 1024 * 1024 // 1TB
+	// FileMaxSizeInBytes indicates the maxiumum file size, in bytes.
+	FileMaxSizeInBytes = 1 * 1024 * 1024 * 1024 * 1024 // 1TB
 )
 
 // A FileURL represents a URL to an Azure Storage file.
@@ -48,9 +48,6 @@ func (f FileURL) String() string {
 
 // WithPipeline creates a new FileURL object identical to the source but with the specified request policy pipeline.
 func (f FileURL) WithPipeline(p pipeline.Pipeline) FileURL {
-	if p == nil {
-		panic("p can't be nil")
-	}
 	return NewFileURL(f.fileClient.URL(), p)
 }
 
@@ -65,7 +62,7 @@ func (f FileURL) WithSnapshot(shareSnapshot string) FileURL {
 // Create creates a new file or replaces a file. Note that this method only initializes the file.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/create-file.
 func (f FileURL) Create(ctx context.Context, size int64, h FileHTTPHeaders, metadata Metadata) (*FileCreateResponse, error) {
-	return f.fileClient.Create(ctx, size, fileType, nil,
+	return f.fileClient.Create(ctx, size, nil,
 		&h.ContentType, &h.ContentEncoding, &h.ContentLanguage, &h.CacheControl,
 		h.contentMD5Pointer(), &h.ContentDisposition, metadata)
 }
@@ -79,7 +76,7 @@ func (f FileURL) StartCopy(ctx context.Context, source url.URL, metadata Metadat
 // AbortCopy stops a pending copy that was previously started and leaves a destination file with 0 length and metadata.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/abort-copy-file.
 func (f FileURL) AbortCopy(ctx context.Context, copyID string) (*FileAbortCopyResponse, error) {
-	return f.fileClient.AbortCopy(ctx, copyID, "abort", nil)
+	return f.fileClient.AbortCopy(ctx, copyID, nil)
 }
 
 // toRange makes range string adhere to REST API.
@@ -190,22 +187,6 @@ func (f FileURL) Resize(ctx context.Context, length int64) (*FileSetHTTPHeadersR
 		&length, nil, nil, nil, nil, nil, nil)
 }
 
-// getStreamSize gets the size of current stream in bytes.
-// When there is error, -1 would be returned for size. Please check error for error details.
-func getStreamSize(s io.Seeker) (int64, error) {
-	size, err := s.Seek(0, io.SeekEnd)
-	if err != nil {
-		return -1, err
-	}
-
-	_, err = s.Seek(0, io.SeekStart)
-	if err != nil {
-		return -1, err
-	}
-
-	return size, nil
-}
-
 // UploadRange writes bytes to a file.
 // offset indiciates the offset at which to begin writing, in bytes.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/put-range.
@@ -217,20 +198,19 @@ func (f FileURL) UploadRange(ctx context.Context, offset int64, body io.ReadSeek
 		panic("body must not be nil")
 	}
 
-	validateSeekableStreamAt0(body)
-
-	size, err := getStreamSize(body)
-	if err != nil {
-		panic(err)
+	count := validateSeekableStreamAt0AndGetCount(body)
+	if count == 0 {
+		panic("body must contain readable data whose size is > 0")
 	}
 
 	// TransactionalContentMD5 isn't supported in convenience layer.
-	return f.fileClient.UploadRange(ctx, *toRange(offset, size), FileRangeWriteUpdate, size, body, nil, nil)
+	return f.fileClient.UploadRange(ctx, *toRange(offset, count), FileRangeWriteUpdate, count, body, nil, nil)
 }
 
 // ClearRange clears the specified range and releases the space used in storage for that range.
-// The range composed is from offset to offset+count-1.
-// If the range specified by offset and count is not 512-byte aligned, the operation will write zeros to
+// offset means the start offset of the range to clear.
+// count means count of bytes to clean, it cannot be CountToEnd (-1), and must be explictly specified.
+// If the range specified is not 512-byte aligned, the operation will write zeros to
 // the start or end of the range that is not 512-byte aligned and free the rest of the range inside that is 512-byte aligned.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/put-range.
 func (f FileURL) ClearRange(ctx context.Context, offset int64, count int64) (*FileUploadRangeResponse, error) {
@@ -238,7 +218,7 @@ func (f FileURL) ClearRange(ctx context.Context, offset int64, count int64) (*Fi
 		panic("offset must be >= 0")
 	}
 	if count <= 0 {
-		panic("count must be > 0")
+		panic("count cannot be CountToEnd, and must be > 0")
 	}
 
 	return f.fileClient.UploadRange(ctx, *toRange(offset, count), FileRangeWriteClear, 0, nil, nil, nil)
