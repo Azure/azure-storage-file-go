@@ -7,10 +7,11 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"github.com/Azure/azure-pipeline-go/pipeline"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+
+	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
 // directoryClient is the client for the Directory methods of the Azfile service.
@@ -76,6 +77,7 @@ func (client directoryClient) createResponder(resp pipeline.Response) (pipeline.
 	if resp == nil {
 		return nil, err
 	}
+	resp.Response().Body.Close()
 	return &DirectoryCreateResponse{rawResponse: resp.Response()}, err
 }
 
@@ -124,6 +126,7 @@ func (client directoryClient) deleteResponder(resp pipeline.Response) (pipeline.
 	if resp == nil {
 		return nil, err
 	}
+	resp.Response().Body.Close()
 	return &DirectoryDeleteResponse{rawResponse: resp.Response()}, err
 }
 
@@ -177,22 +180,11 @@ func (client directoryClient) getPropertiesResponder(resp pipeline.Response) (pi
 	if resp == nil {
 		return nil, err
 	}
+	resp.Response().Body.Close()
 	return &DirectoryGetPropertiesResponse{rawResponse: resp.Response()}, err
 }
 
-// ListFilesAndDirectoriesSegment returns a list of files or directories under the specified share or directory. It
-// lists the contents only for a single level of the directory hierarchy.
-//
-// prefix is filters the results to return only entries whose name begins with the specified prefix. sharesnapshot is
-// the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot to query. marker
-// is a string value that identifies the portion of the list to be returned with the next list operation. The operation
-// returns a marker value within the response body if the list returned was not complete. The marker value may then be
-// used in a subsequent call to request the next set of list items. The marker value is opaque to the client.
-// maxresults is specifies the maximum number of entries to return. If the request does not specify maxresults, or
-// specifies a value greater than 5,000, the server will return up to 5,000 items. timeout is the timeout parameter is
-// expressed in seconds. For more information, see <a
-// href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
-// Timeouts for File Service Operations.</a>
+// ListFilesAndDirectoriesSegment2 is the workaround
 func (client directoryClient) ListFilesAndDirectoriesSegment(ctx context.Context, prefix *string, sharesnapshot *string, marker *string, maxresults *int32, timeout *int32) (*ListFilesAndDirectoriesSegmentResponse, error) {
 	if err := validate([]validation{
 		{targetValue: maxresults,
@@ -212,6 +204,40 @@ func (client directoryClient) ListFilesAndDirectoriesSegment(ctx context.Context
 		return nil, err
 	}
 	return resp.(*ListFilesAndDirectoriesSegmentResponse), err
+}
+
+// ListFilesAndDirectoriesSegment returns a list of files or directories under the specified share or directory. It
+// lists the contents only for a single level of the directory hierarchy.
+//
+// prefix is filters the results to return only entries whose name begins with the specified prefix. sharesnapshot is
+// the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot to query. marker
+// is a string value that identifies the portion of the list to be returned with the next list operation. The operation
+// returns a marker value within the response body if the list returned was not complete. The marker value may then be
+// used in a subsequent call to request the next set of list items. The marker value is opaque to the client.
+// maxresults is specifies the maximum number of entries to return. If the request does not specify maxresults, or
+// specifies a value greater than 5,000, the server will return up to 5,000 items. timeout is the timeout parameter is
+// expressed in seconds. For more information, see <a
+// href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
+// Timeouts for File Service Operations.</a>
+func (client directoryClient) ListFilesAndDirectoriesSegmentAutoRest(ctx context.Context, prefix *string, sharesnapshot *string, marker *string, maxresults *int32, timeout *int32) (*listFilesAndDirectoriesSegmentResponse, error) {
+	if err := validate([]validation{
+		{targetValue: maxresults,
+			constraints: []constraint{{target: "maxresults", name: null, rule: false,
+				chain: []constraint{{target: "maxresults", name: inclusiveMinimum, rule: 1, chain: nil}}}}},
+		{targetValue: timeout,
+			constraints: []constraint{{target: "timeout", name: null, rule: false,
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+		return nil, err
+	}
+	req, err := client.listFilesAndDirectoriesSegmentPreparer(prefix, sharesnapshot, marker, maxresults, timeout)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.listFilesAndDirectoriesSegmentResponder}, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*listFilesAndDirectoriesSegmentResponse), err
 }
 
 // listFilesAndDirectoriesSegmentPreparer prepares the ListFilesAndDirectoriesSegment request.
@@ -243,13 +269,37 @@ func (client directoryClient) listFilesAndDirectoriesSegmentPreparer(prefix *str
 	return req, nil
 }
 
-// listFilesAndDirectoriesSegmentResponder handles the response to the ListFilesAndDirectoriesSegment request.
+// listFilesAndDirectoriesSegmentResponder2 is the workaround handles the response to the ListFilesAndDirectoriesSegment request.
 func (client directoryClient) listFilesAndDirectoriesSegmentResponder(resp pipeline.Response) (pipeline.Response, error) {
 	err := validateResponse(resp, http.StatusOK)
 	if resp == nil {
 		return nil, err
 	}
 	result := &ListFilesAndDirectoriesSegmentResponse{rawResponse: resp.Response()}
+	if err != nil {
+		return result, err
+	}
+	defer resp.Response().Body.Close()
+	b, err := ioutil.ReadAll(resp.Response().Body)
+	if err != nil {
+		return result, NewResponseError(err, resp.Response(), "failed to read response body")
+	}
+	if len(b) > 0 {
+		err = xml.Unmarshal(b, result)
+		if err != nil {
+			return result, NewResponseError(err, resp.Response(), "failed to unmarshal response body")
+		}
+	}
+	return result, nil
+}
+
+// listFilesAndDirectoriesSegmentResponder handles the response to the ListFilesAndDirectoriesSegment request.
+func (client directoryClient) listFilesAndDirectoriesSegmentResponderAutoRest(resp pipeline.Response) (pipeline.Response, error) {
+	err := validateResponse(resp, http.StatusOK)
+	if resp == nil {
+		return nil, err
+	}
+	result := &listFilesAndDirectoriesSegmentResponse{rawResponse: resp.Response()}
 	if err != nil {
 		return result, err
 	}
@@ -321,5 +371,6 @@ func (client directoryClient) setMetadataResponder(resp pipeline.Response) (pipe
 	if resp == nil {
 		return nil, err
 	}
+	resp.Response().Body.Close()
 	return &DirectorySetMetadataResponse{rawResponse: resp.Response()}, err
 }

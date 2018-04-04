@@ -60,8 +60,6 @@ func validate(m []validation) error {
 		for _, constraint := range item.constraints {
 			var err error
 			switch v.Kind() {
-			case reflect.Bool:
-				err = validateBool()
 			case reflect.Ptr:
 				err = validatePtr(v, constraint)
 			case reflect.String:
@@ -82,11 +80,6 @@ func validate(m []validation) error {
 			}
 		}
 	}
-	return nil
-}
-
-// TODO: Temporarily use this as workaround for AutoRest code generating issue.
-func validateBool() error {
 	return nil
 }
 

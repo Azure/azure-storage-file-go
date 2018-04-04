@@ -85,6 +85,7 @@ func (client shareClient) createResponder(resp pipeline.Response) (pipeline.Resp
 	if resp == nil {
 		return nil, err
 	}
+	resp.Response().Body.Close()
 	return &ShareCreateResponse{rawResponse: resp.Response()}, err
 }
 
@@ -142,6 +143,7 @@ func (client shareClient) createSnapshotResponder(resp pipeline.Response) (pipel
 	if resp == nil {
 		return nil, err
 	}
+	resp.Response().Body.Close()
 	return &ShareCreateSnapshotResponse{rawResponse: resp.Response()}, err
 }
 
@@ -199,6 +201,7 @@ func (client shareClient) deleteResponder(resp pipeline.Response) (pipeline.Resp
 	if resp == nil {
 		return nil, err
 	}
+	resp.Response().Body.Close()
 	return &ShareDeleteResponse{rawResponse: resp.Response()}, err
 }
 
@@ -316,6 +319,7 @@ func (client shareClient) getPropertiesResponder(resp pipeline.Response) (pipeli
 	if resp == nil {
 		return nil, err
 	}
+	resp.Response().Body.Close()
 	return &ShareGetPropertiesResponse{rawResponse: resp.Response()}, err
 }
 
@@ -439,6 +443,7 @@ func (client shareClient) setAccessPolicyResponder(resp pipeline.Response) (pipe
 	if resp == nil {
 		return nil, err
 	}
+	resp.Response().Body.Close()
 	return &ShareSetAccessPolicyResponse{rawResponse: resp.Response()}, err
 }
 
@@ -496,6 +501,7 @@ func (client shareClient) setMetadataResponder(resp pipeline.Response) (pipeline
 	if resp == nil {
 		return nil, err
 	}
+	resp.Response().Body.Close()
 	return &ShareSetMetadataResponse{rawResponse: resp.Response()}, err
 }
 
@@ -551,5 +557,6 @@ func (client shareClient) setQuotaResponder(resp pipeline.Response) (pipeline.Re
 	if resp == nil {
 		return nil, err
 	}
+	resp.Response().Body.Close()
 	return &ShareSetQuotaResponse{rawResponse: resp.Response()}, err
 }
