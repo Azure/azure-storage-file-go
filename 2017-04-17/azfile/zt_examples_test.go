@@ -96,7 +96,7 @@ func Example() {
 	// New a reference to a directory with name DemoDir in share, and create the directory.
 	directoryDemoURL := shareURL.NewDirectoryURL("DemoDir")
 	_, err = directoryDemoURL.Create(ctx, Metadata{})
-	if err != nil {
+	if err != nil && err.(StorageError) != nil && err.(StorageError).ServiceCode() != ServiceCodeResourceAlreadyExists {
 		log.Fatal(err)
 	}
 
@@ -902,13 +902,12 @@ func ExampleUploadFileToAzureFile() {
 
 	ctx := context.Background() // This example uses a never-expiring context
 
-	// Trigger parallel upload with Parallelism set to 3. When Overwrite is set to true, if there is an Azure file
+	// Trigger parallel upload with Parallelism set to 3. Note if there is an Azure file
 	// with same name exists, UploadFileToAzureFile will overwrite the existing Azure file with new content,
 	// and set specified FileHTTPHeaders and Metadata.
 	err = UploadFileToAzureFile(ctx, file, fileURL,
 		UploadToAzureFileOptions{
 			Parallelism: 3,
-			Overwrite:   true,
 			FileHTTPHeaders: FileHTTPHeaders{
 				CacheControl: "no-transform",
 			},
