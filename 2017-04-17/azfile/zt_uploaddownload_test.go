@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"crypto/rand"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -27,6 +28,28 @@ const (
 	directoryPrefix = "gotestdirectory"
 	filePrefix      = "gotestfile"
 )
+
+func createNewLocalFile(c *chk.C, fileSizeInByte int64) (*os.File, []byte) {
+	if fileSizeInByte < 0 {
+		panic("fileSizeInByte must >=0")
+	}
+
+	name := generateFileName()
+
+	f, err := os.Create(name)
+	c.Assert(err, chk.IsNil)
+
+	bigBuff := make([]byte, fileSizeInByte)
+	if fileSizeInByte > 0 {
+		_, err = rand.Read(bigBuff)
+		c.Assert(err, chk.IsNil)
+
+		_, err = f.Write(bigBuff)
+		c.Assert(err, chk.IsNil)
+	}
+
+	return f, bigBuff
+}
 
 func delFile(c *chk.C, file FileURL) {
 	resp, err := file.Delete(context.Background())
@@ -52,8 +75,6 @@ func getRandomDataAndReader(n int) (*bytes.Reader, []byte) {
 	}
 	return bytes.NewReader(data), data
 }
-
-// TODO: getRandomWithMD5
 
 func createNewShare(c *chk.C, fsu ServiceURL) (share ShareURL, name string) {
 	share, name = getShareURL(c, fsu)
@@ -99,6 +120,14 @@ func generateShareName() string {
 func getFileURLFromDirectory(c *chk.C, directory DirectoryURL) (file FileURL, name string) {
 	name = generateFileName()
 	file = directory.NewFileURL(name)
+
+	return file, name
+}
+
+// This is a convenience method, No public API to create file URL from share now. This method uses share's root directory.
+func getFileURLFromShare(c *chk.C, share ShareURL) (file FileURL, name string) {
+	name = generateFileName()
+	file = share.NewRootDirectoryURL().NewFileURL(name)
 
 	return file, name
 }
@@ -361,15 +390,280 @@ func (ud *uploadDownloadSuite) TestDownloadNegativeError(c *chk.C) {
 // End testings for FileURL Download
 
 // Following are testings for highlevel APIs.
-func (ud *uploadDownloadSuite) TestHighLevelUploadDownloadBasic(c *chk.C) {
+func (ud *uploadDownloadSuite) TestUploadDownloadBufferParallelNonDefault(c *chk.C) {
 	fsu := getFSU()
 	share, _ := createNewShare(c, fsu)
 	defer delShare(c, share, DeleteSnapshotsOptionNone)
 
 	fileSize := 2048 //2048 bytes
+	fileSize2 := 2048 * 3
 
 	file, _ := createNewFileFromShare(c, share, int64(fileSize))
 	defer delFile(c, file)
+
+	ctx = context.Background()
+	_, srcBytes := getRandomDataAndReader(fileSize)
+	_, srcBytes2 := getRandomDataAndReader(fileSize2)
+
+	md5Str := "MDAwMDAwMDA="
+	var testMd5 [md5.Size]byte
+	copy(testMd5[:], md5Str)
+
+	md5Str2 := "MDAwMDAwMDAAAA="
+	var testMd52 [md5.Size]byte
+	copy(testMd52[:], md5Str2)
+
+	headers := FileHTTPHeaders{
+		ContentType:        "application/octet-stream",
+		ContentEncoding:    "ContentEncoding",
+		ContentLanguage:    "tr,en",
+		ContentMD5:         testMd5,
+		CacheControl:       "no-transform",
+		ContentDisposition: "attachment",
+	}
+
+	metadata := Metadata{
+		"foo": "foovalue",
+		"bar": "barvalue",
+	}
+
+	headers2 := FileHTTPHeaders{
+		ContentType:        "test",
+		ContentEncoding:    "test",
+		ContentLanguage:    "test",
+		ContentMD5:         testMd52,
+		CacheControl:       "test",
+		ContentDisposition: "test",
+	}
+
+	metadata2 := Metadata{
+		"overwrite": "overwrite",
+	}
+
+	err := UploadBufferToAzureFile(ctx, srcBytes, file, UploadToAzureFileOptions{FileHTTPHeaders: headers, Metadata: metadata})
+	c.Assert(err, chk.IsNil)
+
+	destBytes := make([]byte, fileSize)
+	resp, err := DownloadAzureFileToBuffer(ctx, file, destBytes, DownloadFromAzureFileOptions{})
+	c.Assert(err, chk.IsNil)
+	c.Assert(resp.ContentType(), chk.Equals, "application/octet-stream")
+	c.Assert(resp.ContentLength(), chk.Equals, int64(fileSize))
+	c.Assert(resp.ContentEncoding(), chk.Equals, "ContentEncoding")
+	c.Assert(resp.ContentLanguage(), chk.Equals, "tr,en")
+	c.Assert(resp.ContentMD5(), chk.Equals, testMd5)
+	c.Assert(resp.CacheControl(), chk.Equals, "no-transform")
+	c.Assert(resp.ContentDisposition(), chk.Equals, "attachment")
+	c.Assert(resp.NewMetadata(), chk.DeepEquals, metadata)
+
+	c.Assert(destBytes, chk.DeepEquals, srcBytes)
+
+	// Test overwrite scenario
+	err = UploadBufferToAzureFile(ctx, srcBytes2, file, UploadToAzureFileOptions{FileHTTPHeaders: headers2, Metadata: metadata2})
+	c.Assert(err, chk.IsNil)
+
+	destBytes2 := make([]byte, fileSize2)
+	resp2, err := DownloadAzureFileToBuffer(ctx, file, destBytes2, DownloadFromAzureFileOptions{})
+	c.Assert(err, chk.IsNil)
+	c.Assert(resp2.ContentType(), chk.Equals, "test")
+	c.Assert(resp2.ContentLength(), chk.Equals, int64(fileSize2))
+	c.Assert(resp2.ContentEncoding(), chk.Equals, "test")
+	c.Assert(resp2.ContentLanguage(), chk.Equals, "test")
+	c.Assert(resp2.ContentMD5(), chk.Equals, testMd52)
+	c.Assert(resp2.CacheControl(), chk.Equals, "test")
+	c.Assert(resp2.ContentDisposition(), chk.Equals, "test")
+	c.Assert(resp2.NewMetadata(), chk.DeepEquals, metadata2)
+
+	c.Assert(destBytes2, chk.DeepEquals, srcBytes2)
+}
+
+// Customzied range size, parallel count and progress update.
+func (ud *uploadDownloadSuite) TestUploadDownloadBufferParallelCheckProgress(c *chk.C) {
+	fsu := getFSU()
+	share, _ := createNewShare(c, fsu)
+	defer delShare(c, share, DeleteSnapshotsOptionNone)
+
+	fileSize := 4 * 1024 * 1024 //4MB
+	blockSize := 512 * 1024     // 512KB
+
+	file, _ := createNewFileFromShare(c, share, int64(fileSize))
+	defer delFile(c, file)
+
+	ctx = context.Background()
+	_, srcBytes := getRandomDataAndReader(fileSize)
+
+	uLogBuffer := bytes.Buffer{}
+	dLogBuffer := bytes.Buffer{}
+
+	err := UploadBufferToAzureFile(
+		ctx, srcBytes, file,
+		UploadToAzureFileOptions{
+			RangeSize:   int64(blockSize),
+			Parallelism: 3,
+			Progress: func(b int64) {
+				fmt.Fprintf(&uLogBuffer, "Write: %d", b)
+			},
+		})
+	c.Assert(err, chk.IsNil)
+	c.Assert(strings.Contains(uLogBuffer.String(), fmt.Sprintf("Write: %d", fileSize)), chk.Equals, true)
+
+	destBytes := make([]byte, fileSize)
+	_, err = DownloadAzureFileToBuffer(
+		ctx, file, destBytes,
+		DownloadFromAzureFileOptions{
+			RangeSize:   int64(blockSize),
+			Parallelism: 3,
+			Progress: func(b int64) {
+				fmt.Fprintf(&dLogBuffer, "Write: %d", b)
+			},
+		})
+	c.Assert(err, chk.IsNil)
+	c.Assert(strings.Contains(dLogBuffer.String(), fmt.Sprintf("Write: %d", fileSize)), chk.Equals, true)
+
+	c.Assert(destBytes, chk.DeepEquals, srcBytes)
+}
+
+func validateFileExists(c *chk.C, fileURL FileURL) {
+	_, err := fileURL.GetProperties(ctx)
+	c.Assert(err, chk.IsNil)
+}
+
+func (ud *uploadDownloadSuite) TestUploadDownloadFileParallelDefaultEmpty(c *chk.C) {
+	testUploadDownloadFileParallelDefault(c, 0)
+}
+
+func (ud *uploadDownloadSuite) TestUploadDownloadFileParallelDefault1Byte(c *chk.C) {
+	testUploadDownloadFileParallelDefault(c, 1)
+}
+
+func (ud *uploadDownloadSuite) TestUploadDownloadFileParallelDefaultBlockSizeLess(c *chk.C) {
+	testUploadDownloadFileParallelDefault(c, FileMaxUploadRangeBytes-1)
+}
+
+func (ud *uploadDownloadSuite) TestUploadDownloadFileParallelDefaultBlockSize(c *chk.C) {
+	testUploadDownloadFileParallelDefault(c, FileMaxUploadRangeBytes)
+}
+
+func (ud *uploadDownloadSuite) TestUploadDownloadFileParallelDefaultBlockSizeMore(c *chk.C) {
+	testUploadDownloadFileParallelDefault(c, FileMaxUploadRangeBytes+1)
+}
+
+func (ud *uploadDownloadSuite) TestUploadDownloadFileParallelDefaultBlockSizeMulti(c *chk.C) {
+	testUploadDownloadFileParallelDefault(c, FileMaxUploadRangeBytes*10+1)
+}
+
+func testUploadDownloadFileParallelDefault(c *chk.C, fileSize int64) {
+	fsu := getFSU()
+	share, _ := createNewShare(c, fsu)
+	defer delShare(c, share, DeleteSnapshotsOptionNone)
+
+	fileURL, _ := getFileURLFromShare(c, share)
+
+	file, bytes := createNewLocalFile(c, fileSize)
+	defer func() {
+		file.Close()
+		os.Remove(file.Name())
+	}()
+
+	err := UploadFileToAzureFile(ctx, file, fileURL, UploadToAzureFileOptions{})
+	c.Assert(err, chk.IsNil)
+
+	validateFileExists(c, fileURL)
+
+	file2Name := generateFileName()
+	file2, err := os.Create(file2Name)
+	c.Assert(err, chk.IsNil)
+	resp, err := DownloadAzureFileToFile(ctx, fileURL, file2, DownloadFromAzureFileOptions{})
+	c.Assert(err, chk.IsNil)
+	c.Assert(resp.ETag(), chk.Not(chk.Equals), ETagNone)
+
+	defer func() {
+		file2.Close()
+		os.Remove(file2Name)
+	}()
+
+	// Check local file still exists
+	_, err = file2.Stat()
+	c.Assert(err, chk.IsNil)
+	c.Assert(os.IsNotExist(err), chk.Equals, false) // Actually equivalent
+
+	// Check bytes same
+	destBytes, err := ioutil.ReadFile(file2Name)
+	c.Assert(err, chk.IsNil)
+
+	c.Assert(bytes, chk.DeepEquals, destBytes)
+}
+
+func (ud *uploadDownloadSuite) TestUploadFileToAzureFileNegativeInvalidRangeSize(c *chk.C) {
+	_, srcBytes := getRandomDataAndReader(1)
+
+	fsu := getFSU()
+	shareURL, _ := getShareURL(c, fsu)
+	fileURL, _ := getFileURLFromShare(c, shareURL)
+
+	c.Assert(
+		func() { UploadBufferToAzureFile(ctx, srcBytes, fileURL, UploadToAzureFileOptions{RangeSize: -1}) },
+		chk.Panics,
+		"o.RangeSize must be >= 0 and <= 4194304, in bytes")
+}
+
+func (ud *uploadDownloadSuite) TestUploadFileToAzureFileNegativeInvalidRangeSize2(c *chk.C) {
+	_, srcBytes := getRandomDataAndReader(1)
+
+	fsu := getFSU()
+	shareURL, _ := getShareURL(c, fsu)
+	fileURL, _ := getFileURLFromShare(c, shareURL)
+
+	c.Assert(
+		func() {
+			UploadBufferToAzureFile(ctx, srcBytes, fileURL, UploadToAzureFileOptions{RangeSize: FileMaxUploadRangeBytes + 1})
+		},
+		chk.Panics,
+		"o.RangeSize must be >= 0 and <= 4194304, in bytes")
+}
+
+func (ud *uploadDownloadSuite) TestUploadFileToAzureFileNegativeInvalidLocalFile(c *chk.C) {
+	fsu := getFSU()
+	share, _ := createNewShare(c, fsu)
+	defer delShare(c, share, DeleteSnapshotsOptionNone)
+
+	fileURL, _ := getFileURLFromShare(c, share)
+
+	file, _ := createNewLocalFile(c, 0)
+
+	file.Close()
+	os.Remove(file.Name())
+
+	err := UploadFileToAzureFile(ctx, file, fileURL, UploadToAzureFileOptions{})
+	c.Assert(err, chk.NotNil)
+}
+
+func (ud *uploadDownloadSuite) TestDownloadAzureFileToFileNegativeInvalidLocalFile(c *chk.C) {
+	fsu := getFSU()
+	share, _ := createNewShare(c, fsu)
+	defer delShare(c, share, DeleteSnapshotsOptionNone)
+
+	fileURL, _ := createNewFileFromShare(c, share, 1)
+
+	c.Assert(func() { DownloadAzureFileToFile(ctx, fileURL, nil, DownloadFromAzureFileOptions{}) }, chk.Panics, "file should not be nil")
+}
+
+// Download Azure file to a larger existing file, which need overwrite and truncate
+func (ud *uploadDownloadSuite) TestDownloadFileParallelOverwriteLocalFile(c *chk.C) {
+	fsu := getFSU()
+	share, _ := createNewShare(c, fsu)
+	defer delShare(c, share, DeleteSnapshotsOptionNone)
+
+	fileSize := 2048 //2048 bytes
+	fileSize2 := 2048 * 3
+
+	fileURL, _ := createNewFileFromShare(c, share, int64(fileSize))
+	defer delFile(c, fileURL)
+
+	localFile, _ := createNewLocalFile(c, int64(fileSize2))
+	defer func() {
+		localFile.Close()
+		os.Remove(localFile.Name())
+	}()
 
 	ctx = context.Background()
 	_, srcBytes := getRandomDataAndReader(fileSize)
@@ -392,11 +686,10 @@ func (ud *uploadDownloadSuite) TestHighLevelUploadDownloadBasic(c *chk.C) {
 		"bar": "barvalue",
 	}
 
-	err := UploadBufferToAzureFile(ctx, srcBytes, file, UploadToAzureFileOptions{FileHTTPHeaders: headers, Metadata: metadata})
+	err := UploadBufferToAzureFile(ctx, srcBytes, fileURL, UploadToAzureFileOptions{FileHTTPHeaders: headers, Metadata: metadata})
 	c.Assert(err, chk.IsNil)
 
-	destBytes := make([]byte, fileSize)
-	resp, err := DownloadAzureFileToBuffer(ctx, file, destBytes, DownloadFromAzureFileOptions{})
+	resp, err := DownloadAzureFileToFile(ctx, fileURL, localFile, DownloadFromAzureFileOptions{})
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.ContentType(), chk.Equals, "application/octet-stream")
 	c.Assert(resp.ContentLength(), chk.Equals, int64(fileSize))
@@ -407,29 +700,9 @@ func (ud *uploadDownloadSuite) TestHighLevelUploadDownloadBasic(c *chk.C) {
 	c.Assert(resp.ContentDisposition(), chk.Equals, "attachment")
 	c.Assert(resp.NewMetadata(), chk.DeepEquals, metadata)
 
-	c.Assert(destBytes, chk.DeepEquals, srcBytes)
-}
-
-func (ud *uploadDownloadSuite) TestHighLevelUploadDownloadParallel(c *chk.C) {
-	fsu := getFSU()
-	share, _ := createNewShare(c, fsu)
-	defer delShare(c, share, DeleteSnapshotsOptionNone)
-
-	fileSize := 4 * 1024 * 1024 //4MB
-	blockSize := 512 * 1024     // 512KB
-
-	file, _ := createNewFileFromShare(c, share, int64(fileSize))
-	defer delFile(c, file)
-
-	ctx = context.Background()
-	_, srcBytes := getRandomDataAndReader(fileSize)
-
-	err := UploadBufferToAzureFile(ctx, srcBytes, file, UploadToAzureFileOptions{RangeSize: int64(blockSize), Parallelism: 3})
-	c.Assert(err, chk.IsNil)
-
-	destBytes := make([]byte, fileSize)
-	_, err = DownloadAzureFileToBuffer(ctx, file, destBytes, DownloadFromAzureFileOptions{RangeSize: int64(blockSize), Parallelism: 3})
-	c.Assert(err, chk.IsNil)
+	destBytes, err := ioutil.ReadFile(localFile.Name())
 
 	c.Assert(destBytes, chk.DeepEquals, srcBytes)
 }
+
+// TODO: test responseError in doBatchTransfer, which would cause cancel
