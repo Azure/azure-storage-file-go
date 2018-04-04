@@ -75,7 +75,11 @@ func (r *retryReaderSuite) TestRetryReaderReadWithRetry(c *chk.C) {
 		return &r, nil
 	}
 
-	retryReader := NewRetryReader(ctx, nil, HTTPGetterInfo{Offset: 0, Count: int64(byteCount)}, RetryReaderOptions{MaxRetryRequests: 2}, getter)
+	httpGetterInfo := HTTPGetterInfo{Offset: 0, Count: int64(byteCount)}
+	initResponse, err := getter(ctx, httpGetterInfo)
+	c.Assert(err, chk.IsNil)
+
+	retryReader := NewRetryReader(ctx, initResponse, httpGetterInfo, RetryReaderOptions{MaxRetryRequests: 1}, getter)
 
 	// should fail and succeed through retry
 	can := make([]byte, 1)
@@ -179,12 +183,24 @@ func (r *retryReaderSuite) TestRetryReaderReadNegativeNonRetriableError(c *chk.C
 }
 
 func (r *retryReaderSuite) TestRetryReaderNewRetryReaderDefaultNegativePanic(c *chk.C) {
+	// Check initialResponse
+	c.Assert(func() { _ = NewRetryReader(ctx, nil, HTTPGetterInfo{}, RetryReaderOptions{}, nil) }, chk.Panics, "initialResponse must not be nil")
+
+	startResponse := http.Response{}
+
 	// Check getter
-	c.Assert(func() { _ = NewRetryReader(ctx, nil, HTTPGetterInfo{}, RetryReaderOptions{}, nil) }, chk.Panics, "getter must not be nil")
+	c.Assert(func() { _ = NewRetryReader(ctx, &startResponse, HTTPGetterInfo{}, RetryReaderOptions{}, nil) }, chk.Panics, "getter must not be nil")
 
 	getter := func(ctx context.Context, info HTTPGetterInfo) (*http.Response, error) { return nil, nil }
 	// Check info.Count
-	c.Assert(func() { _ = NewRetryReader(ctx, nil, HTTPGetterInfo{Count: -1}, RetryReaderOptions{}, getter) }, chk.Panics, "info.Count must be >= 0")
+	c.Assert(func() {
+		_ = NewRetryReader(ctx, &startResponse, HTTPGetterInfo{Count: -1}, RetryReaderOptions{}, getter)
+	}, chk.Panics, "info.Count must be >= 0")
+
+	// Check o.MaxRetryRequests
+	c.Assert(func() {
+		_ = NewRetryReader(ctx, &startResponse, HTTPGetterInfo{}, RetryReaderOptions{MaxRetryRequests: -1}, getter)
+	}, chk.Panics, "o.MaxRetryRequests must be >= 0")
 
 }
 
