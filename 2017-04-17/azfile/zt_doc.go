@@ -81,5 +81,3 @@ package:
 Also, note that all the NewXxxCredential functions return request policy factory objects which get injected into the pipeline.
 */
 package azfile
-
-// 	TokenCredential     Use this to access resources using Role-Based Access Control (RBAC).
