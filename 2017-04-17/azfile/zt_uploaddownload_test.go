@@ -564,7 +564,107 @@ func testUploadDownloadFileParallelDefault(c *chk.C, fileSize int64) {
 		os.Remove(file.Name())
 	}()
 
-	err := UploadFileToAzureFile(ctx, file, fileURL, UploadToAzureFileOptions{})
+	err := UploadFileToAzureFile(ctx, file, fileURL, UploadToAzureFileOptions{RangeSize: 500 * 1024})
+	c.Assert(err, chk.IsNil)
+
+	validateFileExists(c, fileURL)
+
+	file2Name := generateFileName()
+	file2, err := os.Create(file2Name)
+	c.Assert(err, chk.IsNil)
+	resp, err := DownloadAzureFileToFile(ctx, fileURL, file2, DownloadFromAzureFileOptions{})
+	c.Assert(err, chk.IsNil)
+	c.Assert(resp.ETag(), chk.Not(chk.Equals), ETagNone)
+
+	defer func() {
+		file2.Close()
+		os.Remove(file2Name)
+	}()
+
+	// Check local file still exists
+	_, err = file2.Stat()
+	c.Assert(err, chk.IsNil)
+	c.Assert(os.IsNotExist(err), chk.Equals, false) // Actually equivalent
+
+	// Check bytes same
+	destBytes, err := ioutil.ReadFile(file2Name)
+	c.Assert(err, chk.IsNil)
+
+	c.Assert(bytes, chk.DeepEquals, destBytes)
+}
+
+func (ud *uploadDownloadSuite) TestUpload2DownloadFileParallelEmpty(c *chk.C) {
+	testUpload2DownloadFileParallelDefault(c, 0, 0)
+}
+
+func (ud *uploadDownloadSuite) TestUpload2DownloadFileParallel1Byte(c *chk.C) {
+	testUpload2DownloadFileParallelDefault(c, 1, 0)
+}
+
+func (ud *uploadDownloadSuite) TestUpload2DownloadFileParallelBlockSizeLess(c *chk.C) {
+	testUpload2DownloadFileParallelDefault(c, FileMaxUploadRangeBytes-1, 0)
+}
+
+func (ud *uploadDownloadSuite) TestUpload2DownloadFileParallelBlockSize(c *chk.C) {
+	testUpload2DownloadFileParallelDefault(c, FileMaxUploadRangeBytes, 0)
+}
+
+func (ud *uploadDownloadSuite) TestUpload2DownloadFileParallelBlockSizeMore(c *chk.C) {
+	testUpload2DownloadFileParallelDefault(c, FileMaxUploadRangeBytes+1, 0)
+}
+
+func (ud *uploadDownloadSuite) TestUpload2DownloadFileParallelBlockSizeMulti(c *chk.C) {
+	testUpload2DownloadFileParallelDefault(c, FileMaxUploadRangeBytes*12-1, 0)
+}
+
+func (ud *uploadDownloadSuite) TestUpload2DownloadFileParallelBlockSizeMulti2(c *chk.C) {
+	testUpload2DownloadFileParallelDefault(c, FileMaxUploadRangeBytes*12, 0)
+}
+
+func (ud *uploadDownloadSuite) TestUpload2DownloadFileParallelBlockSizeMulti3(c *chk.C) {
+	testUpload2DownloadFileParallelDefault(c, FileMaxUploadRangeBytes*12+1, 0)
+}
+
+func (ud *uploadDownloadSuite) TestUpload2DownloadFileParallelBlockSizeMult4(c *chk.C) {
+	testUpload2DownloadFileParallelDefault(c, FileMaxUploadRangeBytes*16-1, 500*1024)
+}
+
+func (ud *uploadDownloadSuite) TestUpload2DownloadFileParallelBlockSizeMulti5(c *chk.C) {
+	testUpload2DownloadFileParallelDefault(c, FileMaxUploadRangeBytes*16, 500*1024)
+}
+
+func (ud *uploadDownloadSuite) TestUpload2DownloadFileParallelBlockSizeMulti6(c *chk.C) {
+	testUpload2DownloadFileParallelDefault(c, FileMaxUploadRangeBytes*16+1, 500*1024)
+}
+
+func testUpload2DownloadFileParallelDefault(c *chk.C, fileSize int64, rangeSize int64) {
+	orgFileSegmentSize := getFileSegmentSize
+
+	getFileSegmentSize = func() int64 {
+		return int64(4 * 1024 * 1024)
+	}
+
+	defer func() {
+		getFileSegmentSize = orgFileSegmentSize
+	}()
+
+	if rangeSize == 0 {
+		rangeSize = FileMaxUploadRangeBytes
+	}
+
+	fsu := getFSU()
+	share, _ := createNewShare(c, fsu)
+	defer delShare(c, share, DeleteSnapshotsOptionNone)
+
+	fileURL, _ := getFileURLFromShare(c, share)
+
+	file, bytes := createNewLocalFile(c, fileSize)
+	defer func() {
+		file.Close()
+		os.Remove(file.Name())
+	}()
+
+	err := UploadFileToAzureFile2(ctx, file, fileURL, UploadToAzureFileOptions{RangeSize: rangeSize})
 	c.Assert(err, chk.IsNil)
 
 	validateFileExists(c, fileURL)

@@ -12,8 +12,13 @@ import (
 	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
-// defaultParallelCount specifies default parallel count will be used by parallel upload/download methods
-const defaultParallelCount = 5
+const (
+	// defaultParallelCount specifies default parallel count will be used by parallel upload/download methods
+	defaultParallelCount = 5
+
+	// fileSegmentSize specifies file segment size that file would be splitted into during parallel upload/download
+	fileSegmentSize = 500 * 1024 * 1024
+)
 
 // UploadToAzureFileOptions identifies options used by the UploadBufferToAzureFile and UploadFileToAzureFile functions.
 type UploadToAzureFileOptions struct {
@@ -86,7 +91,7 @@ func UploadBufferToAzureFile(ctx context.Context, b []byte,
 						progressLock.Lock()
 						fileProgress += diff
 						o.Progress(fileProgress)
-						progressLock.Unlock()
+						defer progressLock.Unlock()
 					})
 			}
 
@@ -188,7 +193,7 @@ func downloadAzureFileToBuffer(ctx context.Context, fileURL FileURL, azfilePrope
 						progressLock.Lock()
 						fileProgress += diff
 						o.Progress(fileProgress)
-						progressLock.Unlock()
+						defer progressLock.Unlock()
 					})
 			}
 
@@ -285,11 +290,11 @@ func doBatchTransfer(ctx context.Context, o batchTransferOptions) error {
 
 	curChunkSize := o.chunkSize
 	// Add each chunk's operation to the channel.
-	for chunkNum := int64(0); chunkNum < numChunks; chunkNum++ {
-		if chunkNum == numChunks-1 { // Last chunk
-			curChunkSize = o.transferSize - (int64(chunkNum) * o.chunkSize) // Remove size of all transferred chunks from total
+	for chunkIndex := int64(0); chunkIndex < numChunks; chunkIndex++ {
+		if chunkIndex == numChunks-1 { // Last chunk
+			curChunkSize = o.transferSize - (int64(chunkIndex) * o.chunkSize) // Remove size of all transferred chunks from total
 		}
-		offset := int64(chunkNum) * o.chunkSize
+		offset := int64(chunkIndex) * o.chunkSize
 
 		closureChunkSize := curChunkSize
 		operationChannel <- func() error {
@@ -299,7 +304,7 @@ func doBatchTransfer(ctx context.Context, o batchTransferOptions) error {
 	close(operationChannel)
 
 	// Wait for the operations to complete.
-	for chunkNum := int64(0); chunkNum < numChunks; chunkNum++ {
+	for chunkIndex := int64(0); chunkIndex < numChunks; chunkIndex++ {
 		responseError := <-operationResponseChannel
 		if responseError != nil {
 			cancel()             // As soon as any operation fails, cancel all remaining operation calls
@@ -308,3 +313,214 @@ func doBatchTransfer(ctx context.Context, o batchTransferOptions) error {
 	}
 	return nil
 }
+
+///////////////////////////////////////////////////////////////////////////////////////
+// Segment transfer POC
+///////////////////////////////////////////////////////////////////////////////////////
+
+// segmentTransferStatus contains single segment's transfer status.
+type segmentTransferStatus struct {
+	mMap               *mmf
+	finishedChunkCount int64
+	totalChunkCount    int64
+}
+
+// chunkTransferResult contains single chunk's transfer result.
+type chunkTransferResult struct {
+	segmentID segmentID
+	err       error
+}
+
+type segmentID int64
+
+// getFileSegmentSize is used for mocking fileSegmentSize
+var getFileSegmentSize = func() int64 {
+	return int64(fileSegmentSize)
+}
+
+// uploadBufPoolToAzureFile uploads buffer pool which consists of MMFs into Azure file by segments.
+// Each segment is mapped to a MMF, and after each segment is transfered, it's corresponding MMF will be unmapped.
+func uploadBufPoolToAzureFile(ctx context.Context, bufPool []mmf, size int64,
+	fileURL FileURL, o UploadToAzureFileOptions) error {
+
+	// 1. Validate parameters, and set defaults.
+	if o.RangeSize < 0 || o.RangeSize > FileMaxUploadRangeBytes {
+		panic(fmt.Sprintf("o.RangeSize must be >= 0 and <= %d, in bytes", FileMaxUploadRangeBytes))
+	}
+	if o.RangeSize == 0 {
+		o.RangeSize = FileMaxUploadRangeBytes
+	}
+
+	if size > FileMaxSizeInBytes {
+		panic(fmt.Sprintf("b's length must be <= %d, in bytes", FileMaxSizeInBytes))
+	}
+
+	parallelism := o.Parallelism
+	if parallelism == 0 {
+		parallelism = defaultParallelCount // default parallelism
+	}
+
+	// 2. Try to create the Azure file.
+	_, err := fileURL.Create(ctx, size, o.FileHTTPHeaders, o.Metadata)
+	if err != nil {
+		return err
+	}
+	// If size equals to 0, upload nothing and directly return.
+	if size == 0 {
+		return nil
+	}
+
+	// 3. Prepare and do parallel upload.
+	// Initialize transferSegmentMap and calculate total chunks.
+	transferSegmentMap := make(map[segmentID]*segmentTransferStatus)
+	defer func() {
+		for _, sts := range transferSegmentMap {
+			if sts.mMap != nil {
+				sts.mMap.unmap()
+			}
+		}
+	}()
+
+	var numTotalChunks int64
+
+	//fmt.Println(time.Now(), " uploadBufPoolToAzureFile starts to initialize transferSegmentMap.")
+
+	// bufIndex is used as segmentID
+	for bufIndex := int64(0); bufIndex < int64(len(bufPool)); bufIndex++ {
+		curBuf := &bufPool[bufIndex]
+
+		numSegmentChunks := (int64(len(*curBuf)-1) / o.RangeSize) + 1
+		numTotalChunks += numSegmentChunks
+
+		segID := segmentID(bufIndex)
+		transferSegmentMap[segID] = &segmentTransferStatus{mMap: curBuf, totalChunkCount: numSegmentChunks}
+	}
+
+	//fmt.Println(time.Now(), " uploadBufPoolToAzureFile finishes to initialize transferSegmentMap.")
+
+	// Initialize context and channels.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	operationChannel := make(chan func() (segmentID, error), parallelism)      // Create the channel that release 'parallelism' goroutines concurrently
+	operationResponseChannel := make(chan chunkTransferResult, numTotalChunks) // Holds each response
+
+	// Create the goroutines that process each operation (in parallel)
+	for g := uint16(0); g < parallelism; g++ {
+		go func() {
+			for f := range operationChannel {
+				segmentID, err := f()
+				operationResponseChannel <- chunkTransferResult{segmentID: segmentID, err: err}
+			}
+		}()
+	}
+
+	// Create the goroutine that dispatches operations
+	go func() {
+		fileProgress := int64(0)
+		progressLock := &sync.Mutex{}
+
+		// bufIndex is used as segmentID
+		for bufIndex := int64(0); bufIndex < int64(len(bufPool)); bufIndex++ {
+			curBuf := &bufPool[bufIndex]
+			curBufLen := int64(len(*curBuf))
+
+			numChunks := ((curBufLen - 1) / o.RangeSize) + 1
+
+			curChunkSize := o.RangeSize
+			segID := segmentID(bufIndex)
+
+			for chunkIndex := int64(0); chunkIndex < numChunks; chunkIndex++ {
+				if chunkIndex == numChunks-1 { // Last chunk
+					curChunkSize = curBufLen - (int64(chunkIndex) * o.RangeSize) // Remove size of dispatched chunks from total
+				}
+				bufOffset := int64(chunkIndex) * o.RangeSize
+				fileOffset := bufIndex*getFileSegmentSize() + bufOffset
+
+				// Prepare to read the proper section of the buffer
+				var body io.ReadSeeker = bytes.NewReader((*curBuf)[bufOffset : bufOffset+curChunkSize])
+				if o.Progress != nil {
+					chunkProgress := int64(0)
+					body = pipeline.NewRequestBodyProgress(body,
+						func(bytesTransferred int64) {
+							diff := bytesTransferred - chunkProgress
+							chunkProgress = bytesTransferred
+							progressLock.Lock()
+							fileProgress += diff
+							o.Progress(fileProgress)
+							progressLock.Unlock()
+						})
+				}
+
+				operationChannel <- func() (segmentID, error) {
+					_, err := fileURL.UploadRange(ctx, int64(fileOffset), body)
+					return segID, err
+				}
+			}
+		}
+		close(operationChannel)
+	}()
+
+	// Wait for the operations to complete.
+	for chunkIndex := int64(0); chunkIndex < numTotalChunks; chunkIndex++ {
+		chunkTransferResult := <-operationResponseChannel
+		if chunkTransferResult.err != nil {
+			cancel()                       // As soon as any operation fails, cancel all remaining operation calls
+			return chunkTransferResult.err // No need to process anymore responses
+		} else {
+			sts, ok := transferSegmentMap[chunkTransferResult.segmentID]
+			if !ok {
+				panic(fmt.Sprintf("invalid status, cannot found segmentID: %d", chunkTransferResult.segmentID))
+			}
+			sts.finishedChunkCount++
+			if sts.finishedChunkCount == sts.totalChunkCount {
+				sts.mMap.unmap()
+				delete(transferSegmentMap, chunkTransferResult.segmentID)
+			}
+		}
+	}
+
+	return nil
+}
+
+// UploadFileToAzureFile2 uploads a local file to an Azure file by segments.
+func UploadFileToAzureFile2(ctx context.Context, file *os.File,
+	fileURL FileURL, o UploadToAzureFileOptions) error {
+
+	stat, err := file.Stat()
+	if err != nil {
+		return err
+	}
+
+	var bufPool []mmf
+	size := int64(stat.Size())
+
+	segmentSize := getFileSegmentSize()
+	//fmt.Println("UploadFileToAzureFile2 uses file segment size: ", segmentSize)
+
+	if size != 0 {
+		segmentCount := ((size - 1) / segmentSize) + 1
+		curSegmentSize := int64(segmentSize)
+
+		for i := int64(0); i < segmentCount; i++ {
+			if i == segmentCount-1 {
+				curSegmentSize = size - i*segmentSize
+			}
+
+			offset := i * segmentSize
+			m, err := newMMF(file, false, offset, int(curSegmentSize))
+			if err != nil { // If fail to create any of the Mmap file, return error immediately
+				return err
+			}
+			bufPool = append(bufPool, m)
+		}
+	} else {
+		m := mmf{} // Default to an empty slice; used for 0-size file
+		bufPool = append(bufPool, m)
+	}
+	return uploadBufPoolToAzureFile(ctx, bufPool, size, fileURL, o)
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+// End of Segment transfer POC
+///////////////////////////////////////////////////////////////////////////////////////
