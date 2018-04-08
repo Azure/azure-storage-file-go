@@ -283,3 +283,106 @@ func (s *StorageAccountSuite) TestAccountListSharesNegativeMaxResults(c *chk.C) 
 
 	c.Fail() // If the list call doesn't panic, we fail
 }
+
+func (s *StorageAccountSuite) TestAccountSAS(c *chk.C) {
+	fsu := getFSU()
+	shareURL, shareName := getShareURL(c, fsu)
+	dirURL, _ := getDirectoryURLFromShare(c, shareURL)
+	fileURL, _ := getFileURLFromDirectory(c, dirURL)
+
+	credential, _ := getCredential()
+	sasQueryParams := azfile.AccountSASSignatureValues{
+		Protocol:      azfile.SASProtocolHTTPS,
+		ExpiryTime:    time.Now().Add(48 * time.Hour),
+		Permissions:   azfile.AccountSASPermissions{Read: true, List: true, Write: true, Delete: true, Add: true, Create: true, Update: true, Process: true}.String(),
+		Services:      azfile.AccountSASServices{File: true, Blob: true, Queue: true}.String(),
+		ResourceTypes: azfile.AccountSASResourceTypes{Service: true, Container: true, Object: true}.String(),
+	}.NewSASQueryParameters(credential)
+
+	// Reverse valiadation all parse logics work as expect.
+	ap := &azfile.AccountSASPermissions{}
+	err := ap.Parse(sasQueryParams.Permissions())
+	c.Assert(err, chk.IsNil)
+	c.Assert(*ap, chk.DeepEquals, azfile.AccountSASPermissions{Read: true, List: true, Write: true, Delete: true, Add: true, Create: true, Update: true, Process: true})
+
+	as := &azfile.AccountSASServices{}
+	err = as.Parse(sasQueryParams.Services())
+	c.Assert(err, chk.IsNil)
+	c.Assert(*as, chk.DeepEquals, azfile.AccountSASServices{File: true, Blob: true, Queue: true})
+
+	ar := &azfile.AccountSASResourceTypes{}
+	err = ar.Parse(sasQueryParams.ResourceTypes())
+	c.Assert(err, chk.IsNil)
+	c.Assert(*ar, chk.DeepEquals, azfile.AccountSASResourceTypes{Service: true, Container: true, Object: true})
+
+	// Test service URL
+	svcParts := azfile.NewFileURLParts(fsu.URL())
+	svcParts.SAS = sasQueryParams
+	testSvcURL := svcParts.URL()
+	svcURLWithSAS := azfile.NewServiceURL(testSvcURL, azfile.NewPipeline(azfile.NewAnonymousCredential(), azfile.PipelineOptions{}))
+	// List
+	_, err = svcURLWithSAS.ListSharesSegment(ctx, azfile.Marker{}, azfile.ListSharesOptions{})
+	c.Assert(err, chk.IsNil)
+	// Write
+	_, err = svcURLWithSAS.SetProperties(ctx, azfile.FileServiceProperties{})
+	c.Assert(err, chk.IsNil)
+	// Read
+	_, err = svcURLWithSAS.GetProperties(ctx)
+	c.Assert(err, chk.IsNil)
+
+	// Test share URL
+	sParts := azfile.NewFileURLParts(shareURL.URL())
+	c.Assert(sParts.ShareName, chk.Equals, shareName)
+	sParts.SAS = sasQueryParams
+	testShareURL := sParts.URL()
+	shareURLWithSAS := azfile.NewShareURL(testShareURL, azfile.NewPipeline(azfile.NewAnonymousCredential(), azfile.PipelineOptions{}))
+	// Create
+	_, err = shareURLWithSAS.Create(ctx, azfile.Metadata{}, 0)
+	c.Assert(err, chk.IsNil)
+	// Write
+	metadata := azfile.Metadata{"foo": "bar"}
+	_, err = shareURLWithSAS.SetMetadata(ctx, metadata)
+	// Read
+	gResp, err := shareURLWithSAS.GetProperties(ctx)
+	c.Assert(err, chk.IsNil)
+	c.Assert(gResp.NewMetadata(), chk.DeepEquals, metadata)
+	// Delete
+	defer shareURLWithSAS.Delete(ctx, azfile.DeleteSnapshotsOptionNone)
+
+	// Test dir URL
+	dParts := azfile.NewFileURLParts(dirURL.URL())
+	dParts.SAS = sasQueryParams
+	testDirURL := dParts.URL()
+	dirURLWithSAS := azfile.NewDirectoryURL(testDirURL, azfile.NewPipeline(azfile.NewAnonymousCredential(), azfile.PipelineOptions{}))
+	// Create
+	_, err = dirURLWithSAS.Create(ctx, azfile.Metadata{})
+	c.Assert(err, chk.IsNil)
+	// Write
+	_, err = dirURLWithSAS.SetMetadata(ctx, metadata)
+	// Read
+	gdResp, err := dirURLWithSAS.GetProperties(ctx)
+	c.Assert(err, chk.IsNil)
+	c.Assert(gdResp.NewMetadata(), chk.DeepEquals, metadata)
+	// List
+	_, err = dirURLWithSAS.ListFilesAndDirectoriesSegment(ctx, azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{})
+	c.Assert(err, chk.IsNil)
+	// Delete
+	defer dirURLWithSAS.Delete(ctx)
+
+	// Test file URL
+	fParts := azfile.NewFileURLParts(fileURL.URL())
+	fParts.SAS = sasQueryParams
+	testFileURL := fParts.URL()
+	fileURLWithSAS := azfile.NewFileURL(testFileURL, azfile.NewPipeline(azfile.NewAnonymousCredential(), azfile.PipelineOptions{}))
+	// Create
+	_, err = fileURLWithSAS.Create(ctx, 0, azfile.FileHTTPHeaders{}, azfile.Metadata{})
+	c.Assert(err, chk.IsNil)
+	// Write
+	_, err = fileURLWithSAS.SetMetadata(ctx, metadata)
+	// Read
+	gfResp, err := fileURLWithSAS.GetProperties(ctx)
+	c.Assert(err, chk.IsNil)
+	c.Assert(gfResp.NewMetadata(), chk.DeepEquals, metadata)
+	// Delete
+	defer fileURLWithSAS.Delete(ctx)
+}

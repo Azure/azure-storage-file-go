@@ -873,13 +873,14 @@ func (s *FileURLSuite) TestUploadDownloadDefaultNonDefaultMD5(c *chk.C) {
 	c.Assert(resp.ContentLength(), chk.Equals, int64(1024))
 	c.Assert(resp.ContentMD5(), chk.Not(chk.Equals), [md5.Size]byte{})
 	c.Assert(resp.ContentType(), chk.Equals, "application/octet-stream")
+	c.Assert(resp.Status(), chk.Not(chk.Equals), "")
 
 	download, err := ioutil.ReadAll(resp.Response().Body)
 	c.Assert(err, chk.IsNil)
 	c.Assert(download, chk.DeepEquals, contentD[:1024])
 
 	// Set ContentMD5 for the entire file.
-	_, err = fileURL.SetHTTPHeaders(context.Background(), azfile.FileHTTPHeaders{ContentMD5: pResp.ContentMD5()})
+	_, err = fileURL.SetHTTPHeaders(context.Background(), azfile.FileHTTPHeaders{ContentMD5: pResp.ContentMD5(), ContentLanguage: "test"})
 	c.Assert(err, chk.IsNil)
 
 	// Test get with another type of range index, and validate if FileContentMD5 can be get correclty.
@@ -889,6 +890,9 @@ func (s *FileURLSuite) TestUploadDownloadDefaultNonDefaultMD5(c *chk.C) {
 	c.Assert(resp.ContentLength(), chk.Equals, int64(1024))
 	c.Assert(resp.ContentMD5(), chk.Equals, [md5.Size]byte{})
 	c.Assert(resp.FileContentMD5(), chk.DeepEquals, pResp.ContentMD5())
+	c.Assert(resp.ContentLanguage(), chk.Equals, "test")
+	// Note: when it's downloading range, range's MD5 is returned, when set rangeGetContentMD5=true, currently set it to false, so should be empty
+	c.Assert(resp.NewHTTPHeaders(), chk.DeepEquals, azfile.FileHTTPHeaders{ContentMD5: [md5.Size]byte{}, ContentLanguage: "test"})
 
 	download, err = ioutil.ReadAll(resp.Response().Body)
 	c.Assert(err, chk.IsNil)
@@ -899,7 +903,7 @@ func (s *FileURLSuite) TestUploadDownloadDefaultNonDefaultMD5(c *chk.C) {
 	c.Assert(resp.ContentDisposition(), chk.Equals, "")
 	c.Assert(resp.ContentEncoding(), chk.Equals, "")
 	c.Assert(resp.ContentRange(), chk.Equals, "bytes 1024-2047/2048")
-	c.Assert(resp.ContentType(), chk.Equals, "") // Note ContentType is set during SetHTTPHeaders, TODO: discuss this behavior with azfile.FileHTTPHeaders.
+	c.Assert(resp.ContentType(), chk.Equals, "") // Note ContentType is set to empty during SetHTTPHeaders
 	c.Assert(resp.CopyCompletionTime().IsZero(), chk.Equals, true)
 	c.Assert(resp.CopyID(), chk.Equals, "")
 	c.Assert(resp.CopyProgress(), chk.Equals, "")
@@ -1324,5 +1328,3 @@ func (s *FileURLSuite) TestFileGetRangeListNegativeInvalidCount(c *chk.C) {
 
 	c.Assert(func() { fileURL.GetRangeList(ctx, 0, -3) }, chk.Panics, "The file's range Count must be either equal to CountToEnd (-1) or > 0")
 }
-
-// TODO: Add case for account sas

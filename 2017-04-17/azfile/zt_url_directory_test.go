@@ -320,7 +320,6 @@ func (s *DirectoryURLSuite) TestDirGetSetMetadataMergeAndReplace(c *chk.C) {
 
 	md := azfile.Metadata{
 		"color": "RED",
-		//"COLOR": "green", // TODO: case sensitive metadata
 	}
 
 	sResp, err := directory.SetMetadata(context.Background(), md)
@@ -349,7 +348,7 @@ func (s *DirectoryURLSuite) TestDirGetSetMetadataMergeAndReplace(c *chk.C) {
 
 	md2 := azfile.Metadata{
 		"color": "WHITE",
-		//"COLOR": "black", // TODO: case sensitive metadata
+		//"COLOR": "black", // Note: metadata's key should only be lowercase
 	}
 
 	sResp, err = directory.SetMetadata(context.Background(), md2)
@@ -391,6 +390,9 @@ func (s *DirectoryURLSuite) TestDirListDefault(c *chk.C) {
 	lResp, err := dir.ListFilesAndDirectoriesSegment(context.Background(), azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{})
 	c.Assert(err, chk.IsNil)
 	c.Assert(lResp.Response().StatusCode, chk.Equals, 200)
+	c.Assert(lResp.StatusCode(), chk.Equals, 200)
+	c.Assert(lResp.Status(), chk.Not(chk.Equals), "")
+	c.Assert(lResp.ContentType(), chk.Not(chk.Equals), "")
 	c.Assert(lResp.Date().IsZero(), chk.Equals, false)
 	c.Assert(lResp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(lResp.Version(), chk.Not(chk.Equals), "")

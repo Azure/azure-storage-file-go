@@ -229,7 +229,7 @@ func (ud *uploadDownloadSuite) TestDownloadBasic(c *chk.C) {
 	c.Assert(resp.ContentDisposition(), chk.Equals, "")
 	c.Assert(resp.ContentEncoding(), chk.Equals, "")
 	c.Assert(resp.ContentRange(), chk.Equals, "bytes 1024-2047/2048")
-	c.Assert(resp.ContentType(), chk.Equals, "") // Note ContentType is set during SetHTTPHeaders, TODO: discuss this behavior with FileHTTPHeaders.
+	c.Assert(resp.ContentType(), chk.Equals, "") // Note ContentType is set to empty during SetHTTPHeaders
 	c.Assert(resp.CopyCompletionTime().IsZero(), chk.Equals, true)
 	c.Assert(resp.CopyID(), chk.Equals, "")
 	c.Assert(resp.CopyProgress(), chk.Equals, "")
@@ -336,7 +336,7 @@ func (ud *uploadDownloadSuite) TestDownloadRetry(c *chk.C) {
 	c.Assert(resp.IsServerEncrypted(), chk.NotNil)
 }
 
-// TODO: ensure this scenario with Jeff - Cannot download a file using count=0, when file is empty. To download an empty file, use offset=0 and count=CountToEnd (-1)
+// TODO: Cannot download an empty file with count=0. To download an empty file, use offset=0 and count=CountToEnd (-1)
 func (ud *uploadDownloadSuite) TestDownloadDefaultParam(c *chk.C) {
 	fsu := getFSU()
 	share, _ := createNewShare(c, fsu)
@@ -548,7 +548,7 @@ func (ud *uploadDownloadSuite) TestUploadDownloadFileParallelDefaultBlockSizeMor
 }
 
 func (ud *uploadDownloadSuite) TestUploadDownloadFileParallelDefaultBlockSizeMulti(c *chk.C) {
-	testUploadDownloadFileParallelDefault(c, FileMaxUploadRangeBytes*10+1)
+	testUploadDownloadFileParallelDefault(c, FileMaxUploadRangeBytes*12+1)
 }
 
 func testUploadDownloadFileParallelDefault(c *chk.C, fileSize int64) {
@@ -704,5 +704,3 @@ func (ud *uploadDownloadSuite) TestDownloadFileParallelOverwriteLocalFile(c *chk
 
 	c.Assert(destBytes, chk.DeepEquals, srcBytes)
 }
-
-// TODO: test responseError in doBatchTransfer, which would cause cancel

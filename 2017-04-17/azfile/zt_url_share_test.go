@@ -571,7 +571,7 @@ func (s *ShareURLSuite) TestShareGetStats(c *chk.C) {
 	// c.Assert(gResp.LastModified().IsZero(), chk.Equals, false) // TODO: Even share is once updated, no LastModified would be returned.
 	c.Assert(gResp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(gResp.Version(), chk.Not(chk.Equals), "")
-	c.Assert(gResp.ShareUsage, chk.Equals, int32(0)) // TODO: Create and transfer one file, and get stats again.
+	c.Assert(gResp.ShareUsage, chk.Equals, int32(0))
 }
 
 func (s *ShareURLSuite) TestShareGetStatsNegative(c *chk.C) {
@@ -715,11 +715,11 @@ func (s *ShareURLSuite) TestShareCreateSnapshotNegativeSnapshotOfSnapshot(c *chk
 
 	snapshotURL := share.WithSnapshot(time.Now().UTC().String())
 	cResp, err := snapshotURL.CreateSnapshot(ctx, nil)
-	c.Assert(err, chk.IsNil) //TODO: this would not fail, snapshot would be ignored.
+	c.Assert(err, chk.IsNil) //Note: this would not fail, snapshot would be ignored.
 
 	snapshotRecursiveURL := share.WithSnapshot(cResp.Snapshot())
 	_, err = snapshotRecursiveURL.CreateSnapshot(ctx, nil)
-	c.Assert(err, chk.IsNil) //TODO: this would not fail, snapshot would be ignored.
+	c.Assert(err, chk.IsNil) //Note: this would not fail, snapshot would be ignored.
 }
 
 func validateShareDeleted(c *chk.C, shareURL azfile.ShareURL) {
@@ -766,5 +766,3 @@ func (s *ShareURLSuite) TestShareDeleteSnapshotsNoneWithSnapshots(c *chk.C) {
 	_, err = share.Delete(ctx, azfile.DeleteSnapshotsOptionNone)
 	validateStorageError(c, err, azfile.ServiceCodeShareHasSnapshots)
 }
-
-// TODO: si with list for file SAS, check if it can work properly for other operations.
