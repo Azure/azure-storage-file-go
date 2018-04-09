@@ -111,6 +111,8 @@ func (s *StorageAccountSuite) TestAccountGetSetPropertiesNonDefaultWithEnable(c 
 	c.Assert(resp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(resp.Version(), chk.Not(chk.Equals), "")
 
+	time.Sleep(time.Second * 30)
+
 	props, err := sa.GetProperties(context.Background())
 	c.Assert(err, chk.IsNil)
 	c.Assert(props.Response().StatusCode, chk.Equals, 200)

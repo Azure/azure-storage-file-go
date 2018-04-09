@@ -352,7 +352,7 @@ func (s *ShareURLSuite) TestShareSetPermissionsNonDefaultDeleteAndModifyACL(c *c
 
 	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
 
-	start := time.Now().UTC()
+	start := time.Now().UTC().Truncate(10000 * time.Millisecond)
 	expiry := start.Add(5 * time.Minute).UTC()
 	accessPermission := azfile.AccessPolicyPermission{List: true}.String()
 	permissions := make([]azfile.SignedIdentifier, 2, 2)
@@ -372,6 +372,7 @@ func (s *ShareURLSuite) TestShareSetPermissionsNonDefaultDeleteAndModifyACL(c *c
 
 	resp, err := shareURL.GetPermissions(ctx)
 	c.Assert(err, chk.IsNil)
+
 	c.Assert(resp.Value, chk.DeepEquals, permissions)
 
 	permissions = resp.Value[:1] // Delete the first policy by removing it from the slice
@@ -381,6 +382,7 @@ func (s *ShareURLSuite) TestShareSetPermissionsNonDefaultDeleteAndModifyACL(c *c
 	resp, err = shareURL.GetPermissions(ctx)
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.Value, chk.HasLen, 1)
+
 	c.Assert(resp.Value, chk.DeepEquals, permissions)
 }
 
