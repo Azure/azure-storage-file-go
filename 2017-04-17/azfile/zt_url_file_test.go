@@ -1318,7 +1318,7 @@ func (s *FileURLSuite) TestFileGetRangeListNegativeInvalidOffset(c *chk.C) {
 	shareURL, _ := getShareURL(c, fsu)
 	fileURL, _ := getFileURLFromShare(c, shareURL)
 
-	c.Assert(func() { fileURL.GetRangeList(ctx, -2, 500) }, chk.Panics, "The file's range Offset must be >= 0")
+	c.Assert(func() { fileURL.GetRangeList(ctx, -2, 500) }, chk.Panics, "The range offset must be >= 0")
 }
 
 func (s *FileURLSuite) TestFileGetRangeListNegativeInvalidCount(c *chk.C) {
@@ -1326,5 +1326,5 @@ func (s *FileURLSuite) TestFileGetRangeListNegativeInvalidCount(c *chk.C) {
 	shareURL, _ := getShareURL(c, fsu)
 	fileURL, _ := getFileURLFromShare(c, shareURL)
 
-	c.Assert(func() { fileURL.GetRangeList(ctx, 0, -3) }, chk.Panics, "The file's range Count must be either equal to CountToEnd (-1) or > 0")
+	c.Assert(func() { fileURL.GetRangeList(ctx, 0, -3) }, chk.Panics, "The range count must be either equal to CountToEnd (-1) or > 0")
 }

@@ -2,11 +2,9 @@ package azfile
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
 )
@@ -79,39 +77,6 @@ func (f FileURL) AbortCopy(ctx context.Context, copyID string) (*FileAbortCopyRe
 	return f.fileClient.AbortCopy(ctx, copyID, nil)
 }
 
-// toRange makes range string adhere to REST API.
-// A count with value CountToEnd (-1) means count of bytes from offset to the end of file.
-// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/specifying-the-range-header-for-file-service-operations.
-func toRange(offset int64, count int64) *string {
-	endRange := ""
-	if count != CountToEnd {
-		endRange = strconv.FormatInt(offset+count-1, 10)
-	}
-	r := fmt.Sprintf("bytes=%d-%s", offset, endRange)
-	return &r
-}
-
-// FileRange defines a range of bytes within a file, starting at Offset and ending
-// at Offset+Count-1 inclusively. Use a zero-value FileRange to indicate the entire file.
-type FileRange struct {
-	Offset int64
-	Count  int64
-}
-
-func (dr *FileRange) pointers() *string {
-	if dr.Offset < 0 {
-		panic("The file's range Offset must be >= 0")
-	}
-	if dr.Count <= 0 && dr.Count != CountToEnd {
-		panic("The file's range Count must be either equal to CountToEnd (-1) or > 0")
-	}
-	if dr.Offset == 0 && dr.Count == CountToEnd {
-		return nil
-	}
-
-	return toRange(dr.Offset, dr.Count)
-}
-
 // Download downloads count bytes of data from the start offset. If count is CountToEnd (-1), then data is read from specified offset to the end.
 // The response includes all of the file’s properties. However, passing true for rangeGetContentMD5 returns the range’s MD5 in the ContentMD5
 // response header/property if the range is <= 4MB; the HTTP request fails with 400 (Bad Request) if the requested range is greater than 4MB.
@@ -124,7 +89,7 @@ func (f FileURL) Download(ctx context.Context, offset int64, count int64, rangeG
 		}
 		xRangeGetContentMD5 = &rangeGetContentMD5
 	}
-	dr, err := f.fileClient.Download(ctx, nil, (&FileRange{Offset: offset, Count: count}).pointers(), xRangeGetContentMD5)
+	dr, err := f.fileClient.Download(ctx, nil, (&httpRange{offset: offset, count: count}).pointers(), xRangeGetContentMD5)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +168,7 @@ func (f FileURL) UploadRange(ctx context.Context, offset int64, body io.ReadSeek
 		panic("body must contain readable data whose size is > 0")
 	}
 
-	// TransactionalContentMD5 isn't supported in convenience layer.
+	// TransactionalContentMD5 isn't supported currently.
 	return f.fileClient.UploadRange(ctx, *toRange(offset, count), FileRangeWriteUpdate, count, body, nil, nil)
 }
 
@@ -228,5 +193,5 @@ func (f FileURL) ClearRange(ctx context.Context, offset int64, count int64) (*Fi
 // Use a count with value CountToEnd (-1) to indicate the left part of file start from offset.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/list-ranges.
 func (f FileURL) GetRangeList(ctx context.Context, offset int64, count int64) (*Ranges, error) {
-	return f.fileClient.GetRangeList(ctx, nil, nil, (&FileRange{Offset: offset, Count: count}).pointers())
+	return f.fileClient.GetRangeList(ctx, nil, nil, (&httpRange{offset: offset, count: count}).pointers())
 }

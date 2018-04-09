@@ -348,7 +348,7 @@ func (ud *uploadDownloadSuite) TestDownloadDefaultParam(c *chk.C) {
 	defer delFile(c, file)
 
 	// Check download with all default parameters will fail, as download 0 byte is not a valid scenario: offset=0 and count=0
-	c.Assert(func() { file.Download(context.Background(), 0, 0, false) }, chk.Panics, "The file's range Count must be either equal to CountToEnd (-1) or > 0")
+	c.Assert(func() { file.Download(context.Background(), 0, 0, false) }, chk.Panics, "The range count must be either equal to CountToEnd (-1) or > 0")
 }
 
 func (ud *uploadDownloadSuite) TestDownloadNegativePanic(c *chk.C) {
@@ -362,10 +362,10 @@ func (ud *uploadDownloadSuite) TestDownloadNegativePanic(c *chk.C) {
 	defer delFile(c, file)
 
 	// Check download with all default parameters will fail, as download 0 byte is not a valid scenario: offset=0 and count=0
-	c.Assert(func() { file.Download(context.Background(), 0, 0, false) }, chk.Panics, "The file's range Count must be either equal to CountToEnd (-1) or > 0")
+	c.Assert(func() { file.Download(context.Background(), 0, 0, false) }, chk.Panics, "The range count must be either equal to CountToEnd (-1) or > 0")
 
 	// Check illegal offset
-	c.Assert(func() { file.Download(context.Background(), -1, 3, false) }, chk.Panics, "The file's range Offset must be >= 0")
+	c.Assert(func() { file.Download(context.Background(), -1, 3, false) }, chk.Panics, "The range offset must be >= 0")
 
 	// Check illegal rangeGetContentMD5
 	c.Assert(func() { file.Download(context.Background(), 0, CountToEnd, true) }, chk.Panics, "rangeGetContentMD5 only work with partial data downloading")
