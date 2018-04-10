@@ -89,9 +89,9 @@ func UploadBufferToAzureFile(ctx context.Context, b []byte,
 						diff := bytesTransferred - rangeProgress
 						rangeProgress = bytesTransferred
 						progressLock.Lock()
+						defer progressLock.Unlock()
 						fileProgress += diff
 						o.Progress(fileProgress)
-						defer progressLock.Unlock()
 					})
 			}
 
@@ -191,9 +191,9 @@ func downloadAzureFileToBuffer(ctx context.Context, fileURL FileURL, azfilePrope
 						diff := bytesTransferred - rangeProgress
 						rangeProgress = bytesTransferred
 						progressLock.Lock()
+						defer progressLock.Unlock()
 						fileProgress += diff
 						o.Progress(fileProgress)
-						defer progressLock.Unlock()
 					})
 			}
 
@@ -446,9 +446,9 @@ func uploadBufPoolToAzureFile(ctx context.Context, bufPool []mmf, size int64,
 							diff := bytesTransferred - chunkProgress
 							chunkProgress = bytesTransferred
 							progressLock.Lock()
+							defer progressLock.Unlock()
 							fileProgress += diff
 							o.Progress(fileProgress)
-							progressLock.Unlock()
 						})
 				}
 
