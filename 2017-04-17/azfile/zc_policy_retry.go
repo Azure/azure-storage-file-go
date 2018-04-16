@@ -2,6 +2,8 @@ package azfile
 
 import (
 	"context"
+	"io"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
@@ -51,6 +53,7 @@ type RetryOptions struct {
 	// If you specify 0, then you must also specify 0 for RetryDelay.
 	MaxRetryDelay time.Duration
 }
+
 func (o RetryOptions) retryReadsFromSecondaryHost() string {
 	return ""
 }
@@ -234,6 +237,11 @@ func NewRetryPolicyFactory(o RetryOptions) pipeline.Factory {
 						_ = tryCancel // So, for now, we don't call cancel: cancel()
 					}
 					break // Don't retry
+				}
+				if response != nil {
+					// If we're going to retry and we got a previous response, then flush its body to avoid leaking its TCP connection
+					io.Copy(ioutil.Discard, response.Response().Body)
+					response.Response().Body.Close()
 				}
 				// If retrying, cancel the current per-try timeout context
 				tryCancel()
