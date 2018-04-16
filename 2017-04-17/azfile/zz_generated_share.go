@@ -9,6 +9,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/Azure/azure-pipeline-go/pipeline"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -85,6 +86,7 @@ func (client shareClient) createResponder(resp pipeline.Response) (pipeline.Resp
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &ShareCreateResponse{rawResponse: resp.Response()}, err
 }
@@ -143,6 +145,7 @@ func (client shareClient) createSnapshotResponder(resp pipeline.Response) (pipel
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &ShareCreateSnapshotResponse{rawResponse: resp.Response()}, err
 }
@@ -180,7 +183,7 @@ func (client shareClient) deletePreparer(sharesnapshot *string, timeout *int32, 
 		return req, pipeline.NewError(err, "failed to create request")
 	}
 	params := req.URL.Query()
-	if sharesnapshot != nil {
+	if sharesnapshot != nil && len(*sharesnapshot) > 0 {
 		params.Set("sharesnapshot", *sharesnapshot)
 	}
 	if timeout != nil {
@@ -201,6 +204,7 @@ func (client shareClient) deleteResponder(resp pipeline.Response) (pipeline.Resp
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &ShareDeleteResponse{rawResponse: resp.Response()}, err
 }
@@ -301,7 +305,7 @@ func (client shareClient) getPropertiesPreparer(sharesnapshot *string, timeout *
 		return req, pipeline.NewError(err, "failed to create request")
 	}
 	params := req.URL.Query()
-	if sharesnapshot != nil {
+	if sharesnapshot != nil && len(*sharesnapshot) > 0 {
 		params.Set("sharesnapshot", *sharesnapshot)
 	}
 	if timeout != nil {
@@ -319,6 +323,7 @@ func (client shareClient) getPropertiesResponder(resp pipeline.Response) (pipeli
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &ShareGetPropertiesResponse{rawResponse: resp.Response()}, err
 }
@@ -443,6 +448,7 @@ func (client shareClient) setAccessPolicyResponder(resp pipeline.Response) (pipe
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &ShareSetAccessPolicyResponse{rawResponse: resp.Response()}, err
 }
@@ -501,6 +507,7 @@ func (client shareClient) setMetadataResponder(resp pipeline.Response) (pipeline
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &ShareSetMetadataResponse{rawResponse: resp.Response()}, err
 }
@@ -557,6 +564,7 @@ func (client shareClient) setQuotaResponder(resp pipeline.Response) (pipeline.Re
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &ShareSetQuotaResponse{rawResponse: resp.Response()}, err
 }

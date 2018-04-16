@@ -101,7 +101,7 @@ func (o *ListFilesAndDirectoriesOptions) pointers() (prefix *string, maxResults 
 }
 
 // toConvenienceModel convert raw response to convenience model.
-// func (r *ListDirectoriesAndFilesResponse) toConvenienceModel() *ListFilesAndDirectoriesSegmentResponse {
+// func (r *listFilesAndDirectoriesSegmentResponse) toConvenienceModel() *ListFilesAndDirectoriesSegmentResponse {
 // 	cr := ListFilesAndDirectoriesSegmentResponse{
 // 		rawResponse:     r.rawResponse,
 // 		ServiceEndpoint: r.ServiceEndpoint,
@@ -119,11 +119,9 @@ func (o *ListFilesAndDirectoriesOptions) pointers() (prefix *string, maxResults 
 // 			cr.Files = append(cr.Files, *f)
 // 		} else if d, isDir := e.AsDirectoryEntry(); isDir {
 // 			cr.Directories = append(cr.Directories, *d)
-// 		} else if b, isBaseEntry := e.AsEntry(); isBaseEntry {
-// 			fmt.Println("EntryType", b.EntryType, "EntryName", b.Name)
 // 		} else {
 // 			// Logic should not be here, otherwise client is not aligning to latest REST API document
-// 			panic(fmt.Sprintf("invalid entry type found, entry info: %v", e))
+// 			panic(fmt.Errorf("invalid entry type found, entry info: %v", e))
 // 		}
 
 // 	}
@@ -131,11 +129,7 @@ func (o *ListFilesAndDirectoriesOptions) pointers() (prefix *string, maxResults 
 // 	return &cr
 // }
 
-// ListFilesAndDirectoriesSegment returns a single segment of files and directories starting from the specified Marker.
-// Use an empty Marker to start enumeration from the beginning. File and directory names are returned in lexicographic order.
-// After getting a segment, process it, and then call ListFilesAndDirectoriesSegment again (passing the the previously-returned
-// Marker) to get the next segment. This method lists the contents only for a single level of the directory hierarchy.
-// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/list-directories-and-files.
+// ListFilesAndDirectoriesSegmentAutoRest is the implementation using Auto Rest generated protocol code.
 // func (d DirectoryURL) ListFilesAndDirectoriesSegmentAutoRest(ctx context.Context, marker Marker, o ListFilesAndDirectoriesOptions) (*ListFilesAndDirectoriesSegmentResponse, error) {
 // 	prefix, maxResults := o.pointers()
 
@@ -144,7 +138,11 @@ func (o *ListFilesAndDirectoriesOptions) pointers() (prefix *string, maxResults 
 // 	return rawResponse.toConvenienceModel(), error
 // }
 
-// ListFilesAndDirectoriesSegment2 is the workaround
+// ListFilesAndDirectoriesSegment returns a single segment of files and directories starting from the specified Marker.
+// Use an empty Marker to start enumeration from the beginning. File and directory names are returned in lexicographic order.
+// After getting a segment, process it, and then call ListFilesAndDirectoriesSegment again (passing the the previously-returned
+// Marker) to get the next segment. This method lists the contents only for a single level of the directory hierarchy.
+// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/list-directories-and-files.
 func (d DirectoryURL) ListFilesAndDirectoriesSegment(ctx context.Context, marker Marker, o ListFilesAndDirectoriesOptions) (*ListFilesAndDirectoriesSegmentResponse, error) {
 	prefix, maxResults := o.pointers()
 	return d.directoryClient.ListFilesAndDirectoriesSegment(ctx, prefix, nil, marker.val, maxResults, nil)

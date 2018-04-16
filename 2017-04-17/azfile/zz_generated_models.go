@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 )
 
 // ETag is an entity tag.
@@ -179,6 +180,24 @@ type AccessPolicy struct {
 	Expiry *time.Time `xml:"Expiry"`
 	// Permission - The permissions for the ACL policy.
 	Permission *string `xml:"Permission"`
+}
+
+// MarshalXML implements the xml.Marshaler interface for AccessPolicy.
+func (ap AccessPolicy) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	if reflect.TypeOf((*AccessPolicy)(nil)).Elem().Size() != reflect.TypeOf((*accessPolicy)(nil)).Elem().Size() {
+		panic("size mismatch between AccessPolicy and accessPolicy")
+	}
+	ap2 := (*accessPolicy)(unsafe.Pointer(&ap))
+	return e.EncodeElement(*ap2, start)
+}
+
+// UnmarshalXML implements the xml.Unmarshaler interface for AccessPolicy.
+func (ap *AccessPolicy) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	if reflect.TypeOf((*AccessPolicy)(nil)).Elem().Size() != reflect.TypeOf((*accessPolicy)(nil)).Elem().Size() {
+		panic("size mismatch between AccessPolicy and accessPolicy")
+	}
+	ap2 := (*accessPolicy)(unsafe.Pointer(ap))
+	return d.DecodeElement(ap2, &start)
 }
 
 // CorsRule - CORS is an HTTP feature that enables a web application running under one domain to access
@@ -1933,6 +1952,24 @@ type ShareProperties struct {
 	Quota        int32     `xml:"Quota"`
 }
 
+// MarshalXML implements the xml.Marshaler interface for ShareProperties.
+func (sp ShareProperties) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	if reflect.TypeOf((*ShareProperties)(nil)).Elem().Size() != reflect.TypeOf((*shareProperties)(nil)).Elem().Size() {
+		panic("size mismatch between ShareProperties and shareProperties")
+	}
+	sp2 := (*shareProperties)(unsafe.Pointer(&sp))
+	return e.EncodeElement(*sp2, start)
+}
+
+// UnmarshalXML implements the xml.Unmarshaler interface for ShareProperties.
+func (sp *ShareProperties) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	if reflect.TypeOf((*ShareProperties)(nil)).Elem().Size() != reflect.TypeOf((*shareProperties)(nil)).Elem().Size() {
+		panic("size mismatch between ShareProperties and shareProperties")
+	}
+	sp2 := (*shareProperties)(unsafe.Pointer(sp))
+	return d.DecodeElement(sp2, &start)
+}
+
 // ShareSetAccessPolicyResponse ...
 type ShareSetAccessPolicyResponse struct {
 	rawResponse *http.Response
@@ -2283,4 +2320,57 @@ func (ssp StorageServiceProperties) RequestID() string {
 // Version returns the value for header x-ms-version.
 func (ssp StorageServiceProperties) Version() string {
 	return ssp.rawResponse.Header.Get("x-ms-version")
+}
+
+const (
+	rfc3339Format = "2006-01-02T15:04:05.0000000Z07:00"
+)
+
+// used to convert times from UTC to GMT before sending across the wire
+var gmt = time.FixedZone("GMT", 0)
+
+// internal type used for marshalling time in RFC1123 format
+type timeRFC1123 struct {
+	time.Time
+}
+
+// MarshalText implements the encoding.TextMarshaler interface for timeRFC1123.
+func (t timeRFC1123) MarshalText() ([]byte, error) {
+	return []byte(t.Format(time.RFC1123)), nil
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface for timeRFC1123.
+func (t *timeRFC1123) UnmarshalText(data []byte) (err error) {
+	t.Time, err = time.Parse(time.RFC1123, string(data))
+	return
+}
+
+// internal type used for marshalling time in RFC3339 format
+type timeRFC3339 struct {
+	time.Time
+}
+
+// MarshalText implements the encoding.TextMarshaler interface for timeRFC3339.
+func (t timeRFC3339) MarshalText() ([]byte, error) {
+	return []byte(t.Format(rfc3339Format)), nil
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface for timeRFC3339.
+func (t *timeRFC3339) UnmarshalText(data []byte) (err error) {
+	t.Time, err = time.Parse(rfc3339Format, string(data))
+	return
+}
+
+// internal type used for marshalling
+type accessPolicy struct {
+	Start      *timeRFC3339 `xml:"Start"`
+	Expiry     *timeRFC3339 `xml:"Expiry"`
+	Permission *string      `xml:"Permission"`
+}
+
+// internal type used for marshalling
+type shareProperties struct {
+	LastModified timeRFC1123 `xml:"Last-Modified"`
+	Etag         ETag        `xml:"Etag"`
+	Quota        int32       `xml:"Quota"`
 }

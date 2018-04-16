@@ -72,6 +72,7 @@ func (client fileClient) abortCopyResponder(resp pipeline.Response) (pipeline.Re
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &FileAbortCopyResponse{rawResponse: resp.Response()}, err
 }
@@ -154,6 +155,7 @@ func (client fileClient) createResponder(resp pipeline.Response) (pipeline.Respo
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &FileCreateResponse{rawResponse: resp.Response()}, err
 }
@@ -202,6 +204,7 @@ func (client fileClient) deleteResponder(resp pipeline.Response) (pipeline.Respo
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &FileDeleteResponse{rawResponse: resp.Response()}, err
 }
@@ -293,7 +296,7 @@ func (client fileClient) getPropertiesPreparer(sharesnapshot *string, timeout *i
 		return req, pipeline.NewError(err, "failed to create request")
 	}
 	params := req.URL.Query()
-	if sharesnapshot != nil {
+	if sharesnapshot != nil && len(*sharesnapshot) > 0 {
 		params.Set("sharesnapshot", *sharesnapshot)
 	}
 	if timeout != nil {
@@ -310,6 +313,7 @@ func (client fileClient) getPropertiesResponder(resp pipeline.Response) (pipelin
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &FileGetPropertiesResponse{rawResponse: resp.Response()}, err
 }
@@ -346,7 +350,7 @@ func (client fileClient) getRangeListPreparer(sharesnapshot *string, timeout *in
 		return req, pipeline.NewError(err, "failed to create request")
 	}
 	params := req.URL.Query()
-	if sharesnapshot != nil {
+	if sharesnapshot != nil && len(*sharesnapshot) > 0 {
 		params.Set("sharesnapshot", *sharesnapshot)
 	}
 	if timeout != nil {
@@ -457,6 +461,7 @@ func (client fileClient) setHTTPHeadersResponder(resp pipeline.Response) (pipeli
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &FileSetHTTPHeadersResponse{rawResponse: resp.Response()}, err
 }
@@ -514,6 +519,7 @@ func (client fileClient) setMetadataResponder(resp pipeline.Response) (pipeline.
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &FileSetMetadataResponse{rawResponse: resp.Response()}, err
 }
@@ -576,6 +582,7 @@ func (client fileClient) startCopyResponder(resp pipeline.Response) (pipeline.Re
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &FileStartCopyResponse{rawResponse: resp.Response()}, err
 }
@@ -645,6 +652,7 @@ func (client fileClient) uploadRangeResponder(resp pipeline.Response) (pipeline.
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &FileUploadRangeResponse{rawResponse: resp.Response()}, err
 }

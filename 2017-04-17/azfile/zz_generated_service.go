@@ -8,12 +8,11 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"github.com/Azure/azure-pipeline-go/pipeline"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
-
-	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
 // serviceClient is the client for the Service methods of the Azfile service.
@@ -132,18 +131,17 @@ func (client serviceClient) listSharesSegmentPreparer(prefix *string, marker *st
 		return req, pipeline.NewError(err, "failed to create request")
 	}
 	params := req.URL.Query()
-	if prefix != nil {
+	if prefix != nil && len(*prefix) > 0 {
 		params.Set("prefix", *prefix)
 	}
-	if marker != nil {
+	if marker != nil && len(*marker) > 0 {
 		params.Set("marker", *marker)
 	}
 	if maxresults != nil {
 		params.Set("maxresults", fmt.Sprintf("%v", *maxresults))
 	}
-	if len(include) != 0 {
-		include := strings.Trim(strings.Replace(fmt.Sprint(include), " ", ",", -1), "[]")
-		params.Set("include", fmt.Sprintf("%v", include))
+	if include != nil && len(include) > 0 {
+		params.Set("include", fmt.Sprintf("%v", joinConst(include, ",")))
 	}
 	if timeout != nil {
 		params.Set("timeout", fmt.Sprintf("%v", *timeout))
@@ -252,6 +250,7 @@ func (client serviceClient) setPropertiesResponder(resp pipeline.Response) (pipe
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
 	return &ServiceSetPropertiesResponse{rawResponse: resp.Response()}, err
 }
