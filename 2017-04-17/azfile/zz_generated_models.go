@@ -7,9 +7,11 @@ import (
 	"encoding/xml"
 	"io"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 )
 
 // ETag is an entity tag.
@@ -70,6 +72,19 @@ func (m *Marker) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return err
 }
 
+// concatenates a slice of const values with the specified separator between each item
+func joinConst(s interface{}, sep string) string {
+	v := reflect.ValueOf(s)
+	if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
+		panic("s wasn't a slice or array")
+	}
+	ss := make([]string, 0, v.Len())
+	for i := 0; i < v.Len(); i++ {
+		ss = append(ss, v.Index(i).String())
+	}
+	return strings.Join(ss, sep)
+}
+
 // CopyStatusType enumerates the values for copy status type.
 type CopyStatusType string
 
@@ -86,6 +101,11 @@ const (
 	CopyStatusSuccess CopyStatusType = "success"
 )
 
+// PossibleCopyStatusTypeValues returns an array of possible values for the CopyStatusType const type.
+func PossibleCopyStatusTypeValues() []CopyStatusType {
+	return []CopyStatusType{CopyStatusAborted, CopyStatusFailed, CopyStatusNone, CopyStatusPending, CopyStatusSuccess}
+}
+
 // DeleteSnapshotsOptionType enumerates the values for delete snapshots option type.
 type DeleteSnapshotsOptionType string
 
@@ -95,6 +115,28 @@ const (
 	// DeleteSnapshotsOptionNone represents an empty DeleteSnapshotsOptionType.
 	DeleteSnapshotsOptionNone DeleteSnapshotsOptionType = ""
 )
+
+// PossibleDeleteSnapshotsOptionTypeValues returns an array of possible values for the DeleteSnapshotsOptionType const type.
+func PossibleDeleteSnapshotsOptionTypeValues() []DeleteSnapshotsOptionType {
+	return []DeleteSnapshotsOptionType{DeleteSnapshotsOptionInclude, DeleteSnapshotsOptionNone}
+}
+
+// EntryType enumerates the values for entry type.
+type EntryType string
+
+const (
+	// EntryDirectory ...
+	EntryDirectory EntryType = "Directory"
+	// EntryEntry ...
+	EntryEntry EntryType = "Entry"
+	// EntryFile ...
+	EntryFile EntryType = "File"
+)
+
+// PossibleEntryTypeValues returns an array of possible values for the EntryType const type.
+func PossibleEntryTypeValues() []EntryType {
+	return []EntryType{EntryDirectory, EntryEntry, EntryFile}
+}
 
 // FileRangeWriteType enumerates the values for file range write type.
 type FileRangeWriteType string
@@ -108,6 +150,11 @@ const (
 	FileRangeWriteUpdate FileRangeWriteType = "update"
 )
 
+// PossibleFileRangeWriteTypeValues returns an array of possible values for the FileRangeWriteType const type.
+func PossibleFileRangeWriteTypeValues() []FileRangeWriteType {
+	return []FileRangeWriteType{FileRangeWriteClear, FileRangeWriteNone, FileRangeWriteUpdate}
+}
+
 // ListSharesIncludeType enumerates the values for list shares include type.
 type ListSharesIncludeType string
 
@@ -120,6 +167,11 @@ const (
 	ListSharesIncludeSnapshots ListSharesIncludeType = "snapshots"
 )
 
+// PossibleListSharesIncludeTypeValues returns an array of possible values for the ListSharesIncludeType const type.
+func PossibleListSharesIncludeTypeValues() []ListSharesIncludeType {
+	return []ListSharesIncludeType{ListSharesIncludeMetadata, ListSharesIncludeNone, ListSharesIncludeSnapshots}
+}
+
 // AccessPolicy - An Access policy.
 type AccessPolicy struct {
 	// Start - The date-time the policy is active.
@@ -130,10 +182,28 @@ type AccessPolicy struct {
 	Permission *string `xml:"Permission"`
 }
 
-// CorsRule - CORS is an HTTP feature that enables a web application running under one domain to access resources in
-// another domain. Web browsers implement a security restriction known as same-origin policy that prevents a web page
-// from calling APIs in a different domain; CORS provides a secure way to allow one domain (the origin domain) to call
-// APIs in another domain.
+// MarshalXML implements the xml.Marshaler interface for AccessPolicy.
+func (ap AccessPolicy) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	if reflect.TypeOf((*AccessPolicy)(nil)).Elem().Size() != reflect.TypeOf((*accessPolicy)(nil)).Elem().Size() {
+		panic("size mismatch between AccessPolicy and accessPolicy")
+	}
+	ap2 := (*accessPolicy)(unsafe.Pointer(&ap))
+	return e.EncodeElement(*ap2, start)
+}
+
+// UnmarshalXML implements the xml.Unmarshaler interface for AccessPolicy.
+func (ap *AccessPolicy) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	if reflect.TypeOf((*AccessPolicy)(nil)).Elem().Size() != reflect.TypeOf((*accessPolicy)(nil)).Elem().Size() {
+		panic("size mismatch between AccessPolicy and accessPolicy")
+	}
+	ap2 := (*accessPolicy)(unsafe.Pointer(ap))
+	return d.DecodeElement(ap2, &start)
+}
+
+// CorsRule - CORS is an HTTP feature that enables a web application running under one domain to access
+// resources in another domain. Web browsers implement a security restriction known as same-origin policy that
+// prevents a web page from calling APIs in a different domain; CORS provides a secure way to allow one domain
+// (the origin domain) to call APIs in another domain.
 type CorsRule struct {
 	// AllowedOrigins - The origin domains that are permitted to make a request against the storage service via CORS. The origin domain is the domain from which the request originates. Note that the origin must be an exact case-sensitive match with the origin that the user age sends to the service. You can also use the wildcard character '*' to allow all origin domains to make requests via CORS.
 	AllowedOrigins string `xml:"AllowedOrigins"`
@@ -259,15 +329,60 @@ func (ddr DirectoryDeleteResponse) Version() string {
 // DirectoryEntry - Directory entry.
 type DirectoryEntry struct {
 	// XMLName is used for marshalling and is subject to removal in a future release.
-	XMLName   xml.Name `xml:"Directory"`
-	EntryType string   `xml:"EntryType"`
+	XMLName xml.Name `xml:"Directory"`
 	// Name - Name of the entry.
 	Name string `xml:"Name"`
+	// EntryType - Possible values include: 'EntryEntry', 'EntryDirectory', 'EntryFile'
+	EntryType EntryType `xml:"EntryType"`
+}
+
+// AsDirectoryEntry is the BasicEntry implementation for DirectoryEntry.
+func (de DirectoryEntry) AsDirectoryEntry() (*DirectoryEntry, bool) {
+	return &de, true
+}
+
+// AsFileEntry is the BasicEntry implementation for DirectoryEntry.
+func (de DirectoryEntry) AsFileEntry() (*FileEntry, bool) {
+	return nil, false
+}
+
+// AsEntry is the BasicEntry implementation for DirectoryEntry.
+func (de DirectoryEntry) AsEntry() (*Entry, bool) {
+	return nil, false
+}
+
+// AsBasicEntry is the BasicEntry implementation for DirectoryEntry.
+func (de DirectoryEntry) AsBasicEntry() (BasicEntry, bool) {
+	return &de, true
+}
+
+// MarshalXML is the custom marshaler for DirectoryEntry.
+func (de DirectoryEntry) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	de.EntryType = EntryDirectory
+	type Alias DirectoryEntry
+	return e.EncodeElement(struct {
+		Alias
+	}{
+		Alias: (Alias)(de),
+	}, start)
 }
 
 // DirectoryGetPropertiesResponse ...
 type DirectoryGetPropertiesResponse struct {
 	rawResponse *http.Response
+}
+
+// NewMetadata returns user-defined key/value pairs.
+func (dgpr DirectoryGetPropertiesResponse) NewMetadata() Metadata {
+	md := Metadata{}
+	for k, v := range dgpr.rawResponse.Header {
+		if len(k) > mdPrefixLen {
+			if prefix := k[0:mdPrefixLen]; strings.EqualFold(prefix, mdPrefix) {
+				md[strings.ToLower(k[mdPrefixLen:])] = v[0]
+			}
+		}
+	}
+	return md
 }
 
 // Response returns the raw HTTP response object.
@@ -331,19 +446,6 @@ func (dgpr DirectoryGetPropertiesResponse) Version() string {
 	return dgpr.rawResponse.Header.Get("x-ms-version")
 }
 
-// NewMetadata returns user-defined key/value pairs.
-func (dgpr DirectoryGetPropertiesResponse) NewMetadata() Metadata {
-	md := Metadata{}
-	for k, v := range dgpr.rawResponse.Header {
-		if len(k) > mdPrefixLen {
-			if prefix := k[0:mdPrefixLen]; strings.EqualFold(prefix, mdPrefix) {
-				md[strings.ToLower(k[mdPrefixLen:])] = v[0]
-			}
-		}
-	}
-	return md
-}
-
 // DirectorySetMetadataResponse ...
 type DirectorySetMetadataResponse struct {
 	rawResponse *http.Response
@@ -400,6 +502,19 @@ func (dsmr DirectorySetMetadataResponse) Version() string {
 // downloadResponse ...
 type downloadResponse struct {
 	rawResponse *http.Response
+}
+
+// NewMetadata returns user-defined key/value pairs.
+func (dr downloadResponse) NewMetadata() Metadata {
+	md := Metadata{}
+	for k, v := range dr.rawResponse.Header {
+		if len(k) > mdPrefixLen {
+			if prefix := k[0:mdPrefixLen]; strings.EqualFold(prefix, mdPrefix) {
+				md[strings.ToLower(k[mdPrefixLen:])] = v[0]
+			}
+		}
+	}
+	return md
 }
 
 // Response returns the raw HTTP response object.
@@ -564,24 +679,94 @@ func (dr downloadResponse) Version() string {
 	return dr.rawResponse.Header.Get("x-ms-version")
 }
 
-// NewMetadata returns user-defined key/value pairs.
-func (dr downloadResponse) NewMetadata() Metadata {
-	md := Metadata{}
-	for k, v := range dr.rawResponse.Header {
-		if len(k) > mdPrefixLen {
-			if prefix := k[0:mdPrefixLen]; strings.EqualFold(prefix, mdPrefix) {
-				md[strings.ToLower(k[mdPrefixLen:])] = v[0]
-			}
-		}
-	}
-	return md
+// BasicEntry abstract for entries that can be listed from Directory.
+type BasicEntry interface {
+	AsDirectoryEntry() (*DirectoryEntry, bool)
+	AsFileEntry() (*FileEntry, bool)
+	AsEntry() (*Entry, bool)
 }
 
-// Entry - Abstract for entries that can be listed from Directory.
+// Entry abstract for entries that can be listed from Directory.
 type Entry struct {
-	EntryType string `xml:"EntryType"`
 	// Name - Name of the entry.
 	Name string `xml:"Name"`
+	// EntryType - Possible values include: 'EntryEntry', 'EntryDirectory', 'EntryFile'
+	EntryType EntryType `xml:"EntryType"`
+}
+
+// AsDirectoryEntry is the BasicEntry implementation for Entry.
+func (eVar Entry) AsDirectoryEntry() (*DirectoryEntry, bool) {
+	return nil, false
+}
+
+// AsFileEntry is the BasicEntry implementation for Entry.
+func (eVar Entry) AsFileEntry() (*FileEntry, bool) {
+	return nil, false
+}
+
+// AsEntry is the BasicEntry implementation for Entry.
+func (eVar Entry) AsEntry() (*Entry, bool) {
+	return &eVar, true
+}
+
+// AsBasicEntry is the BasicEntry implementation for Entry.
+func (eVar Entry) AsBasicEntry() (BasicEntry, bool) {
+	return &eVar, true
+}
+
+func unmarshalBasicEntry(d *xml.Decoder, start xml.StartElement) (BasicEntry, error) {
+	switch start.Name.Local {
+	case string(EntryDirectory):
+		var de DirectoryEntry
+		err := d.DecodeElement(&de, &start)
+		if err == nil {
+			de.EntryType = EntryDirectory
+		}
+		return de, err
+	case string(EntryFile):
+		var fe FileEntry
+		err := d.DecodeElement(&fe, &start)
+		if err == nil {
+			fe.EntryType = EntryFile
+		}
+		return fe, err
+	default:
+		var eVar Entry
+		err := d.DecodeElement(&eVar, &start)
+		if err == nil {
+			eVar.EntryType = EntryEntry
+		}
+		return eVar, err
+	}
+}
+func unmarshalBasicEntryArray(d *xml.Decoder, start xml.StartElement) ([]BasicEntry, error) {
+	eVarArray := []BasicEntry{}
+	for t, err := d.Token(); err == nil; t, err = d.Token() {
+		ttStart, ok := t.(xml.StartElement)
+		if ok {
+			eVar, err := unmarshalBasicEntry(d, ttStart)
+			if err == nil {
+				eVarArray = append(eVarArray, eVar)
+			}
+		}
+		ttEnd, ok := t.(xml.EndElement)
+		if ok && start.End() == ttEnd {
+			break
+		}
+		continue
+	}
+	return eVarArray, nil
+}
+
+// MarshalXML is the custom marshaler for Entry.
+func (eVar Entry) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	eVar.EntryType = EntryEntry
+	type Alias Entry
+	return e.EncodeElement(struct {
+		Alias
+	}{
+		Alias: (Alias)(eVar),
+	}, start)
 }
 
 // FileAbortCopyResponse ...
@@ -739,16 +924,61 @@ func (fdr FileDeleteResponse) Version() string {
 // FileEntry - File entry.
 type FileEntry struct {
 	// XMLName is used for marshalling and is subject to removal in a future release.
-	XMLName   xml.Name `xml:"File"`
-	EntryType string   `xml:"EntryType"`
+	XMLName xml.Name `xml:"File"`
 	// Name - Name of the entry.
-	Name       string        `xml:"Name"`
+	Name string `xml:"Name"`
+	// EntryType - Possible values include: 'EntryEntry', 'EntryDirectory', 'EntryFile'
+	EntryType  EntryType     `xml:"EntryType"`
 	Properties *FileProperty `xml:"Properties"`
+}
+
+// AsDirectoryEntry is the BasicEntry implementation for FileEntry.
+func (fe FileEntry) AsDirectoryEntry() (*DirectoryEntry, bool) {
+	return nil, false
+}
+
+// AsFileEntry is the BasicEntry implementation for FileEntry.
+func (fe FileEntry) AsFileEntry() (*FileEntry, bool) {
+	return &fe, true
+}
+
+// AsEntry is the BasicEntry implementation for FileEntry.
+func (fe FileEntry) AsEntry() (*Entry, bool) {
+	return nil, false
+}
+
+// AsBasicEntry is the BasicEntry implementation for FileEntry.
+func (fe FileEntry) AsBasicEntry() (BasicEntry, bool) {
+	return &fe, true
+}
+
+// MarshalXML is the custom marshaler for FileEntry.
+func (fe FileEntry) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	fe.EntryType = EntryFile
+	type Alias FileEntry
+	return e.EncodeElement(struct {
+		Alias
+	}{
+		Alias: (Alias)(fe),
+	}, start)
 }
 
 // FileGetPropertiesResponse ...
 type FileGetPropertiesResponse struct {
 	rawResponse *http.Response
+}
+
+// NewMetadata returns user-defined key/value pairs.
+func (fgpr FileGetPropertiesResponse) NewMetadata() Metadata {
+	md := Metadata{}
+	for k, v := range fgpr.rawResponse.Header {
+		if len(k) > mdPrefixLen {
+			if prefix := k[0:mdPrefixLen]; strings.EqualFold(prefix, mdPrefix) {
+				md[strings.ToLower(k[mdPrefixLen:])] = v[0]
+			}
+		}
+	}
+	return md
 }
 
 // Response returns the raw HTTP response object.
@@ -896,19 +1126,6 @@ func (fgpr FileGetPropertiesResponse) RequestID() string {
 // Version returns the value for header x-ms-version.
 func (fgpr FileGetPropertiesResponse) Version() string {
 	return fgpr.rawResponse.Header.Get("x-ms-version")
-}
-
-// NewMetadata returns user-defined key/value pairs.
-func (fgpr FileGetPropertiesResponse) NewMetadata() Metadata {
-	md := Metadata{}
-	for k, v := range fgpr.rawResponse.Header {
-		if len(k) > mdPrefixLen {
-			if prefix := k[0:mdPrefixLen]; strings.EqualFold(prefix, mdPrefix) {
-				md[strings.ToLower(k[mdPrefixLen:])] = v[0]
-			}
-		}
-	}
-	return md
 }
 
 // FileProperty - File properties.
@@ -1137,16 +1354,6 @@ func (furr FileUploadRangeResponse) Status() string {
 // 	return gr.rawResponse.Header.Get("Content-MD5")
 // }
 
-// ContentRange returns the value for header Content-Range.
-// func (gr downloadResponse) ContentRange() string {
-// 	return gr.rawResponse.Header.Get("Content-Range")
-// }
-
-// IsServerEncrypted returns the value for header x-ms-request-server-encrypted.
-func (furr FileUploadRangeResponse) IsServerEncrypted() string {
-	return furr.rawResponse.Header.Get("x-ms-request-server-encrypted")
-}
-
 // Date returns the value for header Date.
 func (furr FileUploadRangeResponse) Date() time.Time {
 	s := furr.rawResponse.Header.Get("Date")
@@ -1163,6 +1370,11 @@ func (furr FileUploadRangeResponse) Date() time.Time {
 // ETag returns the value for header ETag.
 func (furr FileUploadRangeResponse) ETag() ETag {
 	return ETag(furr.rawResponse.Header.Get("ETag"))
+}
+
+// IsServerEncrypted returns the value for header x-ms-request-server-encrypted.
+func (furr FileUploadRangeResponse) IsServerEncrypted() string {
+	return furr.rawResponse.Header.Get("x-ms-request-server-encrypted")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -1188,46 +1400,96 @@ func (furr FileUploadRangeResponse) Version() string {
 	return furr.rawResponse.Header.Get("x-ms-version")
 }
 
-// ListFilesAndDirectoriesSegmentResponse - An enumeration of directories and files.
-type ListFilesAndDirectoriesSegmentResponse struct {
+// listFilesAndDirectoriesSegmentResponse - An enumeration of directories and files.
+type listFilesAndDirectoriesSegmentResponse struct {
 	rawResponse *http.Response
 	// XMLName is used for marshalling and is subject to removal in a future release.
-	XMLName         xml.Name         `xml:"EnumerationResults"`
-	ServiceEndpoint string           `xml:"ServiceEndpoint,attr"`
-	ShareName       string           `xml:"ShareName,attr"`
-	ShareSnapshot   *string          `xml:"ShareSnapshot,attr"`
-	DirectoryPath   string           `xml:"DirectoryPath,attr"`
-	Prefix          string           `xml:"Prefix"`
-	Marker          *string          `xml:"Marker"`
-	MaxResults      *int32           `xml:"MaxResults"`
-	Files           []FileEntry      `xml:"Entries>File"`
-	Directories     []DirectoryEntry `xml:"Entries>Directory"`
-	NextMarker      Marker           `xml:"NextMarker"`
+	XMLName         xml.Name     `xml:"EnumerationResults"`
+	ServiceEndpoint string       `xml:"ServiceEndpoint,attr"`
+	ShareName       string       `xml:"ShareName,attr"`
+	ShareSnapshot   *string      `xml:"ShareSnapshot,attr"`
+	DirectoryPath   string       `xml:"DirectoryPath,attr"`
+	Prefix          string       `xml:"Prefix"`
+	Marker          *string      `xml:"Marker"`
+	MaxResults      *int32       `xml:"MaxResults"`
+	Entries         []BasicEntry `xml:"Entries>Entries"`
+	NextMarker      Marker       `xml:"NextMarker"`
+}
+
+// UnmarshalXML is the custom unmarshaler for listFilesAndDirectoriesSegmentResponse struct.
+func (lfadsr *listFilesAndDirectoriesSegmentResponse) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	for _, a := range start.Attr {
+		switch a.Name.Local {
+		case "ServiceEndpoint":
+			lfadsr.ServiceEndpoint = a.Value
+		case "ShareName":
+			lfadsr.ShareName = a.Value
+		case "ShareSnapshot":
+			lfadsr.ShareSnapshot = &a.Value
+		case "DirectoryPath":
+			lfadsr.DirectoryPath = a.Value
+		}
+	}
+	for t, err := d.Token(); err == nil; t, err = d.Token() {
+		tt, ok := t.(xml.StartElement)
+		if !ok {
+			continue
+		}
+		switch tt.Name.Local {
+		case "Prefix":
+			err := d.DecodeElement(&lfadsr.Prefix, &tt)
+			if err != nil {
+				return err
+			}
+		case "Marker":
+			err := d.DecodeElement(&lfadsr.Marker, &tt)
+			if err != nil {
+				return err
+			}
+		case "MaxResults":
+			err := d.DecodeElement(&lfadsr.MaxResults, &tt)
+			if err != nil {
+				return err
+			}
+		case "Entries":
+			entries, err := unmarshalBasicEntryArray(d, tt)
+			if err != nil {
+				return err
+			}
+			lfadsr.Entries = entries
+		case "NextMarker":
+			err := d.DecodeElement(&lfadsr.NextMarker, &tt)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // Response returns the raw HTTP response object.
-func (ldafr ListFilesAndDirectoriesSegmentResponse) Response() *http.Response {
-	return ldafr.rawResponse
+func (lfadsr listFilesAndDirectoriesSegmentResponse) Response() *http.Response {
+	return lfadsr.rawResponse
 }
 
 // StatusCode returns the HTTP status code of the response, e.g. 200.
-func (ldafr ListFilesAndDirectoriesSegmentResponse) StatusCode() int {
-	return ldafr.rawResponse.StatusCode
+func (lfadsr listFilesAndDirectoriesSegmentResponse) StatusCode() int {
+	return lfadsr.rawResponse.StatusCode
 }
 
 // Status returns the HTTP status message of the response, e.g. "200 OK".
-func (ldafr ListFilesAndDirectoriesSegmentResponse) Status() string {
-	return ldafr.rawResponse.Status
+func (lfadsr listFilesAndDirectoriesSegmentResponse) Status() string {
+	return lfadsr.rawResponse.Status
 }
 
 // ContentType returns the value for header Content-Type.
-func (ldafr ListFilesAndDirectoriesSegmentResponse) ContentType() string {
-	return ldafr.rawResponse.Header.Get("Content-Type")
+func (lfadsr listFilesAndDirectoriesSegmentResponse) ContentType() string {
+	return lfadsr.rawResponse.Header.Get("Content-Type")
 }
 
 // Date returns the value for header Date.
-func (ldafr ListFilesAndDirectoriesSegmentResponse) Date() time.Time {
-	s := ldafr.rawResponse.Header.Get("Date")
+func (lfadsr listFilesAndDirectoriesSegmentResponse) Date() time.Time {
+	s := lfadsr.rawResponse.Header.Get("Date")
 	if s == "" {
 		return time.Time{}
 	}
@@ -1239,13 +1501,13 @@ func (ldafr ListFilesAndDirectoriesSegmentResponse) Date() time.Time {
 }
 
 // RequestID returns the value for header x-ms-request-id.
-func (ldafr ListFilesAndDirectoriesSegmentResponse) RequestID() string {
-	return ldafr.rawResponse.Header.Get("x-ms-request-id")
+func (lfadsr listFilesAndDirectoriesSegmentResponse) RequestID() string {
+	return lfadsr.rawResponse.Header.Get("x-ms-request-id")
 }
 
 // Version returns the value for header x-ms-version.
-func (ldafr ListFilesAndDirectoriesSegmentResponse) Version() string {
-	return ldafr.rawResponse.Header.Get("x-ms-version")
+func (lfadsr listFilesAndDirectoriesSegmentResponse) Version() string {
+	return lfadsr.rawResponse.Header.Get("x-ms-version")
 }
 
 // ListSharesResponse - An enumeration of shares.
@@ -1289,7 +1551,7 @@ func (lsr ListSharesResponse) Version() string {
 // Metrics - Storage Analytics metrics for file service.
 type Metrics struct {
 	// Version - The version of Storage Analytics to configure.
-	Version *string `xml:"Version"`
+	Version string `xml:"Version"`
 	// Enabled - Indicates whether metrics are enabled for the File service.
 	Enabled bool `xml:"Enabled"`
 	// IncludeAPIs - Indicates whether metrics should generate summary statistics for called API operations.
@@ -1601,6 +1863,19 @@ type ShareGetPropertiesResponse struct {
 	rawResponse *http.Response
 }
 
+// NewMetadata returns user-defined key/value pairs.
+func (sgpr ShareGetPropertiesResponse) NewMetadata() Metadata {
+	md := Metadata{}
+	for k, v := range sgpr.rawResponse.Header {
+		if len(k) > mdPrefixLen {
+			if prefix := k[0:mdPrefixLen]; strings.EqualFold(prefix, mdPrefix) {
+				md[strings.ToLower(k[mdPrefixLen:])] = v[0]
+			}
+		}
+	}
+	return md
+}
+
 // Response returns the raw HTTP response object.
 func (sgpr ShareGetPropertiesResponse) Response() *http.Response {
 	return sgpr.rawResponse
@@ -1670,24 +1945,29 @@ func (sgpr ShareGetPropertiesResponse) Version() string {
 	return sgpr.rawResponse.Header.Get("x-ms-version")
 }
 
-// NewMetadata returns user-defined key/value pairs.
-func (sgpr ShareGetPropertiesResponse) NewMetadata() Metadata {
-	md := Metadata{}
-	for k, v := range sgpr.rawResponse.Header {
-		if len(k) > mdPrefixLen {
-			if prefix := k[0:mdPrefixLen]; strings.EqualFold(prefix, mdPrefix) {
-				md[strings.ToLower(k[mdPrefixLen:])] = v[0]
-			}
-		}
-	}
-	return md
-}
-
 // ShareProperties - Properties of a share.
 type ShareProperties struct {
 	LastModified time.Time `xml:"Last-Modified"`
 	Etag         ETag      `xml:"Etag"`
 	Quota        int32     `xml:"Quota"`
+}
+
+// MarshalXML implements the xml.Marshaler interface for ShareProperties.
+func (sp ShareProperties) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	if reflect.TypeOf((*ShareProperties)(nil)).Elem().Size() != reflect.TypeOf((*shareProperties)(nil)).Elem().Size() {
+		panic("size mismatch between ShareProperties and shareProperties")
+	}
+	sp2 := (*shareProperties)(unsafe.Pointer(&sp))
+	return e.EncodeElement(*sp2, start)
+}
+
+// UnmarshalXML implements the xml.Unmarshaler interface for ShareProperties.
+func (sp *ShareProperties) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	if reflect.TypeOf((*ShareProperties)(nil)).Elem().Size() != reflect.TypeOf((*shareProperties)(nil)).Elem().Size() {
+		panic("size mismatch between ShareProperties and shareProperties")
+	}
+	sp2 := (*shareProperties)(unsafe.Pointer(sp))
+	return d.DecodeElement(sp2, &start)
 }
 
 // ShareSetAccessPolicyResponse ...
@@ -2040,4 +2320,57 @@ func (ssp StorageServiceProperties) RequestID() string {
 // Version returns the value for header x-ms-version.
 func (ssp StorageServiceProperties) Version() string {
 	return ssp.rawResponse.Header.Get("x-ms-version")
+}
+
+const (
+	rfc3339Format = "2006-01-02T15:04:05.0000000Z07:00"
+)
+
+// used to convert times from UTC to GMT before sending across the wire
+var gmt = time.FixedZone("GMT", 0)
+
+// internal type used for marshalling time in RFC1123 format
+type timeRFC1123 struct {
+	time.Time
+}
+
+// MarshalText implements the encoding.TextMarshaler interface for timeRFC1123.
+func (t timeRFC1123) MarshalText() ([]byte, error) {
+	return []byte(t.Format(time.RFC1123)), nil
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface for timeRFC1123.
+func (t *timeRFC1123) UnmarshalText(data []byte) (err error) {
+	t.Time, err = time.Parse(time.RFC1123, string(data))
+	return
+}
+
+// internal type used for marshalling time in RFC3339 format
+type timeRFC3339 struct {
+	time.Time
+}
+
+// MarshalText implements the encoding.TextMarshaler interface for timeRFC3339.
+func (t timeRFC3339) MarshalText() ([]byte, error) {
+	return []byte(t.Format(rfc3339Format)), nil
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface for timeRFC3339.
+func (t *timeRFC3339) UnmarshalText(data []byte) (err error) {
+	t.Time, err = time.Parse(rfc3339Format, string(data))
+	return
+}
+
+// internal type used for marshalling
+type accessPolicy struct {
+	Start      *timeRFC3339 `xml:"Start"`
+	Expiry     *timeRFC3339 `xml:"Expiry"`
+	Permission *string      `xml:"Permission"`
+}
+
+// internal type used for marshalling
+type shareProperties struct {
+	LastModified timeRFC1123 `xml:"Last-Modified"`
+	Etag         ETag        `xml:"Etag"`
+	Quota        int32       `xml:"Quota"`
 }

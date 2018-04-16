@@ -100,6 +100,44 @@ func (o *ListFilesAndDirectoriesOptions) pointers() (prefix *string, maxResults 
 	return
 }
 
+// toConvenienceModel convert raw response to convenience model.
+// func (r *listFilesAndDirectoriesSegmentResponse) toConvenienceModel() *ListFilesAndDirectoriesSegmentResponse {
+// 	cr := ListFilesAndDirectoriesSegmentResponse{
+// 		rawResponse:     r.rawResponse,
+// 		ServiceEndpoint: r.ServiceEndpoint,
+// 		ShareName:       r.ShareName,
+// 		ShareSnapshot:   r.ShareSnapshot,
+// 		DirectoryPath:   r.DirectoryPath,
+// 		Prefix:          r.Prefix,
+// 		Marker:          r.Marker,
+// 		MaxResults:      r.MaxResults,
+// 		NextMarker:      r.NextMarker,
+// 	}
+
+// 	for _, e := range r.Entries {
+// 		if f, isFile := e.AsFileEntry(); isFile {
+// 			cr.Files = append(cr.Files, *f)
+// 		} else if d, isDir := e.AsDirectoryEntry(); isDir {
+// 			cr.Directories = append(cr.Directories, *d)
+// 		} else {
+// 			// Logic should not be here, otherwise client is not aligning to latest REST API document
+// 			panic(fmt.Errorf("invalid entry type found, entry info: %v", e))
+// 		}
+
+// 	}
+
+// 	return &cr
+// }
+
+// ListFilesAndDirectoriesSegmentAutoRest is the implementation using Auto Rest generated protocol code.
+// func (d DirectoryURL) ListFilesAndDirectoriesSegmentAutoRest(ctx context.Context, marker Marker, o ListFilesAndDirectoriesOptions) (*ListFilesAndDirectoriesSegmentResponse, error) {
+// 	prefix, maxResults := o.pointers()
+
+// 	rawResponse, error := d.directoryClient.ListFilesAndDirectoriesSegmentAutoRest(ctx, prefix, nil, marker.val, maxResults, nil)
+
+// 	return rawResponse.toConvenienceModel(), error
+// }
+
 // ListFilesAndDirectoriesSegment returns a single segment of files and directories starting from the specified Marker.
 // Use an empty Marker to start enumeration from the beginning. File and directory names are returned in lexicographic order.
 // After getting a segment, process it, and then call ListFilesAndDirectoriesSegment again (passing the the previously-returned

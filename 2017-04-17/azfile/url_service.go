@@ -7,6 +7,12 @@ import (
 	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
+const (
+	// storageAnalyticsVersion indicates the version of Storage Analytics to configure. Use "1.0" for this value.
+	// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/set-file-service-properties.
+	storageAnalyticsVersion = "1.0"
+)
+
 // A ServiceURL represents a URL to the Azure Storage File service allowing you to manipulate file shares.
 type ServiceURL struct {
 	client serviceClient
@@ -103,7 +109,7 @@ type ListSharesDetail struct {
 	Metadata, Snapshots bool
 }
 
-// string produces the Include query parameter's value.
+// toArray produces the Include query parameter's value.
 func (d *ListSharesDetail) toArray() []ListSharesIncludeType {
 	items := make([]ListSharesIncludeType, 0, 2)
 	if d.Metadata {
@@ -116,14 +122,81 @@ func (d *ListSharesDetail) toArray() []ListSharesIncludeType {
 	return items
 }
 
+// toFsp converts StorageServiceProperties to convenience representation FileServiceProperties.
+// This method is added considering protocol layer's swagger unification purpose.
+func (ssp *StorageServiceProperties) toFsp() *FileServiceProperties {
+	if ssp == nil {
+		return nil
+	}
+
+	return &FileServiceProperties{
+		rawResponse:   ssp.rawResponse,
+		HourMetrics:   ssp.HourMetrics.toMp(),
+		MinuteMetrics: ssp.MinuteMetrics.toMp(),
+		Cors:          ssp.Cors,
+	}
+}
+
+// toMp converts Metrics to convenience representation MetricProperties.
+// This method is added considering protocol layer's swagger unification purpose.
+func (m *Metrics) toMp() MetricProperties {
+	mp := MetricProperties{}
+	if m.Enabled {
+		mp.MetricEnabled = true
+		mp.IncludeAPIs = *m.IncludeAPIs
+		if m.RetentionPolicy != nil && m.RetentionPolicy.Enabled {
+			mp.RetentionPolicyEnabled = true
+			mp.RetentionDays = *m.RetentionPolicy.Days
+		}
+	}
+
+	return mp
+}
+
+// toSsp converts FileServiceProperties to convenience representation StorageServiceProperties.
+// This method is added considering protocol layer's swagger unification purpose.
+func (fsp *FileServiceProperties) toSsp() *StorageServiceProperties {
+	if fsp == nil {
+		return nil
+	}
+
+	return &StorageServiceProperties{
+		rawResponse:   fsp.rawResponse,
+		HourMetrics:   fsp.HourMetrics.toM(),
+		MinuteMetrics: fsp.MinuteMetrics.toM(),
+		Cors:          fsp.Cors,
+	}
+}
+
+// toM converts MetricProperties to Metrics.
+// This method is added considering protocol layer's swagger unification purpose.
+func (mp MetricProperties) toM() *Metrics {
+	m := Metrics{
+		Version:         storageAnalyticsVersion,
+		RetentionPolicy: &RetentionPolicy{}} // Note: Version and RetentionPolicy are actually mandatory.
+
+	if mp.MetricEnabled {
+		m.Enabled = true
+		m.IncludeAPIs = &mp.IncludeAPIs
+		if mp.RetentionPolicyEnabled {
+			m.RetentionPolicy.Enabled = true
+			m.RetentionPolicy.Days = &mp.RetentionDays
+		}
+	}
+
+	return &m
+}
+
 // GetProperties returns the properties of the File service.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/get-file-service-properties.
-func (s ServiceURL) GetProperties(ctx context.Context) (*StorageServiceProperties, error) {
-	return s.client.GetProperties(ctx, nil)
+func (s ServiceURL) GetProperties(ctx context.Context) (*FileServiceProperties, error) {
+	ssp, error := s.client.GetProperties(ctx, nil)
+
+	return ssp.toFsp(), error
 }
 
 // SetProperties sets the properties of the File service.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/set-file-service-properties.
-func (s ServiceURL) SetProperties(ctx context.Context, properties StorageServiceProperties) (*ServiceSetPropertiesResponse, error) {
-	return s.client.SetProperties(ctx, properties, nil)
+func (s ServiceURL) SetProperties(ctx context.Context, properties FileServiceProperties) (*ServiceSetPropertiesResponse, error) {
+	return s.client.SetProperties(ctx, *properties.toSsp(), nil)
 }

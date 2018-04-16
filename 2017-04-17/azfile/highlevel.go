@@ -4,13 +4,20 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math"
 
 	"bytes"
 	"os"
 	"sync"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
+)
+
+const (
+	// defaultParallelCount specifies default parallel count will be used by parallel upload/download methods
+	defaultParallelCount = 5
+
+	// fileSegmentSize specifies file segment size that file would be splitted into during parallel upload/download
+	fileSegmentSize = 500 * 1024 * 1024
 )
 
 // UploadToAzureFileOptions identifies options used by the UploadBufferToAzureFile and UploadFileToAzureFile functions.
@@ -22,10 +29,7 @@ type UploadToAzureFileOptions struct {
 	Progress pipeline.ProgressReceiver
 
 	// Parallelism indicates the maximum number of ranges to upload in parallel. If 0(default) is provided, 5 parallelism will be used by default.
-	Parallelism int16
-
-	// Overwrite indicates whether to overwrite the destination if it already exists.
-	Overwrite bool
+	Parallelism uint16
 
 	// FileHTTPHeaders contains read/writeable file properties.
 	FileHTTPHeaders FileHTTPHeaders
@@ -40,7 +44,7 @@ func UploadBufferToAzureFile(ctx context.Context, b []byte,
 
 	// 1. Validate parameters, and set defaults.
 	if o.RangeSize < 0 || o.RangeSize > FileMaxUploadRangeBytes {
-		panic(fmt.Sprintf("RangeSize option must be > 0 and <= %d", FileMaxUploadRangeBytes))
+		panic(fmt.Sprintf("o.RangeSize must be >= 0 and <= %d, in bytes", FileMaxUploadRangeBytes))
 	}
 	if o.RangeSize == 0 {
 		o.RangeSize = FileMaxUploadRangeBytes
@@ -48,43 +52,33 @@ func UploadBufferToAzureFile(ctx context.Context, b []byte,
 
 	size := int64(len(b))
 
-	if size > FileMaxSize {
-		panic(fmt.Sprintf("The buffer is too big, the size must be <= %d.", FileMaxSize))
+	if size > FileMaxSizeInBytes {
+		panic(fmt.Sprintf("b's length must be <= %d, in bytes", FileMaxSizeInBytes))
 	}
 
 	parallelism := o.Parallelism
 	if parallelism == 0 {
-		parallelism = 5 // default parallelism
+		parallelism = defaultParallelCount // default parallelism
 	}
 
 	// 2. Try to create the Azure file.
 	_, err := fileURL.Create(ctx, size, o.FileHTTPHeaders, o.Metadata)
-	if err != nil && err.(StorageError) != nil && (err.(StorageError)).ServiceCode() == ServiceCodeResourceAlreadyExists {
-		if !o.Overwrite { // return error if not want to overwrite existing Azure file
-			return err
-		}
-
-		// Otherwise, resize the Azure file.
-		_, err = fileURL.Resize(ctx, size)
-		if err != nil {
-			return err
-		}
+	if err != nil {
+		return err
+	}
+	// If size equals to 0, upload nothing and directly return.
+	if size == 0 {
+		return nil
 	}
 
 	// 3. Prepare and do parallel upload.
-	numRanges := int16(math.Ceil(float64(size) / float64(o.RangeSize)))
-	uploadRangeChannel := make(chan func() error, parallelism) // Create the channel that release 'parallelism' goroutines concurrently
-	uploadRangeResponseChannel := make(chan error, numRanges)  // Holds each UploadRange's response
-
 	fileProgress := int64(0)
 	progressLock := &sync.Mutex{}
 
 	return doBatchTransfer(ctx, batchTransferOptions{
-		fileSize:                 size,
-		chunkSize:                o.RangeSize,
-		parallelism:              parallelism,
-		operationChannel:         uploadRangeChannel,
-		operationResponseChannel: uploadRangeResponseChannel,
+		transferSize: size,
+		chunkSize:    o.RangeSize,
+		parallelism:  parallelism,
 		operation: func(offset int64, curRangeSize int64) error {
 			// Prepare to read the proper section of the buffer.
 			var body io.ReadSeeker = bytes.NewReader(b[offset : offset+curRangeSize])
@@ -95,9 +89,9 @@ func UploadBufferToAzureFile(ctx context.Context, b []byte,
 						diff := bytesTransferred - rangeProgress
 						rangeProgress = bytesTransferred
 						progressLock.Lock()
+						defer progressLock.Unlock()
 						fileProgress += diff
 						o.Progress(fileProgress)
-						progressLock.Unlock()
 					})
 			}
 
@@ -136,7 +130,7 @@ type DownloadFromAzureFileOptions struct {
 	Progress pipeline.ProgressReceiver
 
 	// Parallelism indicates the maximum number of ranges to download in parallel. If 0(default) is provided, 5 parallelism will be used by default.
-	Parallelism int16
+	Parallelism uint16
 
 	// Max retry requests used during reading data for each range.
 	MaxRetryRequestsPerRange int
@@ -148,7 +142,7 @@ func downloadAzureFileToBuffer(ctx context.Context, fileURL FileURL, azfilePrope
 
 	// 1. Validate parameters, and set defaults.
 	if o.RangeSize < 0 {
-		panic("RangeSize option must be > 0")
+		panic("RangeSize option must be >= 0")
 	}
 	if o.RangeSize == 0 {
 		o.RangeSize = FileMaxUploadRangeBytes
@@ -156,12 +150,17 @@ func downloadAzureFileToBuffer(ctx context.Context, fileURL FileURL, azfilePrope
 
 	if azfileProperties == nil {
 		p, err := fileURL.GetProperties(ctx)
-		azfileProperties = p
 		if err != nil {
 			return nil, err
 		}
+		azfileProperties = p
 	}
 	azfileSize := azfileProperties.ContentLength()
+
+	// If azure file size equals to 0, directly return as nothing need be downloaded.
+	if azfileSize == 0 {
+		return azfileProperties, nil
+	}
 
 	if int64(len(b)) < azfileSize {
 		panic(fmt.Sprintf("The buffer's size should be equal to or larger than Azure file's size: %d.", azfileSize))
@@ -169,26 +168,20 @@ func downloadAzureFileToBuffer(ctx context.Context, fileURL FileURL, azfilePrope
 
 	parallelism := o.Parallelism
 	if parallelism == 0 {
-		parallelism = 5 // default parallelism
+		parallelism = defaultParallelCount // default parallelism
 	}
 
 	// 2. Prepare and do parallel download.
-	numRanges := int16(math.Ceil(float64(azfileSize) / float64(o.RangeSize)))
-	downloadRangeChannel := make(chan func() error, parallelism) // Create the channel that release 'parallelism' goroutines concurrently
-	downloadRangeResponseChannel := make(chan error, numRanges)  // Holds each response
-
 	fileProgress := int64(0)
 	progressLock := &sync.Mutex{}
 
 	err := doBatchTransfer(ctx, batchTransferOptions{
-		fileSize:                 azfileSize,
-		chunkSize:                o.RangeSize,
-		parallelism:              parallelism,
-		operationChannel:         downloadRangeChannel,
-		operationResponseChannel: downloadRangeResponseChannel,
+		transferSize: azfileSize,
+		chunkSize:    o.RangeSize,
+		parallelism:  parallelism,
 		operation: func(offset int64, curRangeSize int64) error {
 			dr, err := fileURL.Download(ctx, offset, curRangeSize, false)
-			body := dr.Body(ResilientReaderOptions{MaxRetryRequests: o.MaxRetryRequestsPerRange})
+			body := dr.Body(RetryReaderOptions{MaxRetryRequests: o.MaxRetryRequestsPerRange})
 
 			if o.Progress != nil {
 				rangeProgress := int64(0)
@@ -198,9 +191,9 @@ func downloadAzureFileToBuffer(ctx context.Context, fileURL FileURL, azfilePrope
 						diff := bytesTransferred - rangeProgress
 						rangeProgress = bytesTransferred
 						progressLock.Lock()
+						defer progressLock.Unlock()
 						fileProgress += diff
 						o.Progress(fileProgress)
-						progressLock.Unlock()
 					})
 			}
 
@@ -230,7 +223,7 @@ func DownloadAzureFileToFile(ctx context.Context, fileURL FileURL, file *os.File
 
 	// 1. Validate parameters.
 	if file == nil {
-		panic("file should not be nils")
+		panic("file should not be nil")
 	}
 
 	// 2. Try to get Azure file's size.
@@ -251,43 +244,45 @@ func DownloadAzureFileToFile(ctx context.Context, fileURL FileURL, file *os.File
 		}
 	}
 
-	// 4. Set mmap and call DownloadAzureFileToBuffer.
-	m, err := newMMF(file, true, 0, int(azfileSize))
-	if err != nil {
-		return nil, err
+	// 4. Set mmap and call DownloadAzureFileToBuffer, in this case file size should be > 0.
+	m := mmf{} // Default to an empty slice; used for 0-size file
+	if azfileSize > 0 {
+		m, err = newMMF(file, true, 0, int(azfileSize))
+		if err != nil {
+			return nil, err
+		}
+		defer m.unmap()
 	}
-	defer m.unmap()
 
 	return downloadAzureFileToBuffer(ctx, fileURL, azfileProperties, m, o)
 }
 
 // BatchTransferOptions identifies options used by doBatchTransfer.
 type batchTransferOptions struct {
-	fileSize                 int64
-	chunkSize                int64
-	parallelism              int16
-	operationChannel         chan func() error
-	operationResponseChannel chan error
-	operation                func(offset int64, chunkSize int64) error
-	operationName            string
+	transferSize  int64
+	chunkSize     int64
+	parallelism   uint16
+	operation     func(offset int64, chunkSize int64) error
+	operationName string
 }
 
 // doBatchTransfer helps to execute operations in a batch manner.
 func doBatchTransfer(ctx context.Context, o batchTransferOptions) error {
 	// Prepare and do parallel operations.
-	numChunks := int16(math.Ceil(float64(o.fileSize) / float64(o.chunkSize)))
-
+	numChunks := ((o.transferSize - 1) / o.chunkSize) + 1
+	operationChannel := make(chan func() error, o.parallelism) // Create the channel that release 'parallelism' goroutines concurrently
+	operationResponseChannel := make(chan error, numChunks)    // Holds each response
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	// Create the goroutines that process each operation (in parallel).
-	for g := int16(0); g < o.parallelism; g++ {
+	for g := uint16(0); g < o.parallelism; g++ {
 		//grIndex := g
 		go func() {
-			for f := range o.operationChannel {
+			for f := range operationChannel {
 				//fmt.Printf("[%s] gr-%d start action\n", o.operationName, grIndex)
 				err := f()
-				o.operationResponseChannel <- err
+				operationResponseChannel <- err
 				//fmt.Printf("[%s] gr-%d end action\n", o.operationName, grIndex)
 			}
 		}()
@@ -295,26 +290,26 @@ func doBatchTransfer(ctx context.Context, o batchTransferOptions) error {
 
 	curChunkSize := o.chunkSize
 	// Add each chunk's operation to the channel.
-	for chunkNum := int16(0); chunkNum < numChunks; chunkNum++ {
-		if chunkNum == numChunks-1 { // Last chunk
-			curChunkSize = o.fileSize - (int64(chunkNum) * o.chunkSize) // Remove size of all transfered chunks from total
+	for chunkIndex := int64(0); chunkIndex < numChunks; chunkIndex++ {
+		if chunkIndex == numChunks-1 { // Last chunk
+			curChunkSize = o.transferSize - (int64(chunkIndex) * o.chunkSize) // Remove size of all transferred chunks from total
 		}
-		offset := int64(chunkNum) * o.chunkSize
+		offset := int64(chunkIndex) * o.chunkSize
 
-		o.operationChannel <- func() error {
-			return o.operation(offset, curChunkSize)
+		closureChunkSize := curChunkSize
+		operationChannel <- func() error {
+			return o.operation(offset, closureChunkSize)
 		}
 	}
-	close(o.operationChannel)
+	close(operationChannel)
 
 	// Wait for the operations to complete.
-	for chunkNum := int16(0); chunkNum < numChunks; chunkNum++ {
-		responseError := <-o.operationResponseChannel
+	for chunkIndex := int64(0); chunkIndex < numChunks; chunkIndex++ {
+		responseError := <-operationResponseChannel
 		if responseError != nil {
 			cancel()             // As soon as any operation fails, cancel all remaining operation calls
 			return responseError // No need to process anymore responses
 		}
 	}
-
 	return nil
 }

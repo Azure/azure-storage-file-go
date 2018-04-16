@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/base64"
+	"encoding/xml"
 	"net/http"
 	"time"
 )
@@ -77,9 +78,9 @@ type DownloadResponse struct {
 	dr *downloadResponse
 
 	// Fields need for retry.
-	ctx     context.Context
-	f       FileURL
-	getInfo GetInfo
+	ctx  context.Context
+	f    FileURL
+	info HTTPGetterInfo
 }
 
 // Response returns the raw HTTP response object.
@@ -210,4 +211,140 @@ func (dr DownloadResponse) FileContentMD5() [md5.Size]byte {
 // ContentMD5 returns the value for header Content-MD5.
 func (dr DownloadResponse) ContentMD5() [md5.Size]byte {
 	return md5StringToMD5(dr.dr.rawResponse.Header.Get("Content-MD5"))
+}
+
+// // Entry - Abstract for entries that can be listed from Directory.
+// type Entry struct {
+// 	EntryType string `xml:"EntryType"`
+// 	// Name - Name of the entry.
+// 	Name string `xml:"Name"`
+// }
+
+// // FileEntry - File entry.
+// type FileEntry struct {
+// 	// XMLName is used for marshalling and is subject to removal in a future release.
+// 	XMLName   xml.Name `xml:"File"`
+// 	EntryType string   `xml:"EntryType"`
+// 	// Name - Name of the entry.
+// 	Name       string        `xml:"Name"`
+// 	Properties *FileProperty `xml:"Properties"`
+// }
+
+// // DirectoryEntry - Directory entry.
+// type DirectoryEntry struct {
+// 	// XMLName is used for marshalling and is subject to removal in a future release.
+// 	XMLName   xml.Name `xml:"Directory"`
+// 	EntryType string   `xml:"EntryType"`
+// 	// Name - Name of the entry.
+// 	Name string `xml:"Name"`
+// }
+
+// ListFilesAndDirectoriesSegmentResponse - An enumeration of directories and files.
+type ListFilesAndDirectoriesSegmentResponse struct {
+	rawResponse *http.Response
+	// XMLName is used for marshalling and is subject to removal in a future release.
+	XMLName         xml.Name         `xml:"EnumerationResults"`
+	ServiceEndpoint string           `xml:"ServiceEndpoint,attr"`
+	ShareName       string           `xml:"ShareName,attr"`
+	ShareSnapshot   *string          `xml:"ShareSnapshot,attr"`
+	DirectoryPath   string           `xml:"DirectoryPath,attr"`
+	Prefix          string           `xml:"Prefix"`
+	Marker          *string          `xml:"Marker"`
+	MaxResults      *int32           `xml:"MaxResults"`
+	Files           []FileEntry      `xml:"Entries>File"`
+	Directories     []DirectoryEntry `xml:"Entries>Directory"`
+	NextMarker      Marker           `xml:"NextMarker"`
+}
+
+// Response returns the raw HTTP response object.
+func (ldafr ListFilesAndDirectoriesSegmentResponse) Response() *http.Response {
+	return ldafr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (ldafr ListFilesAndDirectoriesSegmentResponse) StatusCode() int {
+	return ldafr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (ldafr ListFilesAndDirectoriesSegmentResponse) Status() string {
+	return ldafr.rawResponse.Status
+}
+
+// ContentType returns the value for header Content-Type.
+func (ldafr ListFilesAndDirectoriesSegmentResponse) ContentType() string {
+	return ldafr.rawResponse.Header.Get("Content-Type")
+}
+
+// Date returns the value for header Date.
+func (ldafr ListFilesAndDirectoriesSegmentResponse) Date() time.Time {
+	s := ldafr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (ldafr ListFilesAndDirectoriesSegmentResponse) RequestID() string {
+	return ldafr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (ldafr ListFilesAndDirectoriesSegmentResponse) Version() string {
+	return ldafr.rawResponse.Header.Get("x-ms-version")
+}
+
+// MetricProperties definies convenience struct for Metrics,
+type MetricProperties struct {
+	// MetricEnabled - Indicates whether metrics are enabled for the File service.
+	MetricEnabled bool
+	// Version - The version of Storage Analytics to configure.
+	// Version string, comment out version, as it's mandatory and should be 1.0
+	// IncludeAPIs - Indicates whether metrics should generate summary statistics for called API operations.
+	IncludeAPIs bool
+	// RetentionPolicyEnabled - Indicates whether a rentention policy is enabled for the File service.
+	RetentionPolicyEnabled bool
+	// RetentionDays - Indicates the number of days that metrics data should be retained.
+	RetentionDays int32
+}
+
+// FileServiceProperties defines convenience struct for StorageServiceProperties
+type FileServiceProperties struct {
+	rawResponse *http.Response
+	// HourMetrics - A summary of request statistics grouped by API in hourly aggregates for files.
+	HourMetrics MetricProperties
+	// MinuteMetrics - A summary of request statistics grouped by API in minute aggregates for files.
+	MinuteMetrics MetricProperties
+	// Cors - The set of CORS rules.
+	Cors []CorsRule
+}
+
+// Response returns the raw HTTP response object.
+func (fsp FileServiceProperties) Response() *http.Response {
+	return fsp.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (fsp FileServiceProperties) StatusCode() int {
+	return fsp.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (fsp FileServiceProperties) Status() string {
+	return fsp.rawResponse.Status
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (fsp FileServiceProperties) RequestID() string {
+	return fsp.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (fsp FileServiceProperties) Version() string {
+	return fsp.rawResponse.Header.Get("x-ms-version")
 }

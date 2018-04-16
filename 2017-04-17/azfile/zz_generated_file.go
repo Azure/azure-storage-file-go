@@ -30,14 +30,14 @@ func newFileClient(url url.URL, p pipeline.Pipeline) fileClient {
 // the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
-func (client fileClient) AbortCopy(ctx context.Context, copyID string, copyActionAbortConstant string, timeout *int32) (*FileAbortCopyResponse, error) {
+func (client fileClient) AbortCopy(ctx context.Context, copyID string, timeout *int32) (*FileAbortCopyResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.abortCopyPreparer(copyID, copyActionAbortConstant, timeout)
+	req, err := client.abortCopyPreparer(copyID, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (client fileClient) AbortCopy(ctx context.Context, copyID string, copyActio
 }
 
 // abortCopyPreparer prepares the AbortCopy request.
-func (client fileClient) abortCopyPreparer(copyID string, copyActionAbortConstant string, timeout *int32) (pipeline.Request, error) {
+func (client fileClient) abortCopyPreparer(copyID string, timeout *int32) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -61,7 +61,7 @@ func (client fileClient) abortCopyPreparer(copyID string, copyActionAbortConstan
 	}
 	params.Set("comp", "copy")
 	req.URL.RawQuery = params.Encode()
-	req.Header.Set("x-ms-copy-action", copyActionAbortConstant)
+	req.Header.Set("x-ms-copy-action", "abort")
 	req.Header.Set("x-ms-version", ServiceVersion)
 	return req, nil
 }
@@ -72,29 +72,33 @@ func (client fileClient) abortCopyResponder(resp pipeline.Response) (pipeline.Re
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
 	return &FileAbortCopyResponse{rawResponse: resp.Response()}, err
 }
 
 // Create creates a new file or replaces a file. Note it only initializes the file with no content.
 //
-// fileContentLength is specifies the maximum size for the file, up to 1 TB. fileTypeConstant is dummy constant
-// parameter, file type can only be file. timeout is the timeout parameter is expressed in seconds. For more
-// information, see <a
+// fileContentLength is specifies the maximum size for the file, up to 1 TB. timeout is the timeout parameter is
+// expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> fileContentType is sets the MIME content type of the file. The default
 // type is 'application/octet-stream'. fileContentEncoding is specifies which content encodings have been applied to
 // the file. fileContentLanguage is specifies the natural languages used by this resource. fileCacheControl is sets the
 // file's cache control. The File service stores this value but does not use or modify it. fileContentMD5 is sets the
 // file's MD5 hash. fileContentDisposition is sets the file's Content-Disposition header. metadata is a name-value pair
-// to associate with a file storage object. Metadata names must adhere to the naming rules for C# identifiers.
-func (client fileClient) Create(ctx context.Context, fileContentLength int64, fileTypeConstant string, timeout *int32, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 *string, fileContentDisposition *string, metadata map[string]string) (*FileCreateResponse, error) {
+// to associate with a file storage object.
+func (client fileClient) Create(ctx context.Context, fileContentLength int64, timeout *int32, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 *string, fileContentDisposition *string, metadata map[string]string) (*FileCreateResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}},
+		{targetValue: metadata,
+			constraints: []constraint{{target: "metadata", name: null, rule: false,
+				chain: []constraint{{target: "metadata", name: pattern, rule: `^[a-zA-Z]+$`, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.createPreparer(fileContentLength, fileTypeConstant, timeout, fileContentType, fileContentEncoding, fileContentLanguage, fileCacheControl, fileContentMD5, fileContentDisposition, metadata)
+	req, err := client.createPreparer(fileContentLength, timeout, fileContentType, fileContentEncoding, fileContentLanguage, fileCacheControl, fileContentMD5, fileContentDisposition, metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +110,7 @@ func (client fileClient) Create(ctx context.Context, fileContentLength int64, fi
 }
 
 // createPreparer prepares the Create request.
-func (client fileClient) createPreparer(fileContentLength int64, fileTypeConstant string, timeout *int32, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 *string, fileContentDisposition *string, metadata map[string]string) (pipeline.Request, error) {
+func (client fileClient) createPreparer(fileContentLength int64, timeout *int32, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 *string, fileContentDisposition *string, metadata map[string]string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -118,7 +122,7 @@ func (client fileClient) createPreparer(fileContentLength int64, fileTypeConstan
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
 	req.Header.Set("x-ms-content-length", fmt.Sprintf("%v", fileContentLength))
-	req.Header.Set("x-ms-type", fileTypeConstant)
+	req.Header.Set("x-ms-type", "file")
 	if fileContentType != nil {
 		req.Header.Set("x-ms-content-type", *fileContentType)
 	}
@@ -151,6 +155,8 @@ func (client fileClient) createResponder(resp pipeline.Response) (pipeline.Respo
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
 	return &FileCreateResponse{rawResponse: resp.Response()}, err
 }
 
@@ -198,6 +204,8 @@ func (client fileClient) deleteResponder(resp pipeline.Response) (pipeline.Respo
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
 	return &FileDeleteResponse{rawResponse: resp.Response()}, err
 }
 
@@ -288,7 +296,7 @@ func (client fileClient) getPropertiesPreparer(sharesnapshot *string, timeout *i
 		return req, pipeline.NewError(err, "failed to create request")
 	}
 	params := req.URL.Query()
-	if sharesnapshot != nil {
+	if sharesnapshot != nil && len(*sharesnapshot) > 0 {
 		params.Set("sharesnapshot", *sharesnapshot)
 	}
 	if timeout != nil {
@@ -305,6 +313,8 @@ func (client fileClient) getPropertiesResponder(resp pipeline.Response) (pipelin
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
 	return &FileGetPropertiesResponse{rawResponse: resp.Response()}, err
 }
 
@@ -340,7 +350,7 @@ func (client fileClient) getRangeListPreparer(sharesnapshot *string, timeout *in
 		return req, pipeline.NewError(err, "failed to create request")
 	}
 	params := req.URL.Query()
-	if sharesnapshot != nil {
+	if sharesnapshot != nil && len(*sharesnapshot) > 0 {
 		params.Set("sharesnapshot", *sharesnapshot)
 	}
 	if timeout != nil {
@@ -451,6 +461,8 @@ func (client fileClient) setHTTPHeadersResponder(resp pipeline.Response) (pipeli
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
 	return &FileSetHTTPHeadersResponse{rawResponse: resp.Response()}, err
 }
 
@@ -459,12 +471,14 @@ func (client fileClient) setHTTPHeadersResponder(resp pipeline.Response) (pipeli
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-// Metadata names must adhere to the naming rules for C# identifiers.
 func (client fileClient) SetMetadata(ctx context.Context, timeout *int32, metadata map[string]string) (*FileSetMetadataResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}},
+		{targetValue: metadata,
+			constraints: []constraint{{target: "metadata", name: null, rule: false,
+				chain: []constraint{{target: "metadata", name: pattern, rule: `^[a-zA-Z]+$`, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
 	req, err := client.setMetadataPreparer(timeout, metadata)
@@ -505,6 +519,8 @@ func (client fileClient) setMetadataResponder(resp pipeline.Response) (pipeline.
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
 	return &FileSetMetadataResponse{rawResponse: resp.Response()}, err
 }
 
@@ -518,12 +534,14 @@ func (client fileClient) setMetadataResponder(resp pipeline.Response) (pipeline.
 // copy source. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-// Metadata names must adhere to the naming rules for C# identifiers.
 func (client fileClient) StartCopy(ctx context.Context, copySource string, timeout *int32, metadata map[string]string) (*FileStartCopyResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}},
+		{targetValue: metadata,
+			constraints: []constraint{{target: "metadata", name: null, rule: false,
+				chain: []constraint{{target: "metadata", name: pattern, rule: `^[a-zA-Z]+$`, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
 	req, err := client.startCopyPreparer(copySource, timeout, metadata)
@@ -564,6 +582,8 @@ func (client fileClient) startCopyResponder(resp pipeline.Response) (pipeline.Re
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
 	return &FileStartCopyResponse{rawResponse: resp.Response()}, err
 }
 
@@ -632,5 +652,7 @@ func (client fileClient) uploadRangeResponder(resp pipeline.Response) (pipeline.
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
 	return &FileUploadRangeResponse{rawResponse: resp.Response()}, err
 }

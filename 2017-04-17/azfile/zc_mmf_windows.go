@@ -14,7 +14,8 @@ func newMMF(file *os.File, writable bool, offset int64, length int) (mmf, error)
 	if writable {
 		prot, access = uint32(syscall.PAGE_READWRITE), uint32(syscall.FILE_MAP_WRITE)
 	}
-	hMMF, errno := syscall.CreateFileMapping(syscall.Handle(file.Fd()), nil, prot, uint32(int64(length)>>32), uint32(int64(length)&0xffffffff), nil)
+	maxSize := int64(offset + int64(length))
+	hMMF, errno := syscall.CreateFileMapping(syscall.Handle(file.Fd()), nil, prot, uint32(maxSize>>32), uint32(maxSize&0xffffffff), nil)
 	if hMMF == 0 {
 		return nil, os.NewSyscallError("CreateFileMapping", errno)
 	}

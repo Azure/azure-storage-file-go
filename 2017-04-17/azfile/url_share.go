@@ -131,9 +131,6 @@ func (p AccessPolicyPermission) String() string {
 	if p.Read {
 		b.WriteRune('r')
 	}
-	if p.Add {
-		b.WriteRune('a')
-	}
 	if p.Create {
 		b.WriteRune('c')
 	}
@@ -152,7 +149,6 @@ func (p AccessPolicyPermission) String() string {
 // Parse initializes the AccessPolicyPermission's fields from a string.
 func (p *AccessPolicyPermission) Parse(s string) {
 	p.Read = strings.ContainsRune(s, 'r')
-	p.Add = strings.ContainsRune(s, 'a')
 	p.Create = strings.ContainsRune(s, 'c')
 	p.Write = strings.ContainsRune(s, 'w')
 	p.Delete = strings.ContainsRune(s, 'd')

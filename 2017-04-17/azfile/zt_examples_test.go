@@ -80,19 +80,23 @@ func Example() {
 	}
 
 	// Download the file's contents and verify that it worked correctly.
-	get, err := fileURL.Download(ctx, 0, 0, false)
+	// User can specify 0 as offset and CountToEnd(-1) as count to indiciate downloading the entire file.
+	get, err := fileURL.Download(ctx, 0, CountToEnd, false)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	downloadedData := &bytes.Buffer{}
-	downloadedData.ReadFrom(get.Body(ResilientReaderOptions{}))
+	retryReader := get.Body(RetryReaderOptions{})
+	defer retryReader.Close() // The client must close the response body when finished with it
+
+	downloadedData.ReadFrom(retryReader)
 	fmt.Println("File content: " + downloadedData.String())
 
 	// New a reference to a directory with name DemoDir in share, and create the directory.
 	directoryDemoURL := shareURL.NewDirectoryURL("DemoDir")
 	_, err = directoryDemoURL.Create(ctx, Metadata{})
-	if err != nil {
+	if err != nil && err.(StorageError) != nil && err.(StorageError).ServiceCode() != ServiceCodeResourceAlreadyExists {
 		log.Fatal(err)
 	}
 
@@ -490,14 +494,13 @@ func ExampleShareURL_SetQuota() {
 	// Updated share usage: 10 GB
 }
 
-// This example shows how to create, delete share snapshots.
-// And how to list shares and share snapshots and restore file shares or files from share snapshots.
+// This example shows how to create, delete, list, and restore share snapshots.
 func ExampleShareURL_CreateSnapshot() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
 	credential := NewSharedKeyCredential(accountName, accountKey)
 
-	ctx := context.Background() // This example uses a ever-expiring context
+	ctx := context.Background() // This example uses a never-expiring context
 
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net", accountName))
 	serviceURL := NewServiceURL(*u, NewPipeline(credential, PipelineOptions{}))
@@ -519,7 +522,7 @@ func ExampleShareURL_CreateSnapshot() {
 		log.Fatal(err)
 	}
 
-	// Create share snapshot, the snapshot contains the create file.
+	// Create share snapshot, the snapshot contains the created file.
 	snapshotShare, err := shareURL.CreateSnapshot(ctx, Metadata{})
 	fmt.Printf("Created share snapshot: %s", snapshotShare.Snapshot())
 
@@ -625,8 +628,8 @@ func ExampleFileURL() {
 	}
 
 	// Let's get all the data saved in the file, and verify if data is correct.
-	// User can specify 0 offset and 0 count to indiciate downloading the entire file.
-	get, err := fileURL.Download(ctx, 0, 0, false)
+	// User can specify 0 as offset and CountToEnd(-1) as count to indiciate downloading the entire file.
+	get, err := fileURL.Download(ctx, 0, CountToEnd, false)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -634,11 +637,13 @@ func ExampleFileURL() {
 	fileData := &bytes.Buffer{}
 	// The resilient reader can help to read stream in a resilient way, by default it returns a raw stream,
 	// which will not provide additional retry mechanism.
-	_, err = fileData.ReadFrom(get.Body(ResilientReaderOptions{}))
+	retryReader := get.Body(RetryReaderOptions{})
+	defer retryReader.Close() // The client must close the response body when finished with it
+
+	_, err = fileData.ReadFrom(retryReader)
 	if err != nil {
 		log.Fatal(err)
 	}
-	get.Body(ResilientReaderOptions{}).Close() // The client must close the response body when finished with it
 
 	fmt.Println(fileData)
 	// The output would be:
@@ -755,7 +760,7 @@ func ExampleFileURL_progressUploadDownload() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	sURL, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare", accountName))
 
-	// Create an ServiceURL object that wraps the service URL and a request pipeline to making requests.
+	// Create a ShareURL object that wraps the share URL and a request pipeline to making requests.
 	shareURL := NewShareURL(*sURL, p)
 
 	ctx := context.Background() // This example uses a never-expiring context
@@ -785,12 +790,12 @@ func ExampleFileURL_progressUploadDownload() {
 	}
 
 	// Here's how to read the file's data with progress reporting:
-	get, err := fileURL.Download(ctx, 0, 0, false)
+	get, err := fileURL.Download(ctx, 0, CountToEnd, false)
 	if err != nil {
 		log.Fatal(err)
 	}
 	// Wrap the response body in a ResponseBodyProgress and pass a callback function for progress reporting.
-	responseBody := pipeline.NewResponseBodyProgress(get.Body(ResilientReaderOptions{}), func(bytesTransferred int64) {
+	responseBody := pipeline.NewResponseBodyProgress(get.Body(RetryReaderOptions{}), func(bytesTransferred int64) {
 		fmt.Printf("Read %d of %d bytes.\n", bytesTransferred, get.ContentLength())
 	})
 
@@ -832,9 +837,52 @@ func ExampleFileURL_StartCopy() {
 	fmt.Printf("StartCopy from %s to %s: ID=%s, Status=%s\n", src.String(), fileURL, copyID, copyStatus)
 }
 
-// This example shows how to copy a large stream to Azure file.
+// This example shows how to download a large file using a RetryReader. Specifically, if
+// the connection fails while reading, continuing to read from this RetryReader initiates a new
+// Download call passing a range that starts from the last byte successfully read before the failure.
+func ExampleFileURL_Download() {
+	// From the Azure portal, get your Storage account file service URL endpoint.
+	accountName, accountKey := accountInfo()
+
+	// Create a FileURL object to a file in the share (we assume the share & file already exist).
+	// Note: You can call GetProperties first to ensure the Azure file exists before downloading.
+	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/BigFile.bin", accountName))
+	fileURL := NewFileURL(*u, NewPipeline(NewSharedKeyCredential(accountName, accountKey), PipelineOptions{}))
+
+	// Trigger download.
+	downloadResponse, err := fileURL.Download(context.Background(), 0, CountToEnd, false) // 0 offset and CountToEnd(-1) count means download entire file.
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	contentLength := downloadResponse.ContentLength() // Used for progress reporting to report the total number of bytes being downloaded.
+
+	// Setup RetryReader options for stream reading retry.
+	retryReader := downloadResponse.Body(RetryReaderOptions{MaxRetryRequests: 3})
+
+	// NewResponseBodyStream wraps the RetryReader with progress reporting; it returns an io.ReadCloser.
+	progressReader := pipeline.NewResponseBodyProgress(retryReader,
+		func(bytesTransferred int64) {
+			fmt.Printf("Downloaded %d of %d bytes.\n", bytesTransferred, contentLength)
+		})
+	defer progressReader.Close() // The client must close the response body when finished with it
+
+	file, err := os.Create("BigFile.bin") // Create the file to hold the downloaded file contents.
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	written, err := io.Copy(file, progressReader) // Write to the file by reading from the file (with intelligent retries).
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = written // Avoid compiler's "declared and not used" error
+}
+
+// This example shows how to upload a large local file to Azure file with parallel support.
 func ExampleUploadFileToAzureFile() {
-	file, err := os.Open("C:\\Test.pdf") // Open the file we want to upload (we assume the file already exists).
+	file, err := os.Open("BigFile.bin") // Open the file we want to upload (we assume the file already exists).
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -854,8 +902,18 @@ func ExampleUploadFileToAzureFile() {
 
 	ctx := context.Background() // This example uses a never-expiring context
 
+	// Trigger parallel upload with Parallelism set to 3. Note if there is an Azure file
+	// with same name exists, UploadFileToAzureFile will overwrite the existing Azure file with new content,
+	// and set specified FileHTTPHeaders and Metadata.
 	err = UploadFileToAzureFile(ctx, file, fileURL,
 		UploadToAzureFileOptions{
+			Parallelism: 3,
+			FileHTTPHeaders: FileHTTPHeaders{
+				CacheControl: "no-transform",
+			},
+			Metadata: Metadata{
+				"createdby": "Jeffrey&Jiachen",
+			},
 			// If Progress is non-nil, this function is called periodically as bytes are uploaded.
 			Progress: func(bytesTransferred int64) {
 				fmt.Printf("Uploaded %d of %d bytes.\n", bytesTransferred, fileSize.Size())
@@ -866,50 +924,7 @@ func ExampleUploadFileToAzureFile() {
 	}
 }
 
-// This example shows how to download a large stream with resilient reader. Specifically, if
-// the connection fails while reading, continuing to read from this stream initiates a new
-// Download call passing a range that starts from the last byte successfully read before the failure.
-func ExampleFileURL_Download() {
-	// From the Azure portal, get your Storage account file service URL endpoint.
-	accountName, accountKey := accountInfo()
-
-	// Create a FileURL object to a file in the share (we assume the share & file already exist).
-	// Note: You can call GetProperties first to ensure the Azure file exists before downloading.
-	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/BigFile.bin", accountName))
-	fileURL := NewFileURL(*u, NewPipeline(NewSharedKeyCredential(accountName, accountKey), PipelineOptions{}))
-
-	// Trigger download.
-	downloadResponse, err := fileURL.Download(context.Background(), 0, 0, false) // 0 offset and 0 count means download entire file.
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	contentLength := downloadResponse.ContentLength() // Used for progress reporting to report the total number of bytes being downloaded.
-
-	// Setup resilient reader options for stream reading retry.
-	resilientReader := downloadResponse.Body(ResilientReaderOptions{MaxRetryRequests: 3})
-
-	// NewResponseBodyStream wraps the GetRetryStream with progress reporting; it returns an io.ReadCloser.
-	progressReader := pipeline.NewResponseBodyProgress(resilientReader,
-		func(bytesTransferred int64) {
-			fmt.Printf("Downloaded %d of %d bytes.\n", bytesTransferred, contentLength)
-		})
-	defer progressReader.Close() // The client must close the response body when finished with it
-
-	file, err := os.Create("BigFile.bin") // Create the file to hold the downloaded file contents.
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	written, err := io.Copy(file, progressReader) // Write to the file by reading from the file (with intelligent retries).
-	if err != nil {
-		log.Fatal(err)
-	}
-	_ = written // Avoid compiler's "declared and not used" error
-}
-
-// This example shows how to download an large Azure file to local with parallel support.
+// This example shows how to download a large Azure file to local with parallel support.
 func ExampleDownloadAzureFileToFile() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
@@ -924,7 +939,7 @@ func ExampleDownloadAzureFileToFile() {
 	}
 	defer file.Close()
 
-	// Trigger parallel download with Parallelism set to 2, MaxRetryRequestsPerRange means the count of retry requests
+	// Trigger parallel download with Parallelism set to 3, MaxRetryRequestsPerRange means the count of retry requests
 	// could be sent if there is error during reading stream.
 	downloadResponse, err := DownloadAzureFileToFile(context.Background(), fileURL, file,
 		DownloadFromAzureFileOptions{

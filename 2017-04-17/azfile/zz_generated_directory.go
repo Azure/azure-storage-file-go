@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -29,12 +30,14 @@ func newDirectoryClient(url url.URL, p pipeline.Pipeline) directoryClient {
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-// Metadata names must adhere to the naming rules for C# identifiers.
 func (client directoryClient) Create(ctx context.Context, timeout *int32, metadata map[string]string) (*DirectoryCreateResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}},
+		{targetValue: metadata,
+			constraints: []constraint{{target: "metadata", name: null, rule: false,
+				chain: []constraint{{target: "metadata", name: pattern, rule: `^[a-zA-Z]+$`, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
 	req, err := client.createPreparer(timeout, metadata)
@@ -75,6 +78,8 @@ func (client directoryClient) createResponder(resp pipeline.Response) (pipeline.
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
 	return &DirectoryCreateResponse{rawResponse: resp.Response()}, err
 }
 
@@ -123,6 +128,8 @@ func (client directoryClient) deleteResponder(resp pipeline.Response) (pipeline.
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
 	return &DirectoryDeleteResponse{rawResponse: resp.Response()}, err
 }
 
@@ -158,7 +165,7 @@ func (client directoryClient) getPropertiesPreparer(sharesnapshot *string, timeo
 		return req, pipeline.NewError(err, "failed to create request")
 	}
 	params := req.URL.Query()
-	if sharesnapshot != nil {
+	if sharesnapshot != nil && len(*sharesnapshot) > 0 {
 		params.Set("sharesnapshot", *sharesnapshot)
 	}
 	if timeout != nil {
@@ -176,6 +183,8 @@ func (client directoryClient) getPropertiesResponder(resp pipeline.Response) (pi
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
 	return &DirectoryGetPropertiesResponse{rawResponse: resp.Response()}, err
 }
 
@@ -213,6 +222,40 @@ func (client directoryClient) ListFilesAndDirectoriesSegment(ctx context.Context
 	return resp.(*ListFilesAndDirectoriesSegmentResponse), err
 }
 
+// ListFilesAndDirectoriesSegmentAutoRest returns a list of files or directories under the specified share or directory. It
+// lists the contents only for a single level of the directory hierarchy.
+//
+// prefix is filters the results to return only entries whose name begins with the specified prefix. sharesnapshot is
+// the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot to query. marker
+// is a string value that identifies the portion of the list to be returned with the next list operation. The operation
+// returns a marker value within the response body if the list returned was not complete. The marker value may then be
+// used in a subsequent call to request the next set of list items. The marker value is opaque to the client.
+// maxresults is specifies the maximum number of entries to return. If the request does not specify maxresults, or
+// specifies a value greater than 5,000, the server will return up to 5,000 items. timeout is the timeout parameter is
+// expressed in seconds. For more information, see <a
+// href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
+// Timeouts for File Service Operations.</a>
+func (client directoryClient) ListFilesAndDirectoriesSegmentAutoRest(ctx context.Context, prefix *string, sharesnapshot *string, marker *string, maxresults *int32, timeout *int32) (*listFilesAndDirectoriesSegmentResponse, error) {
+	if err := validate([]validation{
+		{targetValue: maxresults,
+			constraints: []constraint{{target: "maxresults", name: null, rule: false,
+				chain: []constraint{{target: "maxresults", name: inclusiveMinimum, rule: 1, chain: nil}}}}},
+		{targetValue: timeout,
+			constraints: []constraint{{target: "timeout", name: null, rule: false,
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+		return nil, err
+	}
+	req, err := client.listFilesAndDirectoriesSegmentPreparer(prefix, sharesnapshot, marker, maxresults, timeout)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.listFilesAndDirectoriesSegmentResponderAutoRest}, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*listFilesAndDirectoriesSegmentResponse), err
+}
+
 // listFilesAndDirectoriesSegmentPreparer prepares the ListFilesAndDirectoriesSegment request.
 func (client directoryClient) listFilesAndDirectoriesSegmentPreparer(prefix *string, sharesnapshot *string, marker *string, maxresults *int32, timeout *int32) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("GET", client.url, nil)
@@ -220,13 +263,13 @@ func (client directoryClient) listFilesAndDirectoriesSegmentPreparer(prefix *str
 		return req, pipeline.NewError(err, "failed to create request")
 	}
 	params := req.URL.Query()
-	if prefix != nil {
+	if prefix != nil && len(*prefix) > 0 {
 		params.Set("prefix", *prefix)
 	}
-	if sharesnapshot != nil {
+	if sharesnapshot != nil && len(*sharesnapshot) > 0 {
 		params.Set("sharesnapshot", *sharesnapshot)
 	}
-	if marker != nil {
+	if marker != nil && len(*marker) > 0 {
 		params.Set("marker", *marker)
 	}
 	if maxresults != nil {
@@ -266,17 +309,43 @@ func (client directoryClient) listFilesAndDirectoriesSegmentResponder(resp pipel
 	return result, nil
 }
 
+// listFilesAndDirectoriesSegmentResponderAutoRest handles the response to the ListFilesAndDirectoriesSegment request.
+func (client directoryClient) listFilesAndDirectoriesSegmentResponderAutoRest(resp pipeline.Response) (pipeline.Response, error) {
+	err := validateResponse(resp, http.StatusOK)
+	if resp == nil {
+		return nil, err
+	}
+	result := &listFilesAndDirectoriesSegmentResponse{rawResponse: resp.Response()}
+	if err != nil {
+		return result, err
+	}
+	defer resp.Response().Body.Close()
+	b, err := ioutil.ReadAll(resp.Response().Body)
+	if err != nil {
+		return result, NewResponseError(err, resp.Response(), "failed to read response body")
+	}
+	if len(b) > 0 {
+		err = xml.Unmarshal(b, result)
+		if err != nil {
+			return result, NewResponseError(err, resp.Response(), "failed to unmarshal response body")
+		}
+	}
+	return result, nil
+}
+
 // SetMetadata updates user defined metadata for the specified directory.
 //
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-// Metadata names must adhere to the naming rules for C# identifiers.
 func (client directoryClient) SetMetadata(ctx context.Context, timeout *int32, metadata map[string]string) (*DirectorySetMetadataResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}},
+		{targetValue: metadata,
+			constraints: []constraint{{target: "metadata", name: null, rule: false,
+				chain: []constraint{{target: "metadata", name: pattern, rule: `^[a-zA-Z]+$`, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
 	req, err := client.setMetadataPreparer(timeout, metadata)
@@ -318,5 +387,7 @@ func (client directoryClient) setMetadataResponder(resp pipeline.Response) (pipe
 	if resp == nil {
 		return nil, err
 	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
 	return &DirectorySetMetadataResponse{rawResponse: resp.Response()}, err
 }

@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-storage-file-go/2017-04-17/azfile"
-
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	chk "gopkg.in/check.v1"
 )
@@ -75,7 +73,7 @@ func (s *policyRetrySuite) TestLinearRetry(c *chk.C) {
 		MaxRetryDelay: time.Duration(2) * time.Second,
 	}
 
-	fsu := azfile.NewServiceURL(*mockURL, newTestRetryPipeline(retryOption))
+	fsu := NewServiceURL(*mockURL, newTestRetryPipeline(retryOption))
 
 	_, err := fsu.GetProperties(context.Background())
 
@@ -110,7 +108,7 @@ func (s *policyRetrySuite) TestExponentialRetry(c *chk.C) {
 		MaxRetryDelay: time.Duration(2) * time.Second,
 	}
 
-	fsu := azfile.NewServiceURL(*mockURL, newTestRetryPipeline(retryOption))
+	fsu := NewServiceURL(*mockURL, newTestRetryPipeline(retryOption))
 
 	_, err := fsu.GetProperties(context.Background())
 
