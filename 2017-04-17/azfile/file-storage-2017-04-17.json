@@ -1073,7 +1073,7 @@
               }
             },
             "schema": {
-              "$ref": "#/definitions/ListDirectoriesAndFilesResponse"
+              "$ref": "#/definitions/ListFilesAndDirectoriesSegmentResponse"
             }
           }
         },
@@ -2185,6 +2185,8 @@
         "EntryType",
         "Name"
       ],
+      "discriminator": "EntryType",
+      "x-ms-discriminator-value": "Entry",
       "properties": {
         "EntryType": {
           "type": "string"
@@ -2199,6 +2201,7 @@
       "xml": {
         "name": "Directory"
       },
+      "x-ms-discriminator-value": "Directory",
       "description": "Directory entry.",
       "allOf": [
         {
@@ -2210,6 +2213,7 @@
       "xml": {
         "name": "File"
       },
+      "x-ms-discriminator-value": "File",
       "description": "File entry.",
       "allOf": [
         {
@@ -2242,7 +2246,7 @@
         }
       }
     },
-    "ListDirectoriesAndFilesResponse": {
+    "ListFilesAndDirectoriesSegmentResponse": {
       "xml": {
         "name": "EnumerationResults"
       },
@@ -2296,7 +2300,7 @@
           },
           "type": "array",
           "items": {
-            "$ref": "#/definitions/FileEntry"
+            "$ref": "#/definitions/Entry"
           }
         },
         "NextMarker": {
@@ -2356,6 +2360,7 @@
     "Metrics": {
       "description": "Storage Analytics metrics for file service.",
       "required": [
+        "Version",
         "Enabled"
       ],
       "properties": {
@@ -2734,9 +2739,10 @@
       "name": "x-ms-meta",
       "x-ms-client-name": "metadata",
       "in": "header",
-      "description": "A name-value pair to associate with a file storage object. Metadata names must adhere to the naming rules for C# identifiers.",
+      "description": "A name-value pair to associate with a file storage object.",
       "required": false,
       "type": "string",
+	  "pattern": "^[a-zA-Z]+$",
       "x-ms-parameter-location": "method",
       "x-ms-header-collection-prefix": "x-ms-meta-"
     },
