@@ -213,31 +213,22 @@ func (dr DownloadResponse) ContentMD5() [md5.Size]byte {
 	return md5StringToMD5(dr.dr.rawResponse.Header.Get("Content-MD5"))
 }
 
-// // Entry - Abstract for entries that can be listed from Directory.
-// type Entry struct {
-// 	EntryType string `xml:"EntryType"`
-// 	// Name - Name of the entry.
-// 	Name string `xml:"Name"`
-// }
+// FileEntry - File entry.
+type FileEntry struct {
+	// XMLName is used for marshalling and is subject to removal in a future release.
+	XMLName xml.Name `xml:"File"`
+	// Name - Name of the entry.
+	Name       string        `xml:"Name"`
+	Properties *FileProperty `xml:"Properties"`
+}
 
-// // FileEntry - File entry.
-// type FileEntry struct {
-// 	// XMLName is used for marshalling and is subject to removal in a future release.
-// 	XMLName   xml.Name `xml:"File"`
-// 	EntryType string   `xml:"EntryType"`
-// 	// Name - Name of the entry.
-// 	Name       string        `xml:"Name"`
-// 	Properties *FileProperty `xml:"Properties"`
-// }
-
-// // DirectoryEntry - Directory entry.
-// type DirectoryEntry struct {
-// 	// XMLName is used for marshalling and is subject to removal in a future release.
-// 	XMLName   xml.Name `xml:"Directory"`
-// 	EntryType string   `xml:"EntryType"`
-// 	// Name - Name of the entry.
-// 	Name string `xml:"Name"`
-// }
+// DirectoryEntry - Directory entry.
+type DirectoryEntry struct {
+	// XMLName is used for marshalling and is subject to removal in a future release.
+	XMLName xml.Name `xml:"Directory"`
+	// Name - Name of the entry.
+	Name string `xml:"Name"`
+}
 
 // ListFilesAndDirectoriesSegmentResponse - An enumeration of directories and files.
 type ListFilesAndDirectoriesSegmentResponse struct {

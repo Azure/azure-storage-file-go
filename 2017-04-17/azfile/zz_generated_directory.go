@@ -235,26 +235,26 @@ func (client directoryClient) ListFilesAndDirectoriesSegment(ctx context.Context
 // expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
-func (client directoryClient) ListFilesAndDirectoriesSegmentAutoRest(ctx context.Context, prefix *string, sharesnapshot *string, marker *string, maxresults *int32, timeout *int32) (*listFilesAndDirectoriesSegmentResponse, error) {
-	if err := validate([]validation{
-		{targetValue: maxresults,
-			constraints: []constraint{{target: "maxresults", name: null, rule: false,
-				chain: []constraint{{target: "maxresults", name: inclusiveMinimum, rule: 1, chain: nil}}}}},
-		{targetValue: timeout,
-			constraints: []constraint{{target: "timeout", name: null, rule: false,
-				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
-		return nil, err
-	}
-	req, err := client.listFilesAndDirectoriesSegmentPreparer(prefix, sharesnapshot, marker, maxresults, timeout)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.listFilesAndDirectoriesSegmentResponderAutoRest}, req)
-	if err != nil {
-		return nil, err
-	}
-	return resp.(*listFilesAndDirectoriesSegmentResponse), err
-}
+// func (client directoryClient) ListFilesAndDirectoriesSegmentAutoRest(ctx context.Context, prefix *string, sharesnapshot *string, marker *string, maxresults *int32, timeout *int32) (*listFilesAndDirectoriesSegmentResponse, error) {
+// 	if err := validate([]validation{
+// 		{targetValue: maxresults,
+// 			constraints: []constraint{{target: "maxresults", name: null, rule: false,
+// 				chain: []constraint{{target: "maxresults", name: inclusiveMinimum, rule: 1, chain: nil}}}}},
+// 		{targetValue: timeout,
+// 			constraints: []constraint{{target: "timeout", name: null, rule: false,
+// 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+// 		return nil, err
+// 	}
+// 	req, err := client.listFilesAndDirectoriesSegmentPreparer(prefix, sharesnapshot, marker, maxresults, timeout)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.listFilesAndDirectoriesSegmentResponderAutoRest}, req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return resp.(*listFilesAndDirectoriesSegmentResponse), err
+// }
 
 // listFilesAndDirectoriesSegmentPreparer prepares the ListFilesAndDirectoriesSegment request.
 func (client directoryClient) listFilesAndDirectoriesSegmentPreparer(prefix *string, sharesnapshot *string, marker *string, maxresults *int32, timeout *int32) (pipeline.Request, error) {
@@ -310,28 +310,28 @@ func (client directoryClient) listFilesAndDirectoriesSegmentResponder(resp pipel
 }
 
 // listFilesAndDirectoriesSegmentResponderAutoRest handles the response to the ListFilesAndDirectoriesSegment request.
-func (client directoryClient) listFilesAndDirectoriesSegmentResponderAutoRest(resp pipeline.Response) (pipeline.Response, error) {
-	err := validateResponse(resp, http.StatusOK)
-	if resp == nil {
-		return nil, err
-	}
-	result := &listFilesAndDirectoriesSegmentResponse{rawResponse: resp.Response()}
-	if err != nil {
-		return result, err
-	}
-	defer resp.Response().Body.Close()
-	b, err := ioutil.ReadAll(resp.Response().Body)
-	if err != nil {
-		return result, NewResponseError(err, resp.Response(), "failed to read response body")
-	}
-	if len(b) > 0 {
-		err = xml.Unmarshal(b, result)
-		if err != nil {
-			return result, NewResponseError(err, resp.Response(), "failed to unmarshal response body")
-		}
-	}
-	return result, nil
-}
+// func (client directoryClient) listFilesAndDirectoriesSegmentResponderAutoRest(resp pipeline.Response) (pipeline.Response, error) {
+// 	err := validateResponse(resp, http.StatusOK)
+// 	if resp == nil {
+// 		return nil, err
+// 	}
+// 	result := &listFilesAndDirectoriesSegmentResponse{rawResponse: resp.Response()}
+// 	if err != nil {
+// 		return result, err
+// 	}
+// 	defer resp.Response().Body.Close()
+// 	b, err := ioutil.ReadAll(resp.Response().Body)
+// 	if err != nil {
+// 		return result, NewResponseError(err, resp.Response(), "failed to read response body")
+// 	}
+// 	if len(b) > 0 {
+// 		err = xml.Unmarshal(b, result)
+// 		if err != nil {
+// 			return result, NewResponseError(err, resp.Response(), "failed to unmarshal response body")
+// 		}
+// 	}
+// 	return result, nil
+// }
 
 // SetMetadata updates user defined metadata for the specified directory.
 //
