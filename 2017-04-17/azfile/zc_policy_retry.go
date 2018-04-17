@@ -238,7 +238,7 @@ func NewRetryPolicyFactory(o RetryOptions) pipeline.Factory {
 					}
 					break // Don't retry
 				}
-				if response != nil {
+				if response != nil && response.Response() != nil {
 					// If we're going to retry and we got a previous response, then flush its body to avoid leaking its TCP connection
 					io.Copy(ioutil.Discard, response.Response().Body)
 					response.Response().Body.Close()
