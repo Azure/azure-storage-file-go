@@ -183,9 +183,6 @@ func (r *retryReaderSuite) TestRetryReaderReadNegativeNonRetriableError(c *chk.C
 }
 
 func (r *retryReaderSuite) TestRetryReaderNewRetryReaderDefaultNegativePanic(c *chk.C) {
-	// Check initialResponse
-	c.Assert(func() { _ = NewRetryReader(ctx, nil, HTTPGetterInfo{}, RetryReaderOptions{}, nil) }, chk.Panics, "initialResponse must not be nil")
-
 	startResponse := http.Response{}
 
 	// Check getter

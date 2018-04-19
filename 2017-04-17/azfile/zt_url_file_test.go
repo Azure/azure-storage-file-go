@@ -805,7 +805,7 @@ func (f *FileURLSuite) TestServiceSASFileSAS(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 }
 
-func (s *FileURLSuite) TestDownloadEmptyFile(c *chk.C) {
+func (s *FileURLSuite) TestDownloadEmptyZeroSizeFile(c *chk.C) {
 	fsu := getFSU()
 	shareURL, _ := createNewShare(c, fsu)
 	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
@@ -814,7 +814,7 @@ func (s *FileURLSuite) TestDownloadEmptyFile(c *chk.C) {
 	defer delFile(c, fileURL)
 
 	// Download entire fileURL, check status code 200.
-	resp, err := fileURL.Download(context.Background(), 0, -1, false)
+	resp, err := fileURL.Download(context.Background(), 0, azfile.CountToEnd, false)
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusOK)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(0))
@@ -1326,5 +1326,5 @@ func (s *FileURLSuite) TestFileGetRangeListNegativeInvalidCount(c *chk.C) {
 	shareURL, _ := getShareURL(c, fsu)
 	fileURL, _ := getFileURLFromShare(c, shareURL)
 
-	c.Assert(func() { fileURL.GetRangeList(ctx, 0, -3) }, chk.Panics, "The range count must be either equal to CountToEnd (-1) or > 0")
+	c.Assert(func() { fileURL.GetRangeList(ctx, 0, -3) }, chk.Panics, "The range count must be either equal to CountToEnd (0) or > 0")
 }

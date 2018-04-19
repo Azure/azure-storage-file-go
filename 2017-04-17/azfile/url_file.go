@@ -77,7 +77,7 @@ func (f FileURL) AbortCopy(ctx context.Context, copyID string) (*FileAbortCopyRe
 	return f.fileClient.AbortCopy(ctx, copyID, nil)
 }
 
-// Download downloads count bytes of data from the start offset. If count is CountToEnd (-1), then data is read from specified offset to the end.
+// Download downloads count bytes of data from the start offset. If count is CountToEnd (0), then data is read from specified offset to the end.
 // The response includes all of the file’s properties. However, passing true for rangeGetContentMD5 returns the range’s MD5 in the ContentMD5
 // response header/property if the range is <= 4MB; the HTTP request fails with 400 (Bad Request) if the requested range is greater than 4MB.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/get-file.
@@ -98,7 +98,7 @@ func (f FileURL) Download(ctx context.Context, offset int64, count int64, rangeG
 		f:    f,
 		dr:   dr,
 		ctx:  ctx,
-		info: HTTPGetterInfo{Offset: offset, Count: dr.ContentLength(), ETag: dr.ETag()}, // TODO: Note conditional header is not currently supported in Azure File.
+		info: HTTPGetterInfo{Offset: offset, Count: count, ETag: dr.ETag()}, // TODO: Note conditional header is not currently supported in Azure File.
 	}, err
 }
 
@@ -174,7 +174,7 @@ func (f FileURL) UploadRange(ctx context.Context, offset int64, body io.ReadSeek
 
 // ClearRange clears the specified range and releases the space used in storage for that range.
 // offset means the start offset of the range to clear.
-// count means count of bytes to clean, it cannot be CountToEnd (-1), and must be explictly specified.
+// count means count of bytes to clean, it cannot be CountToEnd (0), and must be explictly specified.
 // If the range specified is not 512-byte aligned, the operation will write zeros to
 // the start or end of the range that is not 512-byte aligned and free the rest of the range inside that is 512-byte aligned.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/put-range.
@@ -190,7 +190,7 @@ func (f FileURL) ClearRange(ctx context.Context, offset int64, count int64) (*Fi
 }
 
 // GetRangeList returns the list of valid ranges for a file.
-// Use a count with value CountToEnd (-1) to indicate the left part of file start from offset.
+// Use a count with value CountToEnd (0) to indicate the left part of file start from offset.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/list-ranges.
 func (f FileURL) GetRangeList(ctx context.Context, offset int64, count int64) (*Ranges, error) {
 	return f.fileClient.GetRangeList(ctx, nil, nil, (&httpRange{offset: offset, count: count}).pointers())

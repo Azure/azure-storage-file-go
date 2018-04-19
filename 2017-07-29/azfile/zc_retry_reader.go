@@ -42,22 +42,17 @@ type RetryReaderOptions struct {
 // user defined action with provided data to get a new response, and continue the overall reading process
 // through reading from the new response.
 type retryReader struct {
-	ctx      context.Context
-	response *http.Response
-
-	info HTTPGetterInfo
-	o    RetryReaderOptions
-
-	getter HTTPGetter
+	ctx             context.Context
+	response        *http.Response
+	info            HTTPGetterInfo
+	countWasBounded bool
+	o               RetryReaderOptions
+	getter          HTTPGetter
 }
 
 // NewRetryReader creates a retry reader.
 func NewRetryReader(ctx context.Context, initialResponse *http.Response,
 	info HTTPGetterInfo, o RetryReaderOptions, getter HTTPGetter) io.ReadCloser {
-
-	if initialResponse == nil {
-		panic("initialResponse must not be nil")
-	}
 	if getter == nil {
 		panic("getter must not be nil")
 	}
@@ -67,18 +62,25 @@ func NewRetryReader(ctx context.Context, initialResponse *http.Response,
 	if o.MaxRetryRequests < 0 {
 		panic("o.MaxRetryRequests must be >= 0")
 	}
-
-	return &retryReader{ctx: ctx, getter: getter, info: info, response: initialResponse, o: o}
+	return &retryReader{ctx: ctx, getter: getter, info: info, countWasBounded: info.Count != CountToEnd, response: initialResponse, o: o}
 }
 
 func (s *retryReader) Read(p []byte) (n int, err error) {
-	try := 0
-	for ; ; try++ {
-		if s.info.Count == 0 { // When there is no more bytes to read, return with error io.EOF directly
+	for try := 0; ; try++ {
+		//fmt.Println(try)       // Comment out for debugging.
+		if s.countWasBounded && s.info.Count == CountToEnd {
+			// User specified an original count and the remaining bytes are 0, return 0, EOF
 			return 0, io.EOF
 		}
 
-		//fmt.Println(try)       // Comment out for debugging.
+		if s.response == nil { // We don't have a response stream to read from, try to get one.
+			response, err := s.getter(s.ctx, s.info)
+			if err != nil {
+				return 0, err
+			}
+			// Successful GET; this is the network stream we'll read from.
+			s.response = response
+		}
 		n, err := s.response.Body.Read(p) // Read from the stream
 
 		// Injection mechanism for testing.
@@ -89,35 +91,24 @@ func (s *retryReader) Read(p []byte) (n int, err error) {
 		// We successfully read data or end EOF.
 		if err == nil || err == io.EOF {
 			s.info.Offset += int64(n) // Increments the start offset in case we need to make a new HTTP request in the future
-			if s.info.Count != 0 {
+			if s.info.Count != CountToEnd {
 				s.info.Count -= int64(n) // Decrement the count in case we need to make a new HTTP request in the future
 			}
 			return n, err // Return the return to the caller
 		}
-
-		s.Close()
-		s.response = nil // Something went wrong; our stream is no longer good
+		s.Close()        // Error, close stream
+		s.response = nil // Our stream is no longer good
 
 		// Check the retry count and error code, and decide whether to retry.
 		if try >= s.o.MaxRetryRequests {
-			return n, err // No retry, or retry exhausted
+			return n, err // All retry exhausted
 		}
 
 		if netErr, ok := err.(net.Error); ok && (netErr.Timeout() || netErr.Temporary()) {
-			// Do retry. We don't have a healthy response stream to read from, try to get one.
-			response, err := s.getter(s.ctx, s.info)
-			if err != nil {
-				return 0, err // No retry when fail to execute getter, only retry for retriable read errors
-			} else if response == nil {
-				panic("getter should not return nil response when there is no error.")
-			}
-			// Successful GET; this is the network stream we'll read from.
-			s.response = response
-
-			// Loop around and try to read from this stream.
-		} else {
-			return n, err // Not retryable, just return
+			continue
+			// Loop around and try to get and read from new stream.
 		}
+		return n, err // Not retryable, just return
 	}
 }
 
