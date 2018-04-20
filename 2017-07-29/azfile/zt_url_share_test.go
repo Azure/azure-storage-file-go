@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-storage-file-go/2017-04-17/azfile"
+	"github.com/Azure/azure-storage-file-go/2017-07-29/azfile"
 	chk "gopkg.in/check.v1"
 )
 

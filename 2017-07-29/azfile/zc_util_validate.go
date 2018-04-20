@@ -10,13 +10,13 @@ import (
 const (
 	// CountToEnd indiciates a flag for count parameter. It means the count of bytes
 	// from start offset to the end of file.
-	CountToEnd = -1
+	CountToEnd = 0
 )
 
 // httpRange defines a range of bytes within an HTTP resource, starting at offset and
 // ending at offset+count-1 inclusively.
-// An httpRange which has a zero-value offset, and a count with value CountToEnd (-1) indicates the entire resource.
-// An httpRange which has a non zero-value offset but a count with value CountToEnd (-1) indicates from the offset to the resource's end.
+// An httpRange which has a zero-value offset, and a count with value CountToEnd indicates the entire resource.
+// An httpRange which has a non zero-value offset but a count with value CountToEnd indicates from the offset to the resource's end.
 type httpRange struct {
 	offset int64
 	count  int64
@@ -30,7 +30,7 @@ func (r httpRange) pointers() *string {
 		panic("The range offset must be >= 0")
 	}
 	if r.count <= 0 && r.count != CountToEnd {
-		panic("The range count must be either equal to CountToEnd (-1) or > 0")
+		panic("The range count must be either equal to CountToEnd (0) or > 0")
 	}
 
 	return toRange(r.offset, r.count)

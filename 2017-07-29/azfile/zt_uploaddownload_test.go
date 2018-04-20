@@ -337,19 +337,26 @@ func (ud *uploadDownloadSuite) TestDownloadRetry(c *chk.C) {
 	c.Assert(resp.IsServerEncrypted(), chk.NotNil)
 }
 
-// TODO: Cannot download an empty file with count=0. To download an empty file, use offset=0 and count=CountToEnd (-1)
 func (ud *uploadDownloadSuite) TestDownloadDefaultParam(c *chk.C) {
 	fsu := getFSU()
 	share, _ := createNewShare(c, fsu)
 	defer delShare(c, share, DeleteSnapshotsOptionNone)
 
-	fileSize := 100 * 1024 //100 KB
+	fileSize := int64(100 * 1024) //100 KB
 
-	file, _ := createNewFileFromShare(c, share, int64(fileSize))
+	file, _ := createNewFileFromShare(c, share, fileSize)
 	defer delFile(c, file)
 
-	// Check download with all default parameters will fail, as download 0 byte is not a valid scenario: offset=0 and count=0
-	c.Assert(func() { file.Download(context.Background(), 0, 0, false) }, chk.Panics, "The range count must be either equal to CountToEnd (-1) or > 0")
+	resp, err := file.Download(context.Background(), 0, 0, false)
+	c.Assert(err, chk.IsNil)
+	c.Assert(resp.ContentLength(), chk.Equals, fileSize)
+
+	retryReader := resp.Body(RetryReaderOptions{})
+	bytes, err := ioutil.ReadAll(retryReader)
+	zeroBytes := make([]byte, fileSize, fileSize)
+	c.Assert(err, chk.IsNil)
+	c.Assert(int64(len(bytes)), chk.Equals, fileSize)
+	c.Assert(zeroBytes, chk.DeepEquals, bytes)
 }
 
 func (ud *uploadDownloadSuite) TestDownloadNegativePanic(c *chk.C) {
@@ -362,8 +369,8 @@ func (ud *uploadDownloadSuite) TestDownloadNegativePanic(c *chk.C) {
 	file, _ := createNewFileFromShare(c, share, int64(fileSize))
 	defer delFile(c, file)
 
-	// Check download with all default parameters will fail, as download 0 byte is not a valid scenario: offset=0 and count=0
-	c.Assert(func() { file.Download(context.Background(), 0, 0, false) }, chk.Panics, "The range count must be either equal to CountToEnd (-1) or > 0")
+	// Check illegal count
+	c.Assert(func() { file.Download(context.Background(), 0, -2, false) }, chk.Panics, "The range count must be either equal to CountToEnd (0) or > 0")
 
 	// Check illegal offset
 	c.Assert(func() { file.Download(context.Background(), -1, 3, false) }, chk.Panics, "The range offset must be >= 0")
