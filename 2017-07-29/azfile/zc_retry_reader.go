@@ -101,7 +101,7 @@ func (s *retryReader) Read(p []byte) (n int, err error) {
 
 		// Check the retry count and error code, and decide whether to retry.
 		if try >= s.o.MaxRetryRequests {
-			return n, err // All retry exhausted
+			return n, err // All retries exhausted
 		}
 
 		if netErr, ok := err.(net.Error); ok && (netErr.Timeout() || netErr.Temporary()) {
