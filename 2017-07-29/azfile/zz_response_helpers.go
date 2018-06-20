@@ -290,6 +290,11 @@ func (ldafr ListFilesAndDirectoriesSegmentResponse) Version() string {
 	return ldafr.rawResponse.Header.Get("x-ms-version")
 }
 
+// ErrorCode returns the value for header x-ms-error-code.
+func (ldafr ListFilesAndDirectoriesSegmentResponse) ErrorCode() string {
+	return ldafr.rawResponse.Header.Get("x-ms-error-code")
+}
+
 // MetricProperties definies convenience struct for Metrics,
 type MetricProperties struct {
 	// MetricEnabled - Indicates whether metrics are enabled for the File service.
