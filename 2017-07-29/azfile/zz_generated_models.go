@@ -250,6 +250,11 @@ func (dcr DirectoryCreateResponse) Date() time.Time {
 	return t
 }
 
+// ErrorCode returns the value for header x-ms-error-code.
+func (dcr DirectoryCreateResponse) ErrorCode() string {
+	return dcr.rawResponse.Header.Get("x-ms-error-code")
+}
+
 // ETag returns the value for header ETag.
 func (dcr DirectoryCreateResponse) ETag() ETag {
 	return ETag(dcr.rawResponse.Header.Get("ETag"))
@@ -314,6 +319,11 @@ func (ddr DirectoryDeleteResponse) Date() time.Time {
 		panic(err)
 	}
 	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (ddr DirectoryDeleteResponse) ErrorCode() string {
+	return ddr.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // RequestID returns the value for header x-ms-request-id.
@@ -413,6 +423,11 @@ func (dgpr DirectoryGetPropertiesResponse) Date() time.Time {
 	return t
 }
 
+// ErrorCode returns the value for header x-ms-error-code.
+func (dgpr DirectoryGetPropertiesResponse) ErrorCode() string {
+	return dgpr.rawResponse.Header.Get("x-ms-error-code")
+}
+
 // ETag returns the value for header ETag.
 func (dgpr DirectoryGetPropertiesResponse) ETag() ETag {
 	return ETag(dgpr.rawResponse.Header.Get("ETag"))
@@ -477,6 +492,11 @@ func (dsmr DirectorySetMetadataResponse) Date() time.Time {
 		panic(err)
 	}
 	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (dsmr DirectorySetMetadataResponse) ErrorCode() string {
+	return dsmr.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // ETag returns the value for header ETag.
@@ -641,6 +661,11 @@ func (dr downloadResponse) Date() time.Time {
 	return t
 }
 
+// ErrorCode returns the value for header x-ms-error-code.
+func (dr downloadResponse) ErrorCode() string {
+	return dr.rawResponse.Header.Get("x-ms-error-code")
+}
+
 // ETag returns the value for header ETag.
 func (dr downloadResponse) ETag() ETag {
 	return ETag(dr.rawResponse.Header.Get("ETag"))
@@ -802,6 +827,11 @@ func (facr FileAbortCopyResponse) Date() time.Time {
 	return t
 }
 
+// ErrorCode returns the value for header x-ms-error-code.
+func (facr FileAbortCopyResponse) ErrorCode() string {
+	return facr.rawResponse.Header.Get("x-ms-error-code")
+}
+
 // RequestID returns the value for header x-ms-request-id.
 func (facr FileAbortCopyResponse) RequestID() string {
 	return facr.rawResponse.Header.Get("x-ms-request-id")
@@ -843,6 +873,11 @@ func (fcr FileCreateResponse) Date() time.Time {
 		panic(err)
 	}
 	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (fcr FileCreateResponse) ErrorCode() string {
+	return fcr.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // ETag returns the value for header ETag.
@@ -909,6 +944,11 @@ func (fdr FileDeleteResponse) Date() time.Time {
 		panic(err)
 	}
 	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (fdr FileDeleteResponse) ErrorCode() string {
+	return fdr.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // RequestID returns the value for header x-ms-request-id.
@@ -1090,6 +1130,11 @@ func (fgpr FileGetPropertiesResponse) Date() time.Time {
 	return t
 }
 
+// ErrorCode returns the value for header x-ms-error-code.
+func (fgpr FileGetPropertiesResponse) ErrorCode() string {
+	return fgpr.rawResponse.Header.Get("x-ms-error-code")
+}
+
 // ETag returns the value for header ETag.
 func (fgpr FileGetPropertiesResponse) ETag() ETag {
 	return ETag(fgpr.rawResponse.Header.Get("ETag"))
@@ -1172,6 +1217,11 @@ func (fshhr FileSetHTTPHeadersResponse) Date() time.Time {
 	return t
 }
 
+// ErrorCode returns the value for header x-ms-error-code.
+func (fshhr FileSetHTTPHeadersResponse) ErrorCode() string {
+	return fshhr.rawResponse.Header.Get("x-ms-error-code")
+}
+
 // ETag returns the value for header ETag.
 func (fshhr FileSetHTTPHeadersResponse) ETag() ETag {
 	return ETag(fshhr.rawResponse.Header.Get("ETag"))
@@ -1238,6 +1288,11 @@ func (fsmr FileSetMetadataResponse) Date() time.Time {
 	return t
 }
 
+// ErrorCode returns the value for header x-ms-error-code.
+func (fsmr FileSetMetadataResponse) ErrorCode() string {
+	return fsmr.rawResponse.Header.Get("x-ms-error-code")
+}
+
 // ETag returns the value for header ETag.
 func (fsmr FileSetMetadataResponse) ETag() ETag {
 	return ETag(fsmr.rawResponse.Header.Get("ETag"))
@@ -1299,6 +1354,11 @@ func (fscr FileStartCopyResponse) Date() time.Time {
 		panic(err)
 	}
 	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (fscr FileStartCopyResponse) ErrorCode() string {
+	return fscr.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // ETag returns the value for header ETag.
@@ -1365,6 +1425,11 @@ func (furr FileUploadRangeResponse) Date() time.Time {
 		panic(err)
 	}
 	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (furr FileUploadRangeResponse) ErrorCode() string {
+	return furr.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // ETag returns the value for header ETag.
@@ -1514,13 +1579,13 @@ func (furr FileUploadRangeResponse) Version() string {
 type ListSharesResponse struct {
 	rawResponse *http.Response
 	// XMLName is used for marshalling and is subject to removal in a future release.
-	XMLName         xml.Name `xml:"EnumerationResults"`
-	ServiceEndpoint string   `xml:"ServiceEndpoint,attr"`
-	Prefix          *string  `xml:"Prefix"`
-	Marker          *string  `xml:"Marker"`
-	MaxResults      *int32   `xml:"MaxResults"`
-	Shares          []Share  `xml:"Shares>Share"`
-	NextMarker      Marker   `xml:"NextMarker"`
+	XMLName         xml.Name    `xml:"EnumerationResults"`
+	ServiceEndpoint string      `xml:"ServiceEndpoint,attr"`
+	Prefix          *string     `xml:"Prefix"`
+	Marker          *string     `xml:"Marker"`
+	MaxResults      *int32      `xml:"MaxResults"`
+	ShareItems      []ShareItem `xml:"Shares>Share"`
+	NextMarker      Marker      `xml:"NextMarker"`
 }
 
 // Response returns the raw HTTP response object.
@@ -1536,6 +1601,11 @@ func (lsr ListSharesResponse) StatusCode() int {
 // Status returns the HTTP status message of the response, e.g. "200 OK".
 func (lsr ListSharesResponse) Status() string {
 	return lsr.rawResponse.Status
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (lsr ListSharesResponse) ErrorCode() string {
+	return lsr.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // RequestID returns the value for header x-ms-request-id.
@@ -1570,7 +1640,7 @@ type Range struct {
 // Ranges ...
 type Ranges struct {
 	rawResponse *http.Response
-	Value       []Range `xml:"Range"`
+	Items       []Range `xml:"Range"`
 }
 
 // Response returns the raw HTTP response object.
@@ -1599,6 +1669,11 @@ func (r Ranges) Date() time.Time {
 		panic(err)
 	}
 	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (r Ranges) ErrorCode() string {
+	return r.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // ETag returns the value for header ETag.
@@ -1670,6 +1745,11 @@ func (sspr ServiceSetPropertiesResponse) Status() string {
 	return sspr.rawResponse.Status
 }
 
+// ErrorCode returns the value for header x-ms-error-code.
+func (sspr ServiceSetPropertiesResponse) ErrorCode() string {
+	return sspr.rawResponse.Header.Get("x-ms-error-code")
+}
+
 // RequestID returns the value for header x-ms-request-id.
 func (sspr ServiceSetPropertiesResponse) RequestID() string {
 	return sspr.rawResponse.Header.Get("x-ms-request-id")
@@ -1678,14 +1758,6 @@ func (sspr ServiceSetPropertiesResponse) RequestID() string {
 // Version returns the value for header x-ms-version.
 func (sspr ServiceSetPropertiesResponse) Version() string {
 	return sspr.rawResponse.Header.Get("x-ms-version")
-}
-
-// Share - An Azure Storage share.
-type Share struct {
-	Name       string          `xml:"Name"`
-	Snapshot   *string         `xml:"Snapshot"`
-	Properties ShareProperties `xml:"Properties"`
-	Metadata   Metadata        `xml:"Metadata"`
 }
 
 // ShareCreateResponse ...
@@ -1719,6 +1791,11 @@ func (scr ShareCreateResponse) Date() time.Time {
 		panic(err)
 	}
 	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (scr ShareCreateResponse) ErrorCode() string {
+	return scr.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // ETag returns the value for header ETag.
@@ -1780,6 +1857,11 @@ func (scsr ShareCreateSnapshotResponse) Date() time.Time {
 		panic(err)
 	}
 	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (scsr ShareCreateSnapshotResponse) ErrorCode() string {
+	return scsr.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // ETag returns the value for header ETag.
@@ -1848,6 +1930,11 @@ func (sdr ShareDeleteResponse) Date() time.Time {
 	return t
 }
 
+// ErrorCode returns the value for header x-ms-error-code.
+func (sdr ShareDeleteResponse) ErrorCode() string {
+	return sdr.rawResponse.Header.Get("x-ms-error-code")
+}
+
 // RequestID returns the value for header x-ms-request-id.
 func (sdr ShareDeleteResponse) RequestID() string {
 	return sdr.rawResponse.Header.Get("x-ms-request-id")
@@ -1904,6 +1991,11 @@ func (sgpr ShareGetPropertiesResponse) Date() time.Time {
 	return t
 }
 
+// ErrorCode returns the value for header x-ms-error-code.
+func (sgpr ShareGetPropertiesResponse) ErrorCode() string {
+	return sgpr.rawResponse.Header.Get("x-ms-error-code")
+}
+
 // ETag returns the value for header ETag.
 func (sgpr ShareGetPropertiesResponse) ETag() ETag {
 	return ETag(sgpr.rawResponse.Header.Get("ETag"))
@@ -1943,6 +2035,16 @@ func (sgpr ShareGetPropertiesResponse) RequestID() string {
 // Version returns the value for header x-ms-version.
 func (sgpr ShareGetPropertiesResponse) Version() string {
 	return sgpr.rawResponse.Header.Get("x-ms-version")
+}
+
+// ShareItem - A listed Azure Storage share item.
+type ShareItem struct {
+	// XMLName is used for marshalling and is subject to removal in a future release.
+	XMLName    xml.Name        `xml:"Share"`
+	Name       string          `xml:"Name"`
+	Snapshot   *string         `xml:"Snapshot"`
+	Properties ShareProperties `xml:"Properties"`
+	Metadata   Metadata        `xml:"Metadata"`
 }
 
 // ShareProperties - Properties of a share.
@@ -2001,6 +2103,11 @@ func (ssapr ShareSetAccessPolicyResponse) Date() time.Time {
 		panic(err)
 	}
 	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (ssapr ShareSetAccessPolicyResponse) ErrorCode() string {
+	return ssapr.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // ETag returns the value for header ETag.
@@ -2064,6 +2171,11 @@ func (ssmr ShareSetMetadataResponse) Date() time.Time {
 	return t
 }
 
+// ErrorCode returns the value for header x-ms-error-code.
+func (ssmr ShareSetMetadataResponse) ErrorCode() string {
+	return ssmr.rawResponse.Header.Get("x-ms-error-code")
+}
+
 // ETag returns the value for header ETag.
 func (ssmr ShareSetMetadataResponse) ETag() ETag {
 	return ETag(ssmr.rawResponse.Header.Get("ETag"))
@@ -2123,6 +2235,11 @@ func (ssqr ShareSetQuotaResponse) Date() time.Time {
 		panic(err)
 	}
 	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (ssqr ShareSetQuotaResponse) ErrorCode() string {
+	return ssqr.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // ETag returns the value for header ETag.
@@ -2188,6 +2305,11 @@ func (ss ShareStats) Date() time.Time {
 	return t
 }
 
+// ErrorCode returns the value for header x-ms-error-code.
+func (ss ShareStats) ErrorCode() string {
+	return ss.rawResponse.Header.Get("x-ms-error-code")
+}
+
 // ETag returns the value for header ETag.
 func (ss ShareStats) ETag() ETag {
 	return ETag(ss.rawResponse.Header.Get("ETag"))
@@ -2227,7 +2349,7 @@ type SignedIdentifier struct {
 // SignedIdentifiers ...
 type SignedIdentifiers struct {
 	rawResponse *http.Response
-	Value       []SignedIdentifier `xml:"SignedIdentifier"`
+	Items       []SignedIdentifier `xml:"SignedIdentifier"`
 }
 
 // Response returns the raw HTTP response object.
@@ -2258,6 +2380,11 @@ func (si SignedIdentifiers) Date() time.Time {
 	return t
 }
 
+// ErrorCode returns the value for header x-ms-error-code.
+func (si SignedIdentifiers) ErrorCode() string {
+	return si.rawResponse.Header.Get("x-ms-error-code")
+}
+
 // ETag returns the value for header ETag.
 func (si SignedIdentifiers) ETag() ETag {
 	return ETag(si.rawResponse.Header.Get("ETag"))
@@ -2286,6 +2413,11 @@ func (si SignedIdentifiers) Version() string {
 	return si.rawResponse.Header.Get("x-ms-version")
 }
 
+// StorageError ...
+// type StorageError struct {
+// 	Message *string `xml:"Message"`
+// }
+
 // StorageServiceProperties - Storage service properties.
 type StorageServiceProperties struct {
 	rawResponse *http.Response
@@ -2310,6 +2442,11 @@ func (ssp StorageServiceProperties) StatusCode() int {
 // Status returns the HTTP status message of the response, e.g. "200 OK".
 func (ssp StorageServiceProperties) Status() string {
 	return ssp.rawResponse.Status
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (ssp StorageServiceProperties) ErrorCode() string {
+	return ssp.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // RequestID returns the value for header x-ms-request-id.

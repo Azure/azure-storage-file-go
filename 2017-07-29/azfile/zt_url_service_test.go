@@ -181,7 +181,7 @@ func (s *StorageAccountSuite) TestAccountListSharesDefault(c *chk.C) {
 	response, err := fsu.ListSharesSegment(ctx, azfile.Marker{}, azfile.ListSharesOptions{})
 
 	c.Assert(err, chk.IsNil)
-	c.Assert(len(response.Shares) >= 2, chk.Equals, true) // The response should contain at least the two created containers. Probably many more
+	c.Assert(len(response.ShareItems) >= 2, chk.Equals, true) // The response should contain at least the two created containers. Probably many more
 }
 
 func (s *StorageAccountSuite) TestAccountListSharesNonDefault(c *chk.C) {
@@ -211,16 +211,16 @@ func (s *StorageAccountSuite) TestAccountListSharesNonDefault(c *chk.C) {
 
 	resp, err = sa.ListSharesSegment(ctx, azfile.Marker{}, azfile.ListSharesOptions{Detail: azfile.ListSharesDetail{Metadata: true, Snapshots: true}, Prefix: shareName})
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Shares, chk.HasLen, 2)
-	c.Assert(resp.Shares[0].Name, chk.NotNil)
-	c.Assert(resp.Shares[0].Properties, chk.NotNil)
-	c.Assert(resp.Shares[0].Properties.LastModified, chk.NotNil)
-	c.Assert(resp.Shares[0].Properties.Etag, chk.NotNil)
-	c.Assert(resp.Shares[0].Properties.Quota, chk.Not(chk.Equals), 0)
-	c.Assert(resp.Shares[0].Metadata, chk.DeepEquals, shareMetadata)
+	c.Assert(resp.ShareItems, chk.HasLen, 2)
+	c.Assert(resp.ShareItems[0].Name, chk.NotNil)
+	c.Assert(resp.ShareItems[0].Properties, chk.NotNil)
+	c.Assert(resp.ShareItems[0].Properties.LastModified, chk.NotNil)
+	c.Assert(resp.ShareItems[0].Properties.Etag, chk.NotNil)
+	c.Assert(resp.ShareItems[0].Properties.Quota, chk.Not(chk.Equals), 0)
+	c.Assert(resp.ShareItems[0].Metadata, chk.DeepEquals, shareMetadata)
 
-	if resp.Shares[0].Snapshot == nil {
-		c.Assert(resp.Shares[1].Snapshot, chk.NotNil)
+	if resp.ShareItems[0].Snapshot == nil {
+		c.Assert(resp.ShareItems[1].Snapshot, chk.NotNil)
 	}
 }
 
@@ -235,7 +235,7 @@ func (s *StorageAccountSuite) TestAccountListSharesMaxResultsZero(c *chk.C) {
 		azfile.Marker{}, azfile.ListSharesOptions{Prefix: sharePrefix, MaxResults: 0})
 
 	c.Assert(err, chk.IsNil)
-	c.Assert(len(resp.Shares) >= 1, chk.Equals, true) // At least 1 share.
+	c.Assert(len(resp.ShareItems) >= 1, chk.Equals, true) // At least 1 share.
 }
 
 func (s *StorageAccountSuite) TestAccountListSharesPaged(c *chk.C) {
@@ -262,7 +262,7 @@ func (s *StorageAccountSuite) TestAccountListSharesPaged(c *chk.C) {
 	for i := 0; i < iterations; i++ {
 		resp, err := sa.ListSharesSegment(context.Background(), marker, azfile.ListSharesOptions{MaxResults: maxResultsPerPage, Prefix: pagedSharesPrefix})
 		c.Assert(err, chk.IsNil)
-		c.Assert(resp.Shares, chk.HasLen, maxResultsPerPage)
+		c.Assert(resp.ShareItems, chk.HasLen, maxResultsPerPage)
 
 		hasMore := i < iterations-1
 		c.Assert(resp.NextMarker.NotDone(), chk.Equals, hasMore)

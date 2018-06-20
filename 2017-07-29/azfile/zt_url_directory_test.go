@@ -402,8 +402,8 @@ func (s *DirectoryURLSuite) TestDirListDefault(c *chk.C) {
 	c.Assert(lResp.ShareSnapshot, chk.IsNil)
 	c.Assert(lResp.Prefix, chk.Equals, "")
 	c.Assert(lResp.MaxResults, chk.IsNil)
-	c.Assert(lResp.Files, chk.HasLen, 0)
-	c.Assert(lResp.Directories, chk.HasLen, 0)
+	c.Assert(lResp.FileItems, chk.HasLen, 0)
+	c.Assert(lResp.DirectoryItems, chk.HasLen, 0)
 
 	innerDir, innerDirName := createNewDirectoryWithPrefix(c, dir, "111")
 	defer delDirectory(c, innerDir)
@@ -415,11 +415,11 @@ func (s *DirectoryURLSuite) TestDirListDefault(c *chk.C) {
 	lResp2, err := dir.ListFilesAndDirectoriesSegment(context.Background(), azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{})
 	c.Assert(err, chk.IsNil)
 	c.Assert(lResp2.Response().StatusCode, chk.Equals, 200)
-	c.Assert(lResp2.Directories, chk.HasLen, 1)
-	c.Assert(lResp2.Directories[0].Name, chk.Equals, innerDirName)
-	c.Assert(lResp2.Files, chk.HasLen, 1)
-	c.Assert(lResp2.Files[0].Name, chk.Equals, innerFileName)
-	c.Assert(lResp2.Files[0].Properties.ContentLength, chk.Equals, int64(0))
+	c.Assert(lResp2.DirectoryItems, chk.HasLen, 1)
+	c.Assert(lResp2.DirectoryItems[0].Name, chk.Equals, innerDirName)
+	c.Assert(lResp2.FileItems, chk.HasLen, 1)
+	c.Assert(lResp2.FileItems[0].Name, chk.Equals, innerFileName)
+	c.Assert(lResp2.FileItems[0].Properties.ContentLength, chk.Equals, int64(0))
 
 	innerDir2, innerDirName2 := createNewDirectoryWithPrefix(c, dir, "222")
 	defer delDirectory(c, innerDir2)
@@ -431,14 +431,14 @@ func (s *DirectoryURLSuite) TestDirListDefault(c *chk.C) {
 	lResp3, err := dir.ListFilesAndDirectoriesSegment(context.Background(), azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{})
 	c.Assert(err, chk.IsNil)
 	c.Assert(lResp3.Response().StatusCode, chk.Equals, 200)
-	c.Assert(lResp3.Directories, chk.HasLen, 2)
-	c.Assert(lResp3.Directories[0].Name, chk.Equals, innerDirName)
-	c.Assert(lResp3.Directories[1].Name, chk.Equals, innerDirName2)
-	c.Assert(lResp3.Files, chk.HasLen, 2)
-	c.Assert(lResp3.Files[0].Name, chk.Equals, innerFileName)
-	c.Assert(lResp3.Files[0].Properties.ContentLength, chk.Equals, int64(0))
-	c.Assert(lResp3.Files[1].Name, chk.Equals, innerFileName2)
-	c.Assert(lResp3.Files[1].Properties.ContentLength, chk.Equals, int64(2))
+	c.Assert(lResp3.DirectoryItems, chk.HasLen, 2)
+	c.Assert(lResp3.DirectoryItems[0].Name, chk.Equals, innerDirName)
+	c.Assert(lResp3.DirectoryItems[1].Name, chk.Equals, innerDirName2)
+	c.Assert(lResp3.FileItems, chk.HasLen, 2)
+	c.Assert(lResp3.FileItems[0].Name, chk.Equals, innerFileName)
+	c.Assert(lResp3.FileItems[0].Properties.ContentLength, chk.Equals, int64(0))
+	c.Assert(lResp3.FileItems[1].Name, chk.Equals, innerFileName2)
+	c.Assert(lResp3.FileItems[1].Properties.ContentLength, chk.Equals, int64(2))
 }
 
 func (s *DirectoryURLSuite) TestDirListNonDefault(c *chk.C) {
@@ -470,20 +470,20 @@ func (s *DirectoryURLSuite) TestDirListNonDefault(c *chk.C) {
 
 	lResp, err := dir.ListFilesAndDirectoriesSegment(context.Background(), marker, azfile.ListFilesAndDirectoriesOptions{MaxResults: maxResultsPerPage, Prefix: testPrefix})
 	c.Assert(err, chk.IsNil)
-	c.Assert(lResp.Files, chk.HasLen, 1)
-	c.Assert(lResp.Files[0].Name, chk.Equals, file1Name)
-	c.Assert(lResp.Directories, chk.HasLen, 1)
-	c.Assert(lResp.Directories[0].Name, chk.Equals, dir1Name)
+	c.Assert(lResp.FileItems, chk.HasLen, 1)
+	c.Assert(lResp.FileItems[0].Name, chk.Equals, file1Name)
+	c.Assert(lResp.DirectoryItems, chk.HasLen, 1)
+	c.Assert(lResp.DirectoryItems[0].Name, chk.Equals, dir1Name)
 
 	c.Assert(lResp.NextMarker.NotDone(), chk.Equals, true)
 	marker = lResp.NextMarker
 
 	lResp, err = dir.ListFilesAndDirectoriesSegment(context.Background(), marker, azfile.ListFilesAndDirectoriesOptions{MaxResults: maxResultsPerPage, Prefix: testPrefix})
 	c.Assert(err, chk.IsNil)
-	c.Assert(lResp.Files, chk.HasLen, 1)
-	c.Assert(lResp.Files[0].Name, chk.Equals, file2Name)
-	c.Assert(lResp.Directories, chk.HasLen, 1)
-	c.Assert(lResp.Directories[0].Name, chk.Equals, dir2Name)
+	c.Assert(lResp.FileItems, chk.HasLen, 1)
+	c.Assert(lResp.FileItems[0].Name, chk.Equals, file2Name)
+	c.Assert(lResp.DirectoryItems, chk.HasLen, 1)
+	c.Assert(lResp.DirectoryItems[0].Name, chk.Equals, dir2Name)
 
 	c.Assert(lResp.NextMarker.NotDone(), chk.Equals, false)
 }
@@ -499,7 +499,7 @@ func (s *DirectoryURLSuite) TestDirListNegativeNonexistantPrefix(c *chk.C) {
 	resp, err := dirURL.ListFilesAndDirectoriesSegment(ctx, azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{Prefix: filePrefix + filePrefix})
 
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Files, chk.HasLen, 0)
+	c.Assert(resp.FileItems, chk.HasLen, 0)
 }
 
 func (s *DirectoryURLSuite) TestDirListNegativeMaxResults(c *chk.C) {
@@ -529,7 +529,7 @@ func (s *DirectoryURLSuite) TestDirListNonDefaultMaxResultsZero(c *chk.C) {
 	resp, err := dirURL.ListFilesAndDirectoriesSegment(ctx, azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{MaxResults: 0})
 
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Files, chk.HasLen, 1)
+	c.Assert(resp.FileItems, chk.HasLen, 1)
 }
 
 func (s *DirectoryURLSuite) TestDirListNonDefaultMaxResultsExact(c *chk.C) {
@@ -545,9 +545,9 @@ func (s *DirectoryURLSuite) TestDirListNonDefaultMaxResultsExact(c *chk.C) {
 	resp, err := dirURL.ListFilesAndDirectoriesSegment(ctx, azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{MaxResults: 2, Prefix: additionalPrefix})
 
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Directories, chk.HasLen, 2)
-	c.Assert(resp.Directories[0].Name, chk.Equals, dirName1)
-	c.Assert(resp.Directories[1].Name, chk.Equals, dirName2)
+	c.Assert(resp.DirectoryItems, chk.HasLen, 2)
+	c.Assert(resp.DirectoryItems[0].Name, chk.Equals, dirName1)
+	c.Assert(resp.DirectoryItems[1].Name, chk.Equals, dirName2)
 }
 
 // Test list directories with SAS

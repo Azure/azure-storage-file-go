@@ -6,13 +6,12 @@ package azfile
 import (
 	"context"
 	"encoding/xml"
-	"fmt"
+	"github.com/Azure/azure-pipeline-go/pipeline"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-
-	"github.com/Azure/azure-pipeline-go/pipeline"
+	"strconv"
 )
 
 // directoryClient is the client for the Directory methods of the Azfile service.
@@ -59,7 +58,7 @@ func (client directoryClient) createPreparer(timeout *int32, metadata map[string
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "directory")
 	req.URL.RawQuery = params.Encode()
@@ -114,7 +113,7 @@ func (client directoryClient) deletePreparer(timeout *int32) (pipeline.Request, 
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "directory")
 	req.URL.RawQuery = params.Encode()
@@ -169,7 +168,7 @@ func (client directoryClient) getPropertiesPreparer(sharesnapshot *string, timeo
 		params.Set("sharesnapshot", *sharesnapshot)
 	}
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "directory")
 	req.URL.RawQuery = params.Encode()
@@ -273,10 +272,10 @@ func (client directoryClient) listFilesAndDirectoriesSegmentPreparer(prefix *str
 		params.Set("marker", *marker)
 	}
 	if maxresults != nil {
-		params.Set("maxresults", fmt.Sprintf("%v", *maxresults))
+		params.Set("maxresults", strconv.FormatInt(int64(*maxresults), 10))
 	}
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "directory")
 	params.Set("comp", "list")
@@ -301,6 +300,7 @@ func (client directoryClient) listFilesAndDirectoriesSegmentResponder(resp pipel
 		return result, NewResponseError(err, resp.Response(), "failed to read response body")
 	}
 	if len(b) > 0 {
+		b = removeBOM(b)
 		err = xml.Unmarshal(b, result)
 		if err != nil {
 			return result, NewResponseError(err, resp.Response(), "failed to unmarshal response body")
@@ -367,7 +367,7 @@ func (client directoryClient) setMetadataPreparer(timeout *int32, metadata map[s
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "directory")
 	params.Set("comp", "metadata")

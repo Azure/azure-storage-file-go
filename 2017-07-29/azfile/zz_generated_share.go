@@ -7,12 +7,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
-	"fmt"
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 )
 
 // shareClient is the client for the Share methods of the Azfile service.
@@ -64,7 +64,7 @@ func (client shareClient) createPreparer(timeout *int32, metadata map[string]str
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "share")
 	req.URL.RawQuery = params.Encode()
@@ -74,7 +74,7 @@ func (client shareClient) createPreparer(timeout *int32, metadata map[string]str
 		}
 	}
 	if quota != nil {
-		req.Header.Set("x-ms-share-quota", fmt.Sprintf("%v", *quota))
+		req.Header.Set("x-ms-share-quota", strconv.FormatInt(int64(*quota), 10))
 	}
 	req.Header.Set("x-ms-version", ServiceVersion)
 	return req, nil
@@ -125,7 +125,7 @@ func (client shareClient) createSnapshotPreparer(timeout *int32, metadata map[st
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "share")
 	params.Set("comp", "snapshot")
@@ -187,13 +187,13 @@ func (client shareClient) deletePreparer(sharesnapshot *string, timeout *int32, 
 		params.Set("sharesnapshot", *sharesnapshot)
 	}
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "share")
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
 	if deleteSnapshots != DeleteSnapshotsOptionNone {
-		req.Header.Set("x-ms-delete-snapshots", fmt.Sprintf("%v", deleteSnapshots))
+		req.Header.Set("x-ms-delete-snapshots", string(deleteSnapshots))
 	}
 	return req, nil
 }
@@ -240,7 +240,7 @@ func (client shareClient) getAccessPolicyPreparer(timeout *int32) (pipeline.Requ
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "share")
 	params.Set("comp", "acl")
@@ -265,6 +265,7 @@ func (client shareClient) getAccessPolicyResponder(resp pipeline.Response) (pipe
 		return result, NewResponseError(err, resp.Response(), "failed to read response body")
 	}
 	if len(b) > 0 {
+		b = removeBOM(b)
 		err = xml.Unmarshal(b, result)
 		if err != nil {
 			return result, NewResponseError(err, resp.Response(), "failed to unmarshal response body")
@@ -309,7 +310,7 @@ func (client shareClient) getPropertiesPreparer(sharesnapshot *string, timeout *
 		params.Set("sharesnapshot", *sharesnapshot)
 	}
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "share")
 	req.URL.RawQuery = params.Encode()
@@ -359,7 +360,7 @@ func (client shareClient) getStatisticsPreparer(timeout *int32) (pipeline.Reques
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "share")
 	params.Set("comp", "stats")
@@ -384,6 +385,7 @@ func (client shareClient) getStatisticsResponder(resp pipeline.Response) (pipeli
 		return result, NewResponseError(err, resp.Response(), "failed to read response body")
 	}
 	if len(b) > 0 {
+		b = removeBOM(b)
 		err = xml.Unmarshal(b, result)
 		if err != nil {
 			return result, NewResponseError(err, resp.Response(), "failed to unmarshal response body")
@@ -424,13 +426,13 @@ func (client shareClient) setAccessPolicyPreparer(shareACL []SignedIdentifier, t
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "share")
 	params.Set("comp", "acl")
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
-	b, err := xml.Marshal(SignedIdentifiers{Value: shareACL})
+	b, err := xml.Marshal(SignedIdentifiers{Items: shareACL})
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to marshal request body")
 	}
@@ -487,7 +489,7 @@ func (client shareClient) setMetadataPreparer(timeout *int32, metadata map[strin
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "share")
 	params.Set("comp", "metadata")
@@ -546,14 +548,14 @@ func (client shareClient) setQuotaPreparer(timeout *int32, quota *int32) (pipeli
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "share")
 	params.Set("comp", "properties")
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
 	if quota != nil {
-		req.Header.Set("x-ms-share-quota", fmt.Sprintf("%v", *quota))
+		req.Header.Set("x-ms-share-quota", strconv.FormatInt(int64(*quota), 10))
 	}
 	return req, nil
 }

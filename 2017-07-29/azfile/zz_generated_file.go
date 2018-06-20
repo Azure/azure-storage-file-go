@@ -6,12 +6,12 @@ package azfile
 import (
 	"context"
 	"encoding/xml"
-	"fmt"
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 )
 
 // fileClient is the client for the File methods of the Azfile service.
@@ -57,7 +57,7 @@ func (client fileClient) abortCopyPreparer(copyID string, timeout *int32) (pipel
 	params := req.URL.Query()
 	params.Set("copyid", copyID)
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("comp", "copy")
 	req.URL.RawQuery = params.Encode()
@@ -117,11 +117,11 @@ func (client fileClient) createPreparer(fileContentLength int64, timeout *int32,
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
-	req.Header.Set("x-ms-content-length", fmt.Sprintf("%v", fileContentLength))
+	req.Header.Set("x-ms-content-length", strconv.FormatInt(fileContentLength, 10))
 	req.Header.Set("x-ms-type", "file")
 	if fileContentType != nil {
 		req.Header.Set("x-ms-content-type", *fileContentType)
@@ -191,7 +191,7 @@ func (client fileClient) deletePreparer(timeout *int32) (pipeline.Request, error
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
@@ -242,7 +242,7 @@ func (client fileClient) downloadPreparer(timeout *int32, rangeParameter *string
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
@@ -250,7 +250,7 @@ func (client fileClient) downloadPreparer(timeout *int32, rangeParameter *string
 		req.Header.Set("x-ms-range", *rangeParameter)
 	}
 	if rangeGetContentMD5 != nil {
-		req.Header.Set("x-ms-range-get-content-md5", fmt.Sprintf("%v", *rangeGetContentMD5))
+		req.Header.Set("x-ms-range-get-content-md5", strconv.FormatBool(*rangeGetContentMD5))
 	}
 	return req, nil
 }
@@ -300,7 +300,7 @@ func (client fileClient) getPropertiesPreparer(sharesnapshot *string, timeout *i
 		params.Set("sharesnapshot", *sharesnapshot)
 	}
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
@@ -354,7 +354,7 @@ func (client fileClient) getRangeListPreparer(sharesnapshot *string, timeout *in
 		params.Set("sharesnapshot", *sharesnapshot)
 	}
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("comp", "rangelist")
 	req.URL.RawQuery = params.Encode()
@@ -381,6 +381,7 @@ func (client fileClient) getRangeListResponder(resp pipeline.Response) (pipeline
 		return result, NewResponseError(err, resp.Response(), "failed to read response body")
 	}
 	if len(b) > 0 {
+		b = removeBOM(b)
 		err = xml.Unmarshal(b, result)
 		if err != nil {
 			return result, NewResponseError(err, resp.Response(), "failed to unmarshal response body")
@@ -426,13 +427,13 @@ func (client fileClient) setHTTPHeadersPreparer(timeout *int32, fileContentLengt
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("comp", "properties")
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
 	if fileContentLength != nil {
-		req.Header.Set("x-ms-content-length", fmt.Sprintf("%v", *fileContentLength))
+		req.Header.Set("x-ms-content-length", strconv.FormatInt(*fileContentLength, 10))
 	}
 	if fileContentType != nil {
 		req.Header.Set("x-ms-content-type", *fileContentType)
@@ -500,7 +501,7 @@ func (client fileClient) setMetadataPreparer(timeout *int32, metadata map[string
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("comp", "metadata")
 	req.URL.RawQuery = params.Encode()
@@ -563,7 +564,7 @@ func (client fileClient) startCopyPreparer(copySource string, timeout *int32, me
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
@@ -632,13 +633,13 @@ func (client fileClient) uploadRangePreparer(rangeParameter string, fileRangeWri
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("comp", "range")
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-range", rangeParameter)
-	req.Header.Set("x-ms-write", fmt.Sprintf("%v", fileRangeWrite))
-	req.Header.Set("Content-Length", fmt.Sprintf("%v", contentLength))
+	req.Header.Set("x-ms-write", string(fileRangeWrite))
+	req.Header.Set("Content-Length", strconv.FormatInt(contentLength, 10))
 	if contentMD5 != nil {
 		req.Header.Set("Content-MD5", *contentMD5)
 	}

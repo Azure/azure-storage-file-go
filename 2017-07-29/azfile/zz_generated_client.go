@@ -4,9 +4,8 @@ package azfile
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
-	"net/url"
-
 	"github.com/Azure/azure-pipeline-go/pipeline"
+	"net/url"
 )
 
 const (
