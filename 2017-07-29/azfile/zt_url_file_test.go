@@ -57,33 +57,6 @@ func (s *FileURLSuite) TestFileNewFileURLNegative(c *chk.C) {
 	c.Assert(func() { azfile.NewFileURL(url.URL{}, nil) }, chk.Panics, "p can't be nil")
 }
 
-func (s *FileURLSuite) TestFileNewFileURLWithSnapshotAndSAS(c *chk.C) {
-	fsu := getFSU()
-	shareURL, shareName := getShareURL(c, fsu)
-	fileURL, fileName := getFileURLFromShare(c, shareURL)
-
-	currentTime := time.Now().UTC()
-	credential, accountName := getCredential()
-	sasQueryParams := azfile.AccountSASSignatureValues{
-		Protocol:      azfile.SASProtocolHTTPS,
-		ExpiryTime:    currentTime.Add(48 * time.Hour),
-		Permissions:   azfile.AccountSASPermissions{Read: true, List: true}.String(),
-		Services:      azfile.AccountSASServices{File: true}.String(),
-		ResourceTypes: azfile.AccountSASResourceTypes{Container: true, Object: true}.String(),
-	}.NewSASQueryParameters(credential)
-
-	parts := azfile.NewFileURLParts(fileURL.URL())
-	parts.SAS = sasQueryParams
-	parts.ShareSnapshot = currentTime.Format("2006-01-02T15:04:05.0000000Z07:00")
-	testURL := parts.URL()
-
-	// The snapshot format string is taken from the snapshotTimeFormat value in parsing_urls.go. The field is not public, so
-	// it is copied here
-	correctURL := "https://" + accountName + ".file.core.windows.net/" + shareName + "/" + fileName +
-		"?" + "sharesnapshot=" + currentTime.Format("2006-01-02T15:04:05.0000000Z07:00") + "&" + sasQueryParams.Encode()
-	c.Assert(testURL.String(), chk.Equals, correctURL)
-}
-
 func (s *FileURLSuite) TestFileCreateDeleteDefault(c *chk.C) {
 	fsu := getFSU()
 	shareURL, _ := createNewShare(c, fsu)
