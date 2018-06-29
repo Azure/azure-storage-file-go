@@ -67,6 +67,46 @@ func (s *ParsingURLSuite) TestFileURLPartsWithIPEndpointStyle(c *chk.C) {
 	c.Assert(p.DirectoryOrFilePath, chk.Equals, "directory/file")
 }
 
+// Positive cases for composing URL with FilrURLParts
+func (s *ParsingURLSuite) TestFileURLPartsComposing(c *chk.C) {
+	p := azfile.FileURLParts{
+		Scheme:              "http",
+		Host:                "105.232.1.23:80",
+		ShareName:           "sharename",
+		DirectoryOrFilePath: "dir/",
+		IPEndpointStyleInfo: azfile.IPEndpointStyleInfo{AccountName: "accountname"},
+	}
+	u := p.URL()
+	c.Assert(u.String(), chk.Equals, "http://105.232.1.23:80/accountname/sharename/dir/")
+
+	p = azfile.FileURLParts{
+		Scheme:              "https",
+		Host:                "105.232.1.23",
+		ShareName:           "sharename",
+		IPEndpointStyleInfo: azfile.IPEndpointStyleInfo{AccountName: "accountname"},
+	}
+	u = p.URL()
+	c.Assert(u.String(), chk.Equals, "https://105.232.1.23/accountname/sharename")
+
+	p = azfile.FileURLParts{
+		Scheme:              "https",
+		Host:                "[1080:0:0:0:8:800:200C:417A]",
+		ShareName:           "sharename",
+		IPEndpointStyleInfo: azfile.IPEndpointStyleInfo{AccountName: "accountname"},
+	}
+	u = p.URL()
+	c.Assert(u.String(), chk.Equals, "https://[1080:0:0:0:8:800:200C:417A]/accountname/sharename")
+
+	p = azfile.FileURLParts{
+		Scheme:              "https",
+		Host:                "accountName.blob.core.windows.net",
+		ShareName:           "sharename",
+		IPEndpointStyleInfo: azfile.IPEndpointStyleInfo{AccountName: "fakeaccount"},
+	}
+	u = p.URL()
+	c.Assert(u.String(), chk.Equals, "https://accountName.blob.core.windows.net/sharename")
+}
+
 // Positive cases for parsing path with domain hostname.
 func (s *ParsingURLSuite) TestFileURLPartsWithDomainHostname(c *chk.C) {
 	p := s.testFileURLPartsWithIPEndpointStyle(c, "https://accountName.blob.core.windows.net")
