@@ -112,12 +112,12 @@ func Example() {
 		marker = listResponse.NextMarker
 
 		// Process the files returned in this result segment (if the segment is empty, the loop body won't execute)
-		for _, fileEntry := range listResponse.Files {
+		for _, fileEntry := range listResponse.FileItems {
 			fmt.Println("File name: " + fileEntry.Name)
 		}
 
 		// Process the directories returned in this result segment (if the segment is empty, the loop body won't execute)
-		for _, directoryEntry := range listResponse.Directories {
+		for _, directoryEntry := range listResponse.DirectoryItems {
 			fmt.Println("Directory name: " + directoryEntry.Name)
 		}
 	}
@@ -169,7 +169,9 @@ func ExampleNewPipeline() {
 				// This method is not called for filtered-out severities.
 				logger.Output(2, m) // This example uses Go's standard logger
 			},
-			MinimumLevelToLog: func() pipeline.LogLevel { return pipeline.LogInfo }, // Log all events from informational to more severe
+			ShouldLog: func(level pipeline.LogLevel) bool {
+				return level <= pipeline.LogInfo // Log all events from informational to more severe
+			},
 		},
 	}
 
@@ -528,7 +530,7 @@ func ExampleShareURL_CreateSnapshot() {
 
 	// List share snapshots.
 	listSnapshot, err := serviceURL.ListSharesSegment(ctx, Marker{}, ListSharesOptions{Detail: ListSharesDetail{Snapshots: true}})
-	for _, share := range listSnapshot.Shares {
+	for _, share := range listSnapshot.ShareItems {
 		if share.Snapshot != nil {
 			fmt.Printf("Listed share snapshot: %s\n", *share.Snapshot)
 		}

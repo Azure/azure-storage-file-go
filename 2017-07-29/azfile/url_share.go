@@ -121,7 +121,7 @@ func (s ShareURL) GetPermissions(ctx context.Context) (*SignedIdentifiers, error
 // The AccessPolicyPermission type simplifies creating the permissions string for a share's access policy.
 // Initialize an instance of this type and then call its String method to set AccessPolicy's Permission field.
 type AccessPolicyPermission struct {
-	Read, Add, Create, Write, Delete, List bool
+	Read, Create, Write, Delete, List bool
 }
 
 // String produces the access policy permission string for an Azure Storage share.

@@ -82,10 +82,10 @@ func (s *ShareURLSuite) TestShareCreateDeleteNonDefault(c *chk.C) {
 
 	shares, err := sa.ListSharesSegment(context.Background(), azfile.Marker{}, azfile.ListSharesOptions{Prefix: shareName, Detail: azfile.ListSharesDetail{Metadata: true}})
 	c.Assert(err, chk.IsNil)
-	c.Assert(shares.Shares, chk.HasLen, 1)
-	c.Assert(shares.Shares[0].Name, chk.Equals, shareName)
-	c.Assert(shares.Shares[0].Metadata, chk.DeepEquals, md)
-	c.Assert(shares.Shares[0].Properties.Quota, chk.Equals, quota)
+	c.Assert(shares.ShareItems, chk.HasLen, 1)
+	c.Assert(shares.ShareItems[0].Name, chk.Equals, shareName)
+	c.Assert(shares.ShareItems[0].Metadata, chk.DeepEquals, md)
+	c.Assert(shares.ShareItems[0].Properties.Quota, chk.Equals, quota)
 
 	dResp, err := share.Delete(context.Background(), azfile.DeleteSnapshotsOptionNone)
 	c.Assert(err, chk.IsNil)
@@ -96,7 +96,7 @@ func (s *ShareURLSuite) TestShareCreateDeleteNonDefault(c *chk.C) {
 
 	shares, err = sa.ListSharesSegment(context.Background(), azfile.Marker{}, azfile.ListSharesOptions{Prefix: shareName})
 	c.Assert(err, chk.IsNil)
-	c.Assert(shares.Shares, chk.HasLen, 0)
+	c.Assert(shares.ShareItems, chk.HasLen, 0)
 }
 
 func (s *ShareURLSuite) TestShareCreateNilMetadata(c *chk.C) {
@@ -257,8 +257,8 @@ func (s *ShareURLSuite) TestShareGetSetPermissionsNonDefault(c *chk.C) {
 	c.Assert(gResp.LastModified().IsZero(), chk.Equals, false)
 	c.Assert(gResp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(gResp.Version(), chk.Not(chk.Equals), "")
-	c.Assert(gResp.Value, chk.HasLen, 1)
-	c.Assert(gResp.Value[0], chk.DeepEquals, permissions[0])
+	c.Assert(gResp.Items, chk.HasLen, 1)
+	c.Assert(gResp.Items[0], chk.DeepEquals, permissions[0])
 }
 
 func (s *ShareURLSuite) TestShareGetSetPermissionsNonDefaultMultiple(c *chk.C) {
@@ -308,8 +308,8 @@ func (s *ShareURLSuite) TestShareGetSetPermissionsNonDefaultMultiple(c *chk.C) {
 	c.Assert(gResp.LastModified().IsZero(), chk.Equals, false)
 	c.Assert(gResp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(gResp.Version(), chk.Not(chk.Equals), "")
-	c.Assert(gResp.Value, chk.HasLen, 2)
-	c.Assert(gResp.Value[0], chk.DeepEquals, permissions[0])
+	c.Assert(gResp.Items, chk.HasLen, 2)
+	c.Assert(gResp.Items[0], chk.DeepEquals, permissions[0])
 }
 
 func (s *ShareURLSuite) TestShareGetSetPermissionsDefault(c *chk.C) {
@@ -334,7 +334,7 @@ func (s *ShareURLSuite) TestShareGetSetPermissionsDefault(c *chk.C) {
 	c.Assert(gResp.LastModified().IsZero(), chk.Equals, false)
 	c.Assert(gResp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(gResp.Version(), chk.Not(chk.Equals), "")
-	c.Assert(gResp.Value, chk.HasLen, 0)
+	c.Assert(gResp.Items, chk.HasLen, 0)
 }
 
 func (s *ShareURLSuite) TestShareGetPermissionNegative(c *chk.C) {
@@ -373,17 +373,17 @@ func (s *ShareURLSuite) TestShareSetPermissionsNonDefaultDeleteAndModifyACL(c *c
 	resp, err := shareURL.GetPermissions(ctx)
 	c.Assert(err, chk.IsNil)
 
-	c.Assert(resp.Value, chk.DeepEquals, permissions)
+	c.Assert(resp.Items, chk.DeepEquals, permissions)
 
-	permissions = resp.Value[:1] // Delete the first policy by removing it from the slice
+	permissions = resp.Items[:1] // Delete the first policy by removing it from the slice
 	permissions[0].ID = "0004"   // Modify the remaining policy which is at index 0 in the new slice
 	_, err = shareURL.SetPermissions(ctx, permissions)
 
 	resp, err = shareURL.GetPermissions(ctx)
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Value, chk.HasLen, 1)
+	c.Assert(resp.Items, chk.HasLen, 1)
 
-	c.Assert(resp.Value, chk.DeepEquals, permissions)
+	c.Assert(resp.Items, chk.DeepEquals, permissions)
 }
 
 func (s *ShareURLSuite) TestShareSetPermissionsDeleteAllPolicies(c *chk.C) {
@@ -415,7 +415,7 @@ func (s *ShareURLSuite) TestShareSetPermissionsDeleteAllPolicies(c *chk.C) {
 
 	resp, err := shareURL.GetPermissions(ctx)
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Value, chk.HasLen, 0)
+	c.Assert(resp.Items, chk.HasLen, 0)
 }
 
 // Note: No error happend
@@ -621,16 +621,16 @@ func (s *ShareURLSuite) TestShareCreateSnapshotNonDefault(c *chk.C) {
 
 	c.Assert(err, chk.IsNil)
 	c.Assert(lResp.Response().StatusCode, chk.Equals, 200)
-	c.Assert(lResp.Shares, chk.HasLen, 2)
+	c.Assert(lResp.ShareItems, chk.HasLen, 2)
 
-	if lResp.Shares[0].Snapshot != nil {
-		c.Assert(*(lResp.Shares[0].Snapshot), chk.Equals, cSnapshot)
-		c.Assert(lResp.Shares[0].Metadata, chk.DeepEquals, md)
-		c.Assert(len(lResp.Shares[1].Metadata), chk.Equals, 0)
+	if lResp.ShareItems[0].Snapshot != nil {
+		c.Assert(*(lResp.ShareItems[0].Snapshot), chk.Equals, cSnapshot)
+		c.Assert(lResp.ShareItems[0].Metadata, chk.DeepEquals, md)
+		c.Assert(len(lResp.ShareItems[1].Metadata), chk.Equals, 0)
 	} else {
-		c.Assert(*(lResp.Shares[1].Snapshot), chk.Equals, cSnapshot)
-		c.Assert(lResp.Shares[1].Metadata, chk.DeepEquals, md)
-		c.Assert(len(lResp.Shares[0].Metadata), chk.Equals, 0)
+		c.Assert(*(lResp.ShareItems[1].Snapshot), chk.Equals, cSnapshot)
+		c.Assert(lResp.ShareItems[1].Metadata, chk.DeepEquals, md)
+		c.Assert(len(lResp.ShareItems[0].Metadata), chk.Equals, 0)
 	}
 
 }
@@ -755,7 +755,7 @@ func (s *ShareURLSuite) TestShareDeleteSnapshotsInclude(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 
 	lResp, _ := fsu.ListSharesSegment(ctx, azfile.Marker{}, azfile.ListSharesOptions{Detail: azfile.ListSharesDetail{Snapshots: true}, Prefix: shareName})
-	c.Assert(lResp.Shares, chk.HasLen, 0)
+	c.Assert(lResp.ShareItems, chk.HasLen, 0)
 }
 
 func (s *ShareURLSuite) TestShareDeleteSnapshotsNoneWithSnapshots(c *chk.C) {
