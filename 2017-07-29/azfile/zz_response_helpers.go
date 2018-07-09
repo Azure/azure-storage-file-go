@@ -213,8 +213,8 @@ func (dr DownloadResponse) ContentMD5() [md5.Size]byte {
 	return md5StringToMD5(dr.dr.rawResponse.Header.Get("Content-MD5"))
 }
 
-// FileEntry - File entry.
-type FileEntry struct {
+// FileItem - Listed file item.
+type FileItem struct {
 	// XMLName is used for marshalling and is subject to removal in a future release.
 	XMLName xml.Name `xml:"File"`
 	// Name - Name of the entry.
@@ -222,8 +222,8 @@ type FileEntry struct {
 	Properties *FileProperty `xml:"Properties"`
 }
 
-// DirectoryEntry - Directory entry.
-type DirectoryEntry struct {
+// DirectoryItem - Listed directory item.
+type DirectoryItem struct {
 	// XMLName is used for marshalling and is subject to removal in a future release.
 	XMLName xml.Name `xml:"Directory"`
 	// Name - Name of the entry.
@@ -234,17 +234,17 @@ type DirectoryEntry struct {
 type ListFilesAndDirectoriesSegmentResponse struct {
 	rawResponse *http.Response
 	// XMLName is used for marshalling and is subject to removal in a future release.
-	XMLName         xml.Name         `xml:"EnumerationResults"`
-	ServiceEndpoint string           `xml:"ServiceEndpoint,attr"`
-	ShareName       string           `xml:"ShareName,attr"`
-	ShareSnapshot   *string          `xml:"ShareSnapshot,attr"`
-	DirectoryPath   string           `xml:"DirectoryPath,attr"`
-	Prefix          string           `xml:"Prefix"`
-	Marker          *string          `xml:"Marker"`
-	MaxResults      *int32           `xml:"MaxResults"`
-	Files           []FileEntry      `xml:"Entries>File"`
-	Directories     []DirectoryEntry `xml:"Entries>Directory"`
-	NextMarker      Marker           `xml:"NextMarker"`
+	XMLName         xml.Name        `xml:"EnumerationResults"`
+	ServiceEndpoint string          `xml:"ServiceEndpoint,attr"`
+	ShareName       string          `xml:"ShareName,attr"`
+	ShareSnapshot   *string         `xml:"ShareSnapshot,attr"`
+	DirectoryPath   string          `xml:"DirectoryPath,attr"`
+	Prefix          string          `xml:"Prefix"`
+	Marker          *string         `xml:"Marker"`
+	MaxResults      *int32          `xml:"MaxResults"`
+	FileItems       []FileItem      `xml:"Entries>File"`
+	DirectoryItems  []DirectoryItem `xml:"Entries>Directory"`
+	NextMarker      Marker          `xml:"NextMarker"`
 }
 
 // Response returns the raw HTTP response object.
@@ -288,6 +288,11 @@ func (ldafr ListFilesAndDirectoriesSegmentResponse) RequestID() string {
 // Version returns the value for header x-ms-version.
 func (ldafr ListFilesAndDirectoriesSegmentResponse) Version() string {
 	return ldafr.rawResponse.Header.Get("x-ms-version")
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (ldafr ListFilesAndDirectoriesSegmentResponse) ErrorCode() string {
+	return ldafr.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // MetricProperties definies convenience struct for Metrics,

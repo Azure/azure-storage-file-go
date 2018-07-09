@@ -7,12 +7,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
-	"fmt"
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 )
 
 // serviceClient is the client for the Service methods of the Azfile service.
@@ -57,7 +57,7 @@ func (client serviceClient) getPropertiesPreparer(timeout *int32) (pipeline.Requ
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "service")
 	params.Set("comp", "properties")
@@ -82,6 +82,7 @@ func (client serviceClient) getPropertiesResponder(resp pipeline.Response) (pipe
 		return result, NewResponseError(err, resp.Response(), "failed to read response body")
 	}
 	if len(b) > 0 {
+		b = removeBOM(b)
 		err = xml.Unmarshal(b, result)
 		if err != nil {
 			return result, NewResponseError(err, resp.Response(), "failed to unmarshal response body")
@@ -138,13 +139,13 @@ func (client serviceClient) listSharesSegmentPreparer(prefix *string, marker *st
 		params.Set("marker", *marker)
 	}
 	if maxresults != nil {
-		params.Set("maxresults", fmt.Sprintf("%v", *maxresults))
+		params.Set("maxresults", strconv.FormatInt(int64(*maxresults), 10))
 	}
 	if include != nil && len(include) > 0 {
-		params.Set("include", fmt.Sprintf("%v", joinConst(include, ",")))
+		params.Set("include", joinConst(include, ","))
 	}
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("comp", "list")
 	req.URL.RawQuery = params.Encode()
@@ -168,6 +169,7 @@ func (client serviceClient) listSharesSegmentResponder(resp pipeline.Response) (
 		return result, NewResponseError(err, resp.Response(), "failed to read response body")
 	}
 	if len(b) > 0 {
+		b = removeBOM(b)
 		err = xml.Unmarshal(b, result)
 		if err != nil {
 			return result, NewResponseError(err, resp.Response(), "failed to unmarshal response body")
@@ -226,7 +228,7 @@ func (client serviceClient) setPropertiesPreparer(storageServiceProperties Stora
 	}
 	params := req.URL.Query()
 	if timeout != nil {
-		params.Set("timeout", fmt.Sprintf("%v", *timeout))
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
 	}
 	params.Set("restype", "service")
 	params.Set("comp", "properties")

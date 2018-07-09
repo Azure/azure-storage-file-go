@@ -57,33 +57,6 @@ func (s *FileURLSuite) TestFileNewFileURLNegative(c *chk.C) {
 	c.Assert(func() { azfile.NewFileURL(url.URL{}, nil) }, chk.Panics, "p can't be nil")
 }
 
-func (s *FileURLSuite) TestFileNewFileURLWithSnapshotAndSAS(c *chk.C) {
-	fsu := getFSU()
-	shareURL, shareName := getShareURL(c, fsu)
-	fileURL, fileName := getFileURLFromShare(c, shareURL)
-
-	currentTime := time.Now().UTC()
-	credential, accountName := getCredential()
-	sasQueryParams := azfile.AccountSASSignatureValues{
-		Protocol:      azfile.SASProtocolHTTPS,
-		ExpiryTime:    currentTime.Add(48 * time.Hour),
-		Permissions:   azfile.AccountSASPermissions{Read: true, List: true}.String(),
-		Services:      azfile.AccountSASServices{File: true}.String(),
-		ResourceTypes: azfile.AccountSASResourceTypes{Container: true, Object: true}.String(),
-	}.NewSASQueryParameters(credential)
-
-	parts := azfile.NewFileURLParts(fileURL.URL())
-	parts.SAS = sasQueryParams
-	parts.ShareSnapshot = currentTime.Format("2006-01-02T15:04:05.0000000Z07:00")
-	testURL := parts.URL()
-
-	// The snapshot format string is taken from the snapshotTimeFormat value in parsing_urls.go. The field is not public, so
-	// it is copied here
-	correctURL := "https://" + accountName + ".file.core.windows.net/" + shareName + "/" + fileName +
-		"?" + "sharesnapshot=" + currentTime.Format("2006-01-02T15:04:05.0000000Z07:00") + "&" + sasQueryParams.Encode()
-	c.Assert(testURL.String(), chk.Equals, correctURL)
-}
-
 func (s *FileURLSuite) TestFileCreateDeleteDefault(c *chk.C) {
 	fsu := getFSU()
 	shareURL, _ := createNewShare(c, fsu)
@@ -1120,8 +1093,8 @@ func (s *FileURLSuite) TestGetRangeListNonDefaultExact(c *chk.C) {
 	c.Assert(rangeList.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(rangeList.Version(), chk.Not(chk.Equals), "")
 	c.Assert(rangeList.Date().IsZero(), chk.Equals, false)
-	c.Assert(rangeList.Value, chk.HasLen, 1)
-	c.Assert(rangeList.Value[0], chk.DeepEquals, azfile.Range{Start: 0, End: 1022})
+	c.Assert(rangeList.Items, chk.HasLen, 1)
+	c.Assert(rangeList.Items[0], chk.DeepEquals, azfile.Range{Start: 0, End: 1022})
 }
 
 // Default means clear the entire file's range
@@ -1142,7 +1115,7 @@ func (s *FileURLSuite) TestClearRangeDefault(c *chk.C) {
 
 	rangeList, err := fileURL.GetRangeList(context.Background(), 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)
-	c.Assert(rangeList.Value, chk.HasLen, 0)
+	c.Assert(rangeList.Items, chk.HasLen, 0)
 }
 
 func (s *FileURLSuite) TestClearRangeNonDefault(c *chk.C) {
@@ -1162,7 +1135,7 @@ func (s *FileURLSuite) TestClearRangeNonDefault(c *chk.C) {
 
 	rangeList, err := fileURL.GetRangeList(context.Background(), 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)
-	c.Assert(rangeList.Value, chk.HasLen, 0)
+	c.Assert(rangeList.Items, chk.HasLen, 0)
 }
 
 func (s *FileURLSuite) TestClearRangeMultipleRanges(c *chk.C) {
@@ -1182,8 +1155,8 @@ func (s *FileURLSuite) TestClearRangeMultipleRanges(c *chk.C) {
 
 	rangeList, err := fileURL.GetRangeList(context.Background(), 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)
-	c.Assert(rangeList.Value, chk.HasLen, 1)
-	c.Assert(rangeList.Value[0], chk.DeepEquals, azfile.Range{Start: 0, End: 1023})
+	c.Assert(rangeList.Items, chk.HasLen, 1)
+	c.Assert(rangeList.Items[0], chk.DeepEquals, azfile.Range{Start: 0, End: 1023})
 }
 
 // When not 512 aligned, clear range will set 0 the non-512 aligned range, and will not eliminate the range.
@@ -1205,8 +1178,8 @@ func (s *FileURLSuite) TestClearRangeNonDefault1Count(c *chk.C) {
 
 	rangeList, err := fileURL.GetRangeList(context.Background(), 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)
-	c.Assert(rangeList.Value, chk.HasLen, 1)
-	c.Assert(rangeList.Value[0], chk.DeepEquals, azfile.Range{Start: 0, End: 0})
+	c.Assert(rangeList.Items, chk.HasLen, 1)
+	c.Assert(rangeList.Items[0], chk.DeepEquals, azfile.Range{Start: 0, End: 0})
 
 	dResp, err := fileURL.Download(ctx, 0, azfile.CountToEnd, false)
 	c.Assert(err, chk.IsNil)
@@ -1244,8 +1217,8 @@ func setupGetRangeListTest(c *chk.C) (shareURL azfile.ShareURL, fileURL azfile.F
 
 func validateBasicGetRangeList(c *chk.C, resp *azfile.Ranges, err error) {
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Value, chk.HasLen, 1)
-	c.Assert(resp.Value[0], chk.Equals, azfile.Range{Start: 0, End: testFileRangeSize - 1})
+	c.Assert(resp.Items, chk.HasLen, 1)
+	c.Assert(resp.Items[0], chk.Equals, azfile.Range{Start: 0, End: testFileRangeSize - 1})
 }
 
 func (s *FileURLSuite) TestFileGetRangeListDefaultEmptyFile(c *chk.C) {
@@ -1256,7 +1229,7 @@ func (s *FileURLSuite) TestFileGetRangeListDefaultEmptyFile(c *chk.C) {
 
 	resp, err := fileURL.GetRangeList(ctx, 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Value, chk.HasLen, 0)
+	c.Assert(resp.Items, chk.HasLen, 0)
 }
 
 func (s *FileURLSuite) TestFileGetRangeListDefault1Range(c *chk.C) {
@@ -1278,9 +1251,9 @@ func (s *FileURLSuite) TestFileGetRangeListNonContiguousRanges(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	resp, err := fileURL.GetRangeList(ctx, 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Value, chk.HasLen, 2)
-	c.Assert(resp.Value[0], chk.Equals, azfile.Range{Start: 0, End: testFileRangeSize - 1})
-	c.Assert(resp.Value[1], chk.Equals, azfile.Range{Start: testFileRangeSize * 2, End: (testFileRangeSize * 3) - 1})
+	c.Assert(resp.Items, chk.HasLen, 2)
+	c.Assert(resp.Items[0], chk.Equals, azfile.Range{Start: 0, End: testFileRangeSize - 1})
+	c.Assert(resp.Items[1], chk.Equals, azfile.Range{Start: testFileRangeSize * 2, End: (testFileRangeSize * 3) - 1})
 }
 
 func (s *FileURLSuite) TestFileGetRangeListNonContiguousRangesCountLess(c *chk.C) {
@@ -1289,8 +1262,8 @@ func (s *FileURLSuite) TestFileGetRangeListNonContiguousRangesCountLess(c *chk.C
 
 	resp, err := fileURL.GetRangeList(ctx, 0, testFileRangeSize-1)
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Value, chk.HasLen, 1)
-	c.Assert(resp.Value[0], chk.Equals, azfile.Range{Start: 0, End: testFileRangeSize - 2})
+	c.Assert(resp.Items, chk.HasLen, 1)
+	c.Assert(resp.Items[0], chk.Equals, azfile.Range{Start: 0, End: testFileRangeSize - 2})
 }
 
 func (s *FileURLSuite) TestFileGetRangeListNonContiguousRangesCountExceed(c *chk.C) {
