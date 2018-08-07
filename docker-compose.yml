@@ -1,0 +1,14 @@
+version: '3'
+services:
+  azure-storage-file-go:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+    - .:${WORK_DIR}
+    working_dir: ${WORK_DIR}
+    environment:
+      - ACCOUNT_NAME
+      - ACCOUNT_KEY
+      - SECONDARY_ACCOUNT_NAME
+      - SECONDARY_ACCOUNT_KEY
