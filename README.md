@@ -1,5 +1,5 @@
 # Azure Storage File SDK for Go
-[![GoDoc Widget]][GoDoc]
+[![GoDoc Widget]][GoDoc] [![Build Status][Travis Widget]][Travis]
 
 The Microsoft Azure Storage SDK for Go allows you to build applications that takes advantage of Azure's scalable cloud storage. 
 
@@ -44,3 +44,5 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 
 [GoDoc]: https://godoc.org/github.com/Azure/azure-storage-file-go/2017-07-29/azfile
 [GoDoc Widget]: https://godoc.org/github.com/Azure/azure-storage-file-go/2017-07-29/azfile?status.svg
+[Travis Widget]: https://travis-ci.org/Azure/azure-storage-file-go.svg?branch=master
+[Travis]: https://travis-ci.org/Azure/azure-storage-file-go
