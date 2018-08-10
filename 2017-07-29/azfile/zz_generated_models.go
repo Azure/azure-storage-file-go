@@ -4,6 +4,7 @@ package azfile
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
+	"encoding/base64"
 	"encoding/xml"
 	"io"
 	"net/http"
@@ -121,22 +122,6 @@ func PossibleDeleteSnapshotsOptionTypeValues() []DeleteSnapshotsOptionType {
 	return []DeleteSnapshotsOptionType{DeleteSnapshotsOptionInclude, DeleteSnapshotsOptionNone}
 }
 
-// // EntryType enumerates the values for entry type.
-// type EntryType string
-
-// const (
-// 	// EntryDirectory ...
-// 	EntryDirectory EntryType = "Directory"
-// 	// EntryEntry ...
-// 	EntryEntry EntryType = "Entry"
-// 	// EntryFile ...
-// 	EntryFile EntryType = "File"
-// )
-
-// // PossibleEntryTypeValues returns an array of possible values for the EntryType const type.
-// func PossibleEntryTypeValues() []EntryType {
-// 	return []EntryType{EntryDirectory, EntryEntry, EntryFile}
-// }
 
 // FileRangeWriteType enumerates the values for file range write type.
 type FileRangeWriteType string
@@ -335,47 +320,6 @@ func (ddr DirectoryDeleteResponse) RequestID() string {
 func (ddr DirectoryDeleteResponse) Version() string {
 	return ddr.rawResponse.Header.Get("x-ms-version")
 }
-
-// // DirectoryEntry - Directory entry.
-// type DirectoryEntry struct {
-// 	// XMLName is used for marshalling and is subject to removal in a future release.
-// 	XMLName xml.Name `xml:"Directory"`
-// 	// Name - Name of the entry.
-// 	Name string `xml:"Name"`
-// 	// EntryType - Possible values include: 'EntryEntry', 'EntryDirectory', 'EntryFile'
-// 	EntryType EntryType `xml:"EntryType"`
-// }
-
-// // AsDirectoryEntry is the BasicEntry implementation for DirectoryEntry.
-// func (de DirectoryEntry) AsDirectoryEntry() (*DirectoryEntry, bool) {
-// 	return &de, true
-// }
-
-// // AsFileEntry is the BasicEntry implementation for DirectoryEntry.
-// func (de DirectoryEntry) AsFileEntry() (*FileEntry, bool) {
-// 	return nil, false
-// }
-
-// // AsEntry is the BasicEntry implementation for DirectoryEntry.
-// func (de DirectoryEntry) AsEntry() (*Entry, bool) {
-// 	return nil, false
-// }
-
-// // AsBasicEntry is the BasicEntry implementation for DirectoryEntry.
-// func (de DirectoryEntry) AsBasicEntry() (BasicEntry, bool) {
-// 	return &de, true
-// }
-
-// // MarshalXML is the custom marshaler for DirectoryEntry.
-// func (de DirectoryEntry) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-// 	de.EntryType = EntryDirectory
-// 	type Alias DirectoryEntry
-// 	return e.EncodeElement(struct {
-// 		Alias
-// 	}{
-// 		Alias: (Alias)(de),
-// 	}, start)
-// }
 
 // DirectoryGetPropertiesResponse ...
 type DirectoryGetPropertiesResponse struct {
@@ -596,9 +540,17 @@ func (dr downloadResponse) ContentLength() int64 {
 }
 
 // ContentMD5 returns the value for header Content-MD5.
-// func (dr downloadResponse) ContentMD5() string {
-// 	return dr.rawResponse.Header.Get("Content-MD5")
-// }
+func (dr downloadResponse) ContentMD5() []byte {
+	s := dr.rawResponse.Header.Get("Content-MD5")
+	if s == "" {
+		return nil
+	}
+	b, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
 
 // ContentRange returns the value for header Content-Range.
 func (dr downloadResponse) ContentRange() string {
@@ -672,9 +624,17 @@ func (dr downloadResponse) ETag() ETag {
 }
 
 // FileContentMD5 returns the value for header x-ms-content-md5.
-// func (dr downloadResponse) FileContentMD5() string {
-// 	return dr.rawResponse.Header.Get("x-ms-content-md5")
-// }
+func (dr downloadResponse) FileContentMD5() []byte {
+	s := dr.rawResponse.Header.Get("x-ms-content-md5")
+	if s == "" {
+		return nil
+	}
+	b, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
 
 // IsServerEncrypted returns the value for header x-ms-server-encrypted.
 func (dr downloadResponse) IsServerEncrypted() string {
@@ -703,96 +663,6 @@ func (dr downloadResponse) RequestID() string {
 func (dr downloadResponse) Version() string {
 	return dr.rawResponse.Header.Get("x-ms-version")
 }
-
-// // BasicEntry abstract for entries that can be listed from Directory.
-// type BasicEntry interface {
-// 	AsDirectoryEntry() (*DirectoryEntry, bool)
-// 	AsFileEntry() (*FileEntry, bool)
-// 	AsEntry() (*Entry, bool)
-// }
-
-// // Entry abstract for entries that can be listed from Directory.
-// type Entry struct {
-// 	// Name - Name of the entry.
-// 	Name string `xml:"Name"`
-// 	// EntryType - Possible values include: 'EntryEntry', 'EntryDirectory', 'EntryFile'
-// 	EntryType EntryType `xml:"EntryType"`
-// }
-
-// // AsDirectoryEntry is the BasicEntry implementation for Entry.
-// func (eVar Entry) AsDirectoryEntry() (*DirectoryEntry, bool) {
-// 	return nil, false
-// }
-
-// // AsFileEntry is the BasicEntry implementation for Entry.
-// func (eVar Entry) AsFileEntry() (*FileEntry, bool) {
-// 	return nil, false
-// }
-
-// // AsEntry is the BasicEntry implementation for Entry.
-// func (eVar Entry) AsEntry() (*Entry, bool) {
-// 	return &eVar, true
-// }
-
-// // AsBasicEntry is the BasicEntry implementation for Entry.
-// func (eVar Entry) AsBasicEntry() (BasicEntry, bool) {
-// 	return &eVar, true
-// }
-
-// func unmarshalBasicEntry(d *xml.Decoder, start xml.StartElement) (BasicEntry, error) {
-// 	switch start.Name.Local {
-// 	case string(EntryDirectory):
-// 		var de DirectoryEntry
-// 		err := d.DecodeElement(&de, &start)
-// 		if err == nil {
-// 			de.EntryType = EntryDirectory
-// 		}
-// 		return de, err
-// 	case string(EntryFile):
-// 		var fe FileEntry
-// 		err := d.DecodeElement(&fe, &start)
-// 		if err == nil {
-// 			fe.EntryType = EntryFile
-// 		}
-// 		return fe, err
-// 	default:
-// 		var eVar Entry
-// 		err := d.DecodeElement(&eVar, &start)
-// 		if err == nil {
-// 			eVar.EntryType = EntryEntry
-// 		}
-// 		return eVar, err
-// 	}
-// }
-// func unmarshalBasicEntryArray(d *xml.Decoder, start xml.StartElement) ([]BasicEntry, error) {
-// 	eVarArray := []BasicEntry{}
-// 	for t, err := d.Token(); err == nil; t, err = d.Token() {
-// 		ttStart, ok := t.(xml.StartElement)
-// 		if ok {
-// 			eVar, err := unmarshalBasicEntry(d, ttStart)
-// 			if err == nil {
-// 				eVarArray = append(eVarArray, eVar)
-// 			}
-// 		}
-// 		ttEnd, ok := t.(xml.EndElement)
-// 		if ok && start.End() == ttEnd {
-// 			break
-// 		}
-// 		continue
-// 	}
-// 	return eVarArray, nil
-// }
-
-// // MarshalXML is the custom marshaler for Entry.
-// func (eVar Entry) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-// 	eVar.EntryType = EntryEntry
-// 	type Alias Entry
-// 	return e.EncodeElement(struct {
-// 		Alias
-// 	}{
-// 		Alias: (Alias)(eVar),
-// 	}, start)
-// }
 
 // FileAbortCopyResponse ...
 type FileAbortCopyResponse struct {
@@ -961,48 +831,6 @@ func (fdr FileDeleteResponse) Version() string {
 	return fdr.rawResponse.Header.Get("x-ms-version")
 }
 
-// // FileEntry - File entry.
-// type FileEntry struct {
-// 	// XMLName is used for marshalling and is subject to removal in a future release.
-// 	XMLName xml.Name `xml:"File"`
-// 	// Name - Name of the entry.
-// 	Name string `xml:"Name"`
-// 	// EntryType - Possible values include: 'EntryEntry', 'EntryDirectory', 'EntryFile'
-// 	EntryType  EntryType     `xml:"EntryType"`
-// 	Properties *FileProperty `xml:"Properties"`
-// }
-
-// // AsDirectoryEntry is the BasicEntry implementation for FileEntry.
-// func (fe FileEntry) AsDirectoryEntry() (*DirectoryEntry, bool) {
-// 	return nil, false
-// }
-
-// // AsFileEntry is the BasicEntry implementation for FileEntry.
-// func (fe FileEntry) AsFileEntry() (*FileEntry, bool) {
-// 	return &fe, true
-// }
-
-// // AsEntry is the BasicEntry implementation for FileEntry.
-// func (fe FileEntry) AsEntry() (*Entry, bool) {
-// 	return nil, false
-// }
-
-// // AsBasicEntry is the BasicEntry implementation for FileEntry.
-// func (fe FileEntry) AsBasicEntry() (BasicEntry, bool) {
-// 	return &fe, true
-// }
-
-// // MarshalXML is the custom marshaler for FileEntry.
-// func (fe FileEntry) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-// 	fe.EntryType = EntryFile
-// 	type Alias FileEntry
-// 	return e.EncodeElement(struct {
-// 		Alias
-// 	}{
-// 		Alias: (Alias)(fe),
-// 	}, start)
-// }
-
 // FileGetPropertiesResponse ...
 type FileGetPropertiesResponse struct {
 	rawResponse *http.Response
@@ -1070,9 +898,17 @@ func (fgpr FileGetPropertiesResponse) ContentLength() int64 {
 }
 
 // ContentMD5 returns the value for header Content-MD5.
-// func (fgpr FileGetPropertiesResponse) ContentMD5() string {
-// 	return fgpr.rawResponse.Header.Get("Content-MD5")
-// }
+func (fgpr FileGetPropertiesResponse) ContentMD5() []byte {
+	s := fgpr.rawResponse.Header.Get("Content-MD5")
+	if s == "" {
+		return nil
+	}
+	b, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
 
 // ContentType returns the value for header Content-Type.
 func (fgpr FileGetPropertiesResponse) ContentType() string {
@@ -1198,11 +1034,6 @@ func (fshhr FileSetHTTPHeadersResponse) StatusCode() int {
 func (fshhr FileSetHTTPHeadersResponse) Status() string {
 	return fshhr.rawResponse.Status
 }
-
-// ContentMD5 returns the value for header Content-MD5.
-// func (fprr FileUploadRangeResponse) ContentMD5() string {
-// 	return fprr.rawResponse.Header.Get("Content-MD5")
-// }
 
 // Date returns the value for header Date.
 func (fshhr FileSetHTTPHeadersResponse) Date() time.Time {
@@ -1410,9 +1241,17 @@ func (furr FileUploadRangeResponse) Status() string {
 }
 
 // ContentMD5 returns the value for header Content-MD5.
-// func (gr downloadResponse) ContentMD5() string {
-// 	return gr.rawResponse.Header.Get("Content-MD5")
-// }
+func (furr FileUploadRangeResponse) ContentMD5() []byte {
+	s := furr.rawResponse.Header.Get("Content-MD5")
+	if s == "" {
+		return nil
+	}
+	b, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
 
 // Date returns the value for header Date.
 func (furr FileUploadRangeResponse) Date() time.Time {
@@ -1464,116 +1303,6 @@ func (furr FileUploadRangeResponse) RequestID() string {
 func (furr FileUploadRangeResponse) Version() string {
 	return furr.rawResponse.Header.Get("x-ms-version")
 }
-
-// listFilesAndDirectoriesSegmentResponse - An enumeration of directories and files.
-// type listFilesAndDirectoriesSegmentResponse struct {
-// 	rawResponse *http.Response
-// 	// XMLName is used for marshalling and is subject to removal in a future release.
-// 	XMLName         xml.Name     `xml:"EnumerationResults"`
-// 	ServiceEndpoint string       `xml:"ServiceEndpoint,attr"`
-// 	ShareName       string       `xml:"ShareName,attr"`
-// 	ShareSnapshot   *string      `xml:"ShareSnapshot,attr"`
-// 	DirectoryPath   string       `xml:"DirectoryPath,attr"`
-// 	Prefix          string       `xml:"Prefix"`
-// 	Marker          *string      `xml:"Marker"`
-// 	MaxResults      *int32       `xml:"MaxResults"`
-// 	Entries         []BasicEntry `xml:"Entries>Entries"`
-// 	NextMarker      Marker       `xml:"NextMarker"`
-// }
-
-// // UnmarshalXML is the custom unmarshaler for listFilesAndDirectoriesSegmentResponse struct.
-// func (lfadsr *listFilesAndDirectoriesSegmentResponse) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-// 	for _, a := range start.Attr {
-// 		switch a.Name.Local {
-// 		case "ServiceEndpoint":
-// 			lfadsr.ServiceEndpoint = a.Value
-// 		case "ShareName":
-// 			lfadsr.ShareName = a.Value
-// 		case "ShareSnapshot":
-// 			lfadsr.ShareSnapshot = &a.Value
-// 		case "DirectoryPath":
-// 			lfadsr.DirectoryPath = a.Value
-// 		}
-// 	}
-// 	for t, err := d.Token(); err == nil; t, err = d.Token() {
-// 		tt, ok := t.(xml.StartElement)
-// 		if !ok {
-// 			continue
-// 		}
-// 		switch tt.Name.Local {
-// 		case "Prefix":
-// 			err := d.DecodeElement(&lfadsr.Prefix, &tt)
-// 			if err != nil {
-// 				return err
-// 			}
-// 		case "Marker":
-// 			err := d.DecodeElement(&lfadsr.Marker, &tt)
-// 			if err != nil {
-// 				return err
-// 			}
-// 		case "MaxResults":
-// 			err := d.DecodeElement(&lfadsr.MaxResults, &tt)
-// 			if err != nil {
-// 				return err
-// 			}
-// 		case "Entries":
-// 			entries, err := unmarshalBasicEntryArray(d, tt)
-// 			if err != nil {
-// 				return err
-// 			}
-// 			lfadsr.Entries = entries
-// 		case "NextMarker":
-// 			err := d.DecodeElement(&lfadsr.NextMarker, &tt)
-// 			if err != nil {
-// 				return err
-// 			}
-// 		}
-// 	}
-// 	return nil
-// }
-
-// // Response returns the raw HTTP response object.
-// func (lfadsr listFilesAndDirectoriesSegmentResponse) Response() *http.Response {
-// 	return lfadsr.rawResponse
-// }
-
-// // StatusCode returns the HTTP status code of the response, e.g. 200.
-// func (lfadsr listFilesAndDirectoriesSegmentResponse) StatusCode() int {
-// 	return lfadsr.rawResponse.StatusCode
-// }
-
-// // Status returns the HTTP status message of the response, e.g. "200 OK".
-// func (lfadsr listFilesAndDirectoriesSegmentResponse) Status() string {
-// 	return lfadsr.rawResponse.Status
-// }
-
-// // ContentType returns the value for header Content-Type.
-// func (lfadsr listFilesAndDirectoriesSegmentResponse) ContentType() string {
-// 	return lfadsr.rawResponse.Header.Get("Content-Type")
-// }
-
-// // Date returns the value for header Date.
-// func (lfadsr listFilesAndDirectoriesSegmentResponse) Date() time.Time {
-// 	s := lfadsr.rawResponse.Header.Get("Date")
-// 	if s == "" {
-// 		return time.Time{}
-// 	}
-// 	t, err := time.Parse(time.RFC1123, s)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	return t
-// }
-
-// // RequestID returns the value for header x-ms-request-id.
-// func (lfadsr listFilesAndDirectoriesSegmentResponse) RequestID() string {
-// 	return lfadsr.rawResponse.Header.Get("x-ms-request-id")
-// }
-
-// // Version returns the value for header x-ms-version.
-// func (lfadsr listFilesAndDirectoriesSegmentResponse) Version() string {
-// 	return lfadsr.rawResponse.Header.Get("x-ms-version")
-// }
 
 // ListSharesResponse - An enumeration of shares.
 type ListSharesResponse struct {

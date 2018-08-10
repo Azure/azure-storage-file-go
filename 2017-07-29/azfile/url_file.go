@@ -62,7 +62,7 @@ func (f FileURL) WithSnapshot(shareSnapshot string) FileURL {
 func (f FileURL) Create(ctx context.Context, size int64, h FileHTTPHeaders, metadata Metadata) (*FileCreateResponse, error) {
 	return f.fileClient.Create(ctx, size, nil,
 		&h.ContentType, &h.ContentEncoding, &h.ContentLanguage, &h.CacheControl,
-		h.contentMD5Pointer(), &h.ContentDisposition, metadata)
+		h.ContentMD5, &h.ContentDisposition, metadata)
 }
 
 // StartCopy copies the data at the source URL to a file.
@@ -139,7 +139,7 @@ func (f FileURL) GetProperties(ctx context.Context) (*FileGetPropertiesResponse,
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-file-properties.
 func (f FileURL) SetHTTPHeaders(ctx context.Context, h FileHTTPHeaders) (*FileSetHTTPHeadersResponse, error) {
 	return f.fileClient.SetHTTPHeaders(ctx, nil,
-		nil, &h.ContentType, &h.ContentEncoding, &h.ContentLanguage, &h.CacheControl, h.contentMD5Pointer(), &h.ContentDisposition)
+		nil, &h.ContentType, &h.ContentEncoding, &h.ContentLanguage, &h.CacheControl, h.ContentMD5, &h.ContentDisposition)
 }
 
 // SetMetadata sets a file's metadata.

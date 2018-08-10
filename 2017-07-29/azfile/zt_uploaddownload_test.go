@@ -3,7 +3,6 @@ package azfile
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
 	"crypto/rand"
 	"fmt"
 	"io/ioutil"
@@ -186,7 +185,7 @@ func (ud *uploadDownloadSuite) TestDownloadBasic(c *chk.C) {
 
 	pResp, err := file.UploadRange(context.Background(), 0, contentR)
 	c.Assert(err, chk.IsNil)
-	c.Assert(pResp.ContentMD5(), chk.Not(chk.Equals), [md5.Size]byte{})
+	c.Assert(pResp.ContentMD5(), chk.Not(chk.Equals), nil)
 	c.Assert(pResp.StatusCode(), chk.Equals, http.StatusCreated)
 	c.Assert(pResp.IsServerEncrypted(), chk.NotNil)
 	c.Assert(pResp.ETag(), chk.Not(chk.Equals), ETagNone)
@@ -201,7 +200,7 @@ func (ud *uploadDownloadSuite) TestDownloadBasic(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusPartialContent)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(1024))
-	c.Assert(resp.ContentMD5(), chk.Not(chk.Equals), [md5.Size]byte{})
+	c.Assert(resp.ContentMD5(), chk.Not(chk.Equals), nil)
 	c.Assert(resp.ContentType(), chk.Equals, "application/octet-stream")
 
 	// Without Retry
@@ -218,7 +217,7 @@ func (ud *uploadDownloadSuite) TestDownloadBasic(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusPartialContent)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(1024))
-	c.Assert(resp.ContentMD5(), chk.Equals, [md5.Size]byte{})
+	c.Assert(resp.ContentMD5(), chk.IsNil)
 	c.Assert(resp.FileContentMD5(), chk.DeepEquals, pResp.ContentMD5())
 
 	download, err = ioutil.ReadAll(resp.Body(RetryReaderOptions{MaxRetryRequests: 1}))
@@ -250,8 +249,8 @@ func (ud *uploadDownloadSuite) TestDownloadBasic(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusOK)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(2048))
-	c.Assert(resp.ContentMD5(), chk.Equals, pResp.ContentMD5())   // Note: This case is inted to get entire file, entire file's MD5 will be returned.
-	c.Assert(resp.FileContentMD5(), chk.Equals, [md5.Size]byte{}) // Note: FileContentMD5 is returned, only when range is specified explicitly.
+	c.Assert(resp.ContentMD5(), chk.DeepEquals, pResp.ContentMD5()) // Note: This case is inted to get entire file, entire file's MD5 will be returned.
+	c.Assert(resp.FileContentMD5(), chk.IsNil)                      // Note: FileContentMD5 is returned, only when range is specified explicitly.
 
 	download, err = ioutil.ReadAll(resp.Body(RetryReaderOptions{MaxRetryRequests: 2}))
 	c.Assert(err, chk.IsNil)
@@ -292,7 +291,7 @@ func (ud *uploadDownloadSuite) TestDownloadRetry(c *chk.C) {
 
 	pResp, err := file.UploadRange(context.Background(), 0, contentR)
 	c.Assert(err, chk.IsNil)
-	c.Assert(pResp.ContentMD5(), chk.Not(chk.Equals), [md5.Size]byte{})
+	c.Assert(pResp.ContentMD5(), chk.Not(chk.Equals), nil)
 	c.Assert(pResp.StatusCode(), chk.Equals, http.StatusCreated)
 	c.Assert(pResp.IsServerEncrypted(), chk.NotNil)
 	c.Assert(pResp.ETag(), chk.Not(chk.Equals), ETagNone)
@@ -309,8 +308,8 @@ func (ud *uploadDownloadSuite) TestDownloadRetry(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusOK)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(102400))
-	c.Assert(resp.ContentMD5(), chk.Equals, pResp.ContentMD5())   // Note: This case is intend to get entire file, entire file's MD5 will be returned.
-	c.Assert(resp.FileContentMD5(), chk.Equals, [md5.Size]byte{}) // Note: FileContentMD5 is returned, only when range is specified explicitly.
+	c.Assert(resp.ContentMD5(), chk.DeepEquals, pResp.ContentMD5()) // Note: This case is intend to get entire file, entire file's MD5 will be returned.
+	c.Assert(resp.FileContentMD5(), chk.IsNil)                      // Note: FileContentMD5 is returned, only when range is specified explicitly.
 
 	download, err := ioutil.ReadAll(resp.Body(RetryReaderOptions{MaxRetryRequests: 2, doInjectError: true, doInjectErrorRound: 0}))
 	c.Assert(err, chk.IsNil)
@@ -414,11 +413,11 @@ func (ud *uploadDownloadSuite) TestUploadDownloadBufferParallelNonDefault(c *chk
 	_, srcBytes2 := getRandomDataAndReader(fileSize2)
 
 	md5Str := "MDAwMDAwMDA="
-	var testMd5 [md5.Size]byte
+	var testMd5 []byte
 	copy(testMd5[:], md5Str)
 
 	md5Str2 := "MDAwMDAwMDAAAA="
-	var testMd52 [md5.Size]byte
+	var testMd52 []byte
 	copy(testMd52[:], md5Str2)
 
 	headers := FileHTTPHeaders{
@@ -458,7 +457,7 @@ func (ud *uploadDownloadSuite) TestUploadDownloadBufferParallelNonDefault(c *chk
 	c.Assert(resp.ContentLength(), chk.Equals, int64(fileSize))
 	c.Assert(resp.ContentEncoding(), chk.Equals, "ContentEncoding")
 	c.Assert(resp.ContentLanguage(), chk.Equals, "tr,en")
-	c.Assert(resp.ContentMD5(), chk.Equals, testMd5)
+	c.Assert(resp.ContentMD5(), chk.DeepEquals, testMd5)
 	c.Assert(resp.CacheControl(), chk.Equals, "no-transform")
 	c.Assert(resp.ContentDisposition(), chk.Equals, "attachment")
 	c.Assert(resp.NewMetadata(), chk.DeepEquals, metadata)
@@ -476,7 +475,7 @@ func (ud *uploadDownloadSuite) TestUploadDownloadBufferParallelNonDefault(c *chk
 	c.Assert(resp2.ContentLength(), chk.Equals, int64(fileSize2))
 	c.Assert(resp2.ContentEncoding(), chk.Equals, "test")
 	c.Assert(resp2.ContentLanguage(), chk.Equals, "test")
-	c.Assert(resp2.ContentMD5(), chk.Equals, testMd52)
+	c.Assert(resp2.ContentMD5(), chk.DeepEquals, testMd52)
 	c.Assert(resp2.CacheControl(), chk.Equals, "test")
 	c.Assert(resp2.ContentDisposition(), chk.Equals, "test")
 	c.Assert(resp2.NewMetadata(), chk.DeepEquals, metadata2)
@@ -677,7 +676,7 @@ func (ud *uploadDownloadSuite) TestDownloadFileParallelOverwriteLocalFile(c *chk
 	_, srcBytes := getRandomDataAndReader(fileSize)
 
 	md5Str := "MDAwMDAwMDA="
-	var testMd5 [md5.Size]byte
+	var testMd5 []byte
 	copy(testMd5[:], md5Str)
 
 	headers := FileHTTPHeaders{
@@ -703,7 +702,7 @@ func (ud *uploadDownloadSuite) TestDownloadFileParallelOverwriteLocalFile(c *chk
 	c.Assert(resp.ContentLength(), chk.Equals, int64(fileSize))
 	c.Assert(resp.ContentEncoding(), chk.Equals, "ContentEncoding")
 	c.Assert(resp.ContentLanguage(), chk.Equals, "tr,en")
-	c.Assert(resp.ContentMD5(), chk.Equals, testMd5)
+	c.Assert(resp.ContentMD5(), chk.DeepEquals, testMd5)
 	c.Assert(resp.CacheControl(), chk.Equals, "no-transform")
 	c.Assert(resp.ContentDisposition(), chk.Equals, "attachment")
 	c.Assert(resp.NewMetadata(), chk.DeepEquals, metadata)

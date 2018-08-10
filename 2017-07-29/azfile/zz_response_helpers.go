@@ -2,8 +2,6 @@ package azfile
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/base64"
 	"encoding/xml"
 	"net/http"
 	"time"
@@ -12,19 +10,11 @@ import (
 // FileHTTPHeaders contains read/writeable file properties.
 type FileHTTPHeaders struct {
 	ContentType        string
-	ContentMD5         [md5.Size]byte
+	ContentMD5         []byte
 	ContentEncoding    string
 	ContentLanguage    string
 	ContentDisposition string
 	CacheControl       string
-}
-
-func (h FileHTTPHeaders) contentMD5Pointer() *string {
-	if h.ContentMD5 == [md5.Size]byte{} {
-		return nil
-	}
-	str := base64.StdEncoding.EncodeToString(h.ContentMD5[:])
-	return &str
 }
 
 // NewHTTPHeaders returns the user-modifiable properties for this file.
@@ -49,28 +39,6 @@ func (fgpr FileGetPropertiesResponse) NewHTTPHeaders() FileHTTPHeaders {
 		CacheControl:       fgpr.CacheControl(),
 		ContentMD5:         fgpr.ContentMD5(),
 	}
-}
-
-func md5StringToMD5(md5String string) (hash [md5.Size]byte) {
-	if md5String == "" {
-		return
-	}
-	md5Slice, err := base64.StdEncoding.DecodeString(md5String)
-	if err != nil {
-		panic(err)
-	}
-	copy(hash[:], md5Slice)
-	return
-}
-
-// ContentMD5 returns the value for header Content-MD5.
-func (fgpr FileGetPropertiesResponse) ContentMD5() [md5.Size]byte {
-	return md5StringToMD5(fgpr.rawResponse.Header.Get("Content-MD5"))
-}
-
-// ContentMD5 returns the value for header Content-MD5.
-func (bpr FileUploadRangeResponse) ContentMD5() [md5.Size]byte {
-	return md5StringToMD5(bpr.rawResponse.Header.Get("Content-MD5"))
 }
 
 // DownloadResponse wraps AutoRest generated downloadResponse and helps to provide info for retry.
@@ -204,13 +172,13 @@ func (dr DownloadResponse) NewMetadata() Metadata {
 }
 
 // FileContentMD5 returns the value for header x-ms-content-md5.
-func (dr DownloadResponse) FileContentMD5() [md5.Size]byte {
-	return md5StringToMD5(dr.dr.rawResponse.Header.Get("x-ms-content-md5"))
+func (dr DownloadResponse) FileContentMD5() []byte {
+	return dr.dr.FileContentMD5()
 }
 
 // ContentMD5 returns the value for header Content-MD5.
-func (dr DownloadResponse) ContentMD5() [md5.Size]byte {
-	return md5StringToMD5(dr.dr.rawResponse.Header.Get("Content-MD5"))
+func (dr DownloadResponse) ContentMD5() []byte {
+	return dr.dr.ContentMD5()
 }
 
 // FileItem - Listed file item.

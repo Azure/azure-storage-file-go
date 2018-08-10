@@ -3,7 +3,6 @@ package azfile_test
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -154,7 +153,7 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 	defer delFile(c, fileURL)
 
 	md5Str := "MDAwMDAwMDA="
-	var testMd5 [md5.Size]byte
+	var testMd5 []byte
 	copy(testMd5[:], md5Str)
 
 	properties := azfile.FileHTTPHeaders{
@@ -204,7 +203,7 @@ func (s *FileURLSuite) TestFileGetSetPropertiesSnapshot(c *chk.C) {
 	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
 
 	md5Str := "MDAwMDAwMDA="
-	var testMd5 [md5.Size]byte
+	var testMd5 []byte
 	copy(testMd5[:], md5Str)
 
 	properties := azfile.FileHTTPHeaders{
@@ -791,7 +790,7 @@ func (s *FileURLSuite) TestDownloadEmptyZeroSizeFile(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusOK)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(0))
-	c.Assert(resp.FileContentMD5(), chk.Equals, [md5.Size]byte{}) // Note: FileContentMD5 is returned, only when range is specified explicitly.
+	c.Assert(resp.FileContentMD5(), chk.IsNil) // Note: FileContentMD5 is returned, only when range is specified explicitly.
 
 	download, err := ioutil.ReadAll(resp.Response().Body)
 	c.Assert(err, chk.IsNil)
@@ -829,7 +828,7 @@ func (s *FileURLSuite) TestUploadDownloadDefaultNonDefaultMD5(c *chk.C) {
 
 	pResp, err := fileURL.UploadRange(context.Background(), 0, contentR)
 	c.Assert(err, chk.IsNil)
-	c.Assert(pResp.ContentMD5(), chk.Not(chk.Equals), [md5.Size]byte{})
+	c.Assert(pResp.ContentMD5(), chk.NotNil)
 	c.Assert(pResp.StatusCode(), chk.Equals, http.StatusCreated)
 	c.Assert(pResp.IsServerEncrypted(), chk.NotNil)
 	c.Assert(pResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
@@ -844,7 +843,7 @@ func (s *FileURLSuite) TestUploadDownloadDefaultNonDefaultMD5(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusPartialContent)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(1024))
-	c.Assert(resp.ContentMD5(), chk.Not(chk.Equals), [md5.Size]byte{})
+	c.Assert(resp.ContentMD5(), chk.NotNil)
 	c.Assert(resp.ContentType(), chk.Equals, "application/octet-stream")
 	c.Assert(resp.Status(), chk.Not(chk.Equals), "")
 
@@ -861,11 +860,11 @@ func (s *FileURLSuite) TestUploadDownloadDefaultNonDefaultMD5(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusPartialContent)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(1024))
-	c.Assert(resp.ContentMD5(), chk.Equals, [md5.Size]byte{})
+	c.Assert(resp.ContentMD5(), chk.IsNil)
 	c.Assert(resp.FileContentMD5(), chk.DeepEquals, pResp.ContentMD5())
 	c.Assert(resp.ContentLanguage(), chk.Equals, "test")
 	// Note: when it's downloading range, range's MD5 is returned, when set rangeGetContentMD5=true, currently set it to false, so should be empty
-	c.Assert(resp.NewHTTPHeaders(), chk.DeepEquals, azfile.FileHTTPHeaders{ContentMD5: [md5.Size]byte{}, ContentLanguage: "test"})
+	c.Assert(resp.NewHTTPHeaders(), chk.DeepEquals, azfile.FileHTTPHeaders{ContentLanguage: "test"})
 
 	download, err = ioutil.ReadAll(resp.Response().Body)
 	c.Assert(err, chk.IsNil)
@@ -896,8 +895,8 @@ func (s *FileURLSuite) TestUploadDownloadDefaultNonDefaultMD5(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.StatusCode(), chk.Equals, http.StatusOK)
 	c.Assert(resp.ContentLength(), chk.Equals, int64(2048))
-	c.Assert(resp.ContentMD5(), chk.Equals, pResp.ContentMD5())   // Note: This case is inted to get entire fileURL, entire file's MD5 will be returned.
-	c.Assert(resp.FileContentMD5(), chk.Equals, [md5.Size]byte{}) // Note: FileContentMD5 is returned, only when range is specified explicitly.
+	c.Assert(resp.ContentMD5(), chk.DeepEquals, pResp.ContentMD5()) // Note: This case is inted to get entire fileURL, entire file's MD5 will be returned.
+	c.Assert(resp.FileContentMD5(), chk.IsNil)                      // Note: FileContentMD5 is returned, only when range is specified explicitly.
 
 	download, err = ioutil.ReadAll(resp.Response().Body)
 	c.Assert(err, chk.IsNil)
@@ -1079,7 +1078,7 @@ func (s *FileURLSuite) TestGetRangeListNonDefaultExact(c *chk.C) {
 	c.Assert(putResp.Response().StatusCode, chk.Equals, 201)
 	c.Assert(putResp.LastModified().IsZero(), chk.Equals, false)
 	c.Assert(putResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
-	c.Assert(putResp.ContentMD5(), chk.Not(chk.Equals), "")
+	c.Assert(putResp.ContentMD5(), chk.NotNil)
 	c.Assert(putResp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(putResp.Version(), chk.Not(chk.Equals), "")
 	c.Assert(putResp.Date().IsZero(), chk.Equals, false)

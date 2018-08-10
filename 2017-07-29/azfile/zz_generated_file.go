@@ -5,6 +5,7 @@ package azfile
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/xml"
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"io"
@@ -88,7 +89,7 @@ func (client fileClient) abortCopyResponder(resp pipeline.Response) (pipeline.Re
 // file's cache control. The File service stores this value but does not use or modify it. fileContentMD5 is sets the
 // file's MD5 hash. fileContentDisposition is sets the file's Content-Disposition header. metadata is a name-value pair
 // to associate with a file storage object.
-func (client fileClient) Create(ctx context.Context, fileContentLength int64, timeout *int32, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 *string, fileContentDisposition *string, metadata map[string]string) (*FileCreateResponse, error) {
+func (client fileClient) Create(ctx context.Context, fileContentLength int64, timeout *int32, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 []byte, fileContentDisposition *string, metadata map[string]string) (*FileCreateResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
@@ -110,7 +111,7 @@ func (client fileClient) Create(ctx context.Context, fileContentLength int64, ti
 }
 
 // createPreparer prepares the Create request.
-func (client fileClient) createPreparer(fileContentLength int64, timeout *int32, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 *string, fileContentDisposition *string, metadata map[string]string) (pipeline.Request, error) {
+func (client fileClient) createPreparer(fileContentLength int64, timeout *int32, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 []byte, fileContentDisposition *string, metadata map[string]string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -136,7 +137,7 @@ func (client fileClient) createPreparer(fileContentLength int64, timeout *int32,
 		req.Header.Set("x-ms-cache-control", *fileCacheControl)
 	}
 	if fileContentMD5 != nil {
-		req.Header.Set("x-ms-content-md5", *fileContentMD5)
+		req.Header.Set("x-ms-content-md5", base64.StdEncoding.EncodeToString(fileContentMD5))
 	}
 	if fileContentDisposition != nil {
 		req.Header.Set("x-ms-content-disposition", *fileContentDisposition)
@@ -401,7 +402,7 @@ func (client fileClient) getRangeListResponder(resp pipeline.Response) (pipeline
 // specifies the natural languages used by this resource. fileCacheControl is sets the file's cache control. The File
 // service stores this value but does not use or modify it. fileContentMD5 is sets the file's MD5 hash.
 // fileContentDisposition is sets the file's Content-Disposition header.
-func (client fileClient) SetHTTPHeaders(ctx context.Context, timeout *int32, fileContentLength *int64, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 *string, fileContentDisposition *string) (*FileSetHTTPHeadersResponse, error) {
+func (client fileClient) SetHTTPHeaders(ctx context.Context, timeout *int32, fileContentLength *int64, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 []byte, fileContentDisposition *string) (*FileSetHTTPHeadersResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
@@ -420,7 +421,7 @@ func (client fileClient) SetHTTPHeaders(ctx context.Context, timeout *int32, fil
 }
 
 // setHTTPHeadersPreparer prepares the SetHTTPHeaders request.
-func (client fileClient) setHTTPHeadersPreparer(timeout *int32, fileContentLength *int64, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 *string, fileContentDisposition *string) (pipeline.Request, error) {
+func (client fileClient) setHTTPHeadersPreparer(timeout *int32, fileContentLength *int64, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 []byte, fileContentDisposition *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -448,7 +449,7 @@ func (client fileClient) setHTTPHeadersPreparer(timeout *int32, fileContentLengt
 		req.Header.Set("x-ms-cache-control", *fileCacheControl)
 	}
 	if fileContentMD5 != nil {
-		req.Header.Set("x-ms-content-md5", *fileContentMD5)
+		req.Header.Set("x-ms-content-md5", base64.StdEncoding.EncodeToString(fileContentMD5))
 	}
 	if fileContentDisposition != nil {
 		req.Header.Set("x-ms-content-disposition", *fileContentDisposition)
@@ -607,7 +608,7 @@ func (client fileClient) startCopyResponder(resp pipeline.Response) (pipeline.Re
 // integrity of the data during transport. When the Content-MD5 header is specified, the File service compares the hash
 // of the content that has arrived with the header value that was sent. If the two hashes do not match, the operation
 // will fail with error code 400 (Bad Request).
-func (client fileClient) UploadRange(ctx context.Context, rangeParameter string, fileRangeWrite FileRangeWriteType, contentLength int64, body io.ReadSeeker, timeout *int32, contentMD5 *string) (*FileUploadRangeResponse, error) {
+func (client fileClient) UploadRange(ctx context.Context, rangeParameter string, fileRangeWrite FileRangeWriteType, contentLength int64, body io.ReadSeeker, timeout *int32, contentMD5 []byte) (*FileUploadRangeResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
@@ -626,7 +627,7 @@ func (client fileClient) UploadRange(ctx context.Context, rangeParameter string,
 }
 
 // uploadRangePreparer prepares the UploadRange request.
-func (client fileClient) uploadRangePreparer(rangeParameter string, fileRangeWrite FileRangeWriteType, contentLength int64, body io.ReadSeeker, timeout *int32, contentMD5 *string) (pipeline.Request, error) {
+func (client fileClient) uploadRangePreparer(rangeParameter string, fileRangeWrite FileRangeWriteType, contentLength int64, body io.ReadSeeker, timeout *int32, contentMD5 []byte) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, body)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -641,7 +642,7 @@ func (client fileClient) uploadRangePreparer(rangeParameter string, fileRangeWri
 	req.Header.Set("x-ms-write", string(fileRangeWrite))
 	req.Header.Set("Content-Length", strconv.FormatInt(contentLength, 10))
 	if contentMD5 != nil {
-		req.Header.Set("Content-MD5", *contentMD5)
+		req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(contentMD5))
 	}
 	req.Header.Set("x-ms-version", ServiceVersion)
 	return req, nil

@@ -2,7 +2,6 @@ package azfile_test
 
 import (
 	"context"
-	"crypto/md5"
 	"errors"
 	"fmt"
 	"net/url"
@@ -32,7 +31,7 @@ const (
 
 var ctx = context.Background()
 var basicHeaders = azfile.FileHTTPHeaders{ContentType: "my_type", ContentDisposition: "my_disposition",
-	CacheControl: "control", ContentMD5: md5.Sum([]byte("")), ContentLanguage: "my_language", ContentEncoding: "my_encoding"}
+	CacheControl: "control", ContentMD5: nil, ContentLanguage: "my_language", ContentEncoding: "my_encoding"}
 var basicMetadata = azfile.Metadata{"foo": "bar"}
 
 func getAccountAndKey() (string, string) {
