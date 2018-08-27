@@ -214,9 +214,27 @@ func NewRetryPolicyFactory(o RetryOptions) pipeline.Factory {
 					considerSecondary = false
 					action = "Retry: Secondary URL returned 404"
 				case err != nil:
-					// NOTE: Protocol Responder returns non-nil if REST API returns invalid status code for the invoked operation
-					if netErr, ok := err.(net.Error); ok && (netErr.Temporary() || netErr.Timeout()) {
-						action = "Retry: net.Error and Temporary() or Timeout()"
+					// NOTE: Protocol Responder returns non-nil if REST API returns invalid status code for the invoked operation.
+					// Use ServiceCode to verify if the error is related to storage service-side,
+					// ServiceCode is set only when error related to storage service happened.
+					if stErr, ok := err.(StorageError); ok {
+						if stErr.Temporary() {
+							action = "Retry: StorageError with error service code and Temporary()"
+						} else if stErr.Response() != nil && isSuccessStatusCode(stErr.Response()) { // TODO: This is a temporarily work around, remove this after protocol layer fix the issue that net.Error is wrapped as storageError
+							action = "Retry: StorageError with success status code"
+						} else {
+							action = "NoRetry: StorageError not Temporary() and without retriable status code"
+						}
+					} else if netErr, ok := err.(net.Error); ok {
+						// Use non-retriable net.Error list, but not retriable list.
+						// As there are errors without Temporary() implementation,
+						// while need be retried, like 'connection reset by peer', 'transport connection broken' and etc.
+						// So the SDK do retry for most of the case, unless the error should not be retried for sure.
+						if !isNotRetriable(netErr) {
+							action = "Retry: net.Error and not in the non-retriable list"
+						} else {
+							action = "NoRetry: net.Error and in the non-retriable list"
+						}
 					} else {
 						action = "NoRetry: unrecognized error"
 					}
@@ -249,6 +267,54 @@ func NewRetryPolicyFactory(o RetryOptions) pipeline.Factory {
 			return response, err // Not retryable or too many retries; return the last response/error
 		}
 	})
+}
+
+// isNotRetriable checks if the provided net.Error isn't retriable.
+func isNotRetriable(errToParse net.Error) bool {
+	// No error, so this is NOT retriable.
+	if errToParse == nil {
+		return true
+	}
+
+	// The error is either temporary or a timeout so it IS retriable (not not retriable).
+	if errToParse.Temporary() || errToParse.Timeout() {
+		return false
+	}
+
+	genericErr := error(errToParse)
+
+	// From here all the error are neither Temporary() nor Timeout().
+	switch err := errToParse.(type) {
+	case *net.OpError:
+		// The net.Error is also a net.OpError but the inner error is nil, so this is not retriable.
+		if err.Err == nil {
+			return true
+		}
+		genericErr = err.Err
+	}
+
+	switch genericErr.(type) {
+	case *net.AddrError, net.UnknownNetworkError, *net.DNSError, net.InvalidAddrError, *net.ParseError, *net.DNSConfigError:
+		// If the error is one of the ones listed, then it is NOT retriable.
+		return true
+	}
+
+	// Assume the error is retriable.
+	return false
+}
+
+var successStatusCodes = []int{http.StatusOK, http.StatusCreated, http.StatusAccepted, http.StatusNoContent, http.StatusPartialContent}
+
+func isSuccessStatusCode(resp *http.Response) bool {
+	if resp == nil {
+		return false
+	}
+	for _, i := range successStatusCodes {
+		if i == resp.StatusCode {
+			return true
+		}
+	}
+	return false
 }
 
 // According to https://github.com/golang/go/wiki/CompilerOptimizations, the compiler will inline this method and hopefully optimize all calls to it away
