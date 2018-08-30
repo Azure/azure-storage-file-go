@@ -248,11 +248,18 @@ func NewRetryPolicyFactory(o RetryOptions) pipeline.Factory {
 					if err != nil {
 						tryCancel() // If we're returning an error, cancel this current/last per-retry timeout context
 					} else {
-						// TODO: Right now, we've decided to leak the per-try Context until the user's Context is canceled.
-						// Another option is that we wrap the last per-try context in a body and overwrite the Response's Body field with our wrapper.
+						// We wrap the last per-try context in a body and overwrite the Response's Body field with our wrapper.
 						// So, when the user closes the Body, the our per-try context gets closed too.
 						// Another option, is that the Last Policy do this wrapping for a per-retry context (not for the user's context)
-						_ = tryCancel // So, for now, we don't call cancel: cancel()
+						if response == nil || response.Response() == nil {
+							// We do panic in the case response or response.Response() is nil,
+							// as for client, the response should not be nil if request is sent and the operations is executed successfully.
+							// Another option, is that execute the cancel function when response or response.Response() is nil,
+							// as in this case, current per-try has nothing to do in future.
+							panic("invalid state, response should not be nil when the operation is executed successfully")
+						}
+
+						response.Response().Body = &contextCancelReadCloser{cf: tryCancel, body: response.Response().Body}
 					}
 					break // Don't retry
 				}
@@ -267,6 +274,24 @@ func NewRetryPolicyFactory(o RetryOptions) pipeline.Factory {
 			return response, err // Not retryable or too many retries; return the last response/error
 		}
 	})
+}
+
+// contextCancelReadCloser helps to invoke context's cancelFunc properly when the ReadCloser is closed.
+type contextCancelReadCloser struct {
+	cf   context.CancelFunc
+	body io.ReadCloser
+}
+
+func (rc *contextCancelReadCloser) Read(p []byte) (n int, err error) {
+	return rc.body.Read(p)
+}
+
+func (rc *contextCancelReadCloser) Close() error {
+	err := rc.body.Close()
+	if rc.cf != nil {
+		rc.cf()
+	}
+	return err
 }
 
 // isNotRetriable checks if the provided net.Error isn't retriable.
