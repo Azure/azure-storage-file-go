@@ -6,6 +6,7 @@ package azfile
 import (
 	"encoding/base64"
 	"encoding/xml"
+	"errors"
 	"io"
 	"net/http"
 	"reflect"
@@ -86,6 +87,12 @@ func joinConst(s interface{}, sep string) string {
 	return strings.Join(ss, sep)
 }
 
+func validateError(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 // CopyStatusType enumerates the values for copy status type.
 type CopyStatusType string
 
@@ -121,7 +128,6 @@ const (
 func PossibleDeleteSnapshotsOptionTypeValues() []DeleteSnapshotsOptionType {
 	return []DeleteSnapshotsOptionType{DeleteSnapshotsOptionInclude, DeleteSnapshotsOptionNone}
 }
-
 
 // FileRangeWriteType enumerates the values for file range write type.
 type FileRangeWriteType string
@@ -170,7 +176,7 @@ type AccessPolicy struct {
 // MarshalXML implements the xml.Marshaler interface for AccessPolicy.
 func (ap AccessPolicy) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	if reflect.TypeOf((*AccessPolicy)(nil)).Elem().Size() != reflect.TypeOf((*accessPolicy)(nil)).Elem().Size() {
-		panic("size mismatch between AccessPolicy and accessPolicy")
+		validateError(errors.New("size mismatch between AccessPolicy and accessPolicy"))
 	}
 	ap2 := (*accessPolicy)(unsafe.Pointer(&ap))
 	return e.EncodeElement(*ap2, start)
@@ -179,7 +185,7 @@ func (ap AccessPolicy) MarshalXML(e *xml.Encoder, start xml.StartElement) error 
 // UnmarshalXML implements the xml.Unmarshaler interface for AccessPolicy.
 func (ap *AccessPolicy) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	if reflect.TypeOf((*AccessPolicy)(nil)).Elem().Size() != reflect.TypeOf((*accessPolicy)(nil)).Elem().Size() {
-		panic("size mismatch between AccessPolicy and accessPolicy")
+		validateError(errors.New("size mismatch between AccessPolicy and accessPolicy"))
 	}
 	ap2 := (*accessPolicy)(unsafe.Pointer(ap))
 	return d.DecodeElement(ap2, &start)
@@ -229,9 +235,7 @@ func (dcr DirectoryCreateResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -257,9 +261,7 @@ func (dcr DirectoryCreateResponse) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -300,9 +302,7 @@ func (ddr DirectoryDeleteResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -361,9 +361,7 @@ func (dgpr DirectoryGetPropertiesResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -389,9 +387,7 @@ func (dgpr DirectoryGetPropertiesResponse) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -432,9 +428,7 @@ func (dsmr DirectorySetMetadataResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -463,7 +457,7 @@ func (dsmr DirectorySetMetadataResponse) Version() string {
 	return dsmr.rawResponse.Header.Get("x-ms-version")
 }
 
-// downloadResponse ...
+// downloadResponse - Wraps the response from the fileClient.Download method.
 type downloadResponse struct {
 	rawResponse *http.Response
 }
@@ -533,9 +527,7 @@ func (dr downloadResponse) ContentLength() int64 {
 		return -1
 	}
 	i, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return i
 }
 
@@ -546,9 +538,7 @@ func (dr downloadResponse) ContentMD5() []byte {
 		return nil
 	}
 	b, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return b
 }
 
@@ -569,9 +559,7 @@ func (dr downloadResponse) CopyCompletionTime() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -607,9 +595,7 @@ func (dr downloadResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -630,9 +616,7 @@ func (dr downloadResponse) FileContentMD5() []byte {
 		return nil
 	}
 	b, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return b
 }
 
@@ -648,9 +632,7 @@ func (dr downloadResponse) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -691,9 +673,7 @@ func (facr FileAbortCopyResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -739,9 +719,7 @@ func (fcr FileCreateResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -767,9 +745,7 @@ func (fcr FileCreateResponse) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -810,9 +786,7 @@ func (fdr FileDeleteResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -891,9 +865,7 @@ func (fgpr FileGetPropertiesResponse) ContentLength() int64 {
 		return -1
 	}
 	i, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return i
 }
 
@@ -904,9 +876,7 @@ func (fgpr FileGetPropertiesResponse) ContentMD5() []byte {
 		return nil
 	}
 	b, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return b
 }
 
@@ -922,9 +892,7 @@ func (fgpr FileGetPropertiesResponse) CopyCompletionTime() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -960,9 +928,7 @@ func (fgpr FileGetPropertiesResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -993,9 +959,7 @@ func (fgpr FileGetPropertiesResponse) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1042,9 +1006,7 @@ func (fshhr FileSetHTTPHeadersResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1070,9 +1032,7 @@ func (fshhr FileSetHTTPHeadersResponse) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1113,9 +1073,7 @@ func (fsmr FileSetMetadataResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1181,9 +1139,7 @@ func (fscr FileStartCopyResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1204,9 +1160,7 @@ func (fscr FileStartCopyResponse) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1247,9 +1201,7 @@ func (furr FileUploadRangeResponse) ContentMD5() []byte {
 		return nil
 	}
 	b, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return b
 }
 
@@ -1260,9 +1212,7 @@ func (furr FileUploadRangeResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1288,9 +1238,7 @@ func (furr FileUploadRangeResponse) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1366,7 +1314,7 @@ type Range struct {
 	End int64 `xml:"End"`
 }
 
-// Ranges ...
+// Ranges - Wraps the response from the fileClient.GetRangeList method.
 type Ranges struct {
 	rawResponse *http.Response
 	Items       []Range `xml:"Range"`
@@ -1394,9 +1342,7 @@ func (r Ranges) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1417,9 +1363,7 @@ func (r Ranges) FileContentLength() int64 {
 		return -1
 	}
 	i, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return i
 }
 
@@ -1430,9 +1374,7 @@ func (r Ranges) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1516,9 +1458,7 @@ func (scr ShareCreateResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1539,9 +1479,7 @@ func (scr ShareCreateResponse) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1582,9 +1520,7 @@ func (scsr ShareCreateSnapshotResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1605,9 +1541,7 @@ func (scsr ShareCreateSnapshotResponse) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1653,9 +1587,7 @@ func (sdr ShareDeleteResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1714,9 +1646,7 @@ func (sgpr ShareGetPropertiesResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1737,9 +1667,7 @@ func (sgpr ShareGetPropertiesResponse) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1750,9 +1678,7 @@ func (sgpr ShareGetPropertiesResponse) Quota() int32 {
 		return -1
 	}
 	i, err := strconv.ParseInt(s, 10, 32)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return int32(i)
 }
 
@@ -1786,7 +1712,7 @@ type ShareProperties struct {
 // MarshalXML implements the xml.Marshaler interface for ShareProperties.
 func (sp ShareProperties) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	if reflect.TypeOf((*ShareProperties)(nil)).Elem().Size() != reflect.TypeOf((*shareProperties)(nil)).Elem().Size() {
-		panic("size mismatch between ShareProperties and shareProperties")
+		validateError(errors.New("size mismatch between ShareProperties and shareProperties"))
 	}
 	sp2 := (*shareProperties)(unsafe.Pointer(&sp))
 	return e.EncodeElement(*sp2, start)
@@ -1795,7 +1721,7 @@ func (sp ShareProperties) MarshalXML(e *xml.Encoder, start xml.StartElement) err
 // UnmarshalXML implements the xml.Unmarshaler interface for ShareProperties.
 func (sp *ShareProperties) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	if reflect.TypeOf((*ShareProperties)(nil)).Elem().Size() != reflect.TypeOf((*shareProperties)(nil)).Elem().Size() {
-		panic("size mismatch between ShareProperties and shareProperties")
+		validateError(errors.New("size mismatch between ShareProperties and shareProperties"))
 	}
 	sp2 := (*shareProperties)(unsafe.Pointer(sp))
 	return d.DecodeElement(sp2, &start)
@@ -1828,9 +1754,7 @@ func (ssapr ShareSetAccessPolicyResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1851,9 +1775,7 @@ func (ssapr ShareSetAccessPolicyResponse) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1894,9 +1816,7 @@ func (ssmr ShareSetMetadataResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1917,9 +1837,7 @@ func (ssmr ShareSetMetadataResponse) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1960,9 +1878,7 @@ func (ssqr ShareSetQuotaResponse) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -1983,9 +1899,7 @@ func (ssqr ShareSetQuotaResponse) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -2028,9 +1942,7 @@ func (ss ShareStats) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -2051,9 +1963,7 @@ func (ss ShareStats) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -2075,7 +1985,7 @@ type SignedIdentifier struct {
 	AccessPolicy *AccessPolicy `xml:"AccessPolicy"`
 }
 
-// SignedIdentifiers ...
+// SignedIdentifiers - Wraps the response from the shareClient.GetAccessPolicy method.
 type SignedIdentifiers struct {
 	rawResponse *http.Response
 	Items       []SignedIdentifier `xml:"SignedIdentifier"`
@@ -2103,9 +2013,7 @@ func (si SignedIdentifiers) Date() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
@@ -2126,9 +2034,7 @@ func (si SignedIdentifiers) LastModified() time.Time {
 		return time.Time{}
 	}
 	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		panic(err)
-	}
+	validateError(err)
 	return t
 }
 
