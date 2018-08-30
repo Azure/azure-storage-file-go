@@ -125,10 +125,9 @@ func (s *ShareURLSuite) TestShareCreateNegativeInvalidMetadata(c *chk.C) {
 	fsu := getFSU()
 	shareURL, _ := getShareURL(c, fsu)
 
-	_, err := shareURL.Create(ctx, azfile.Metadata{"1 foo": "bar"}, 0)
+	_, err := shareURL.Create(ctx, azfile.Metadata{"!@#$%^&*()": "!@#$%^&*()"}, 0)
 
 	c.Assert(err, chk.NotNil)
-	c.Assert(strings.Contains(err.Error(), validationErrorSubstring), chk.Equals, true)
 }
 
 func (s *ShareURLSuite) TestShareDeleteNegativeNonExistant(c *chk.C) {
@@ -546,11 +545,10 @@ func (s *ShareURLSuite) TestShareSetMetadataNegative(c *chk.C) {
 	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
 
 	md := azfile.Metadata{
-		"1 foo": "FooValuE",
+		"!@#$%^&*()": "!@#$%^&*()",
 	}
 	_, err := share.SetMetadata(context.Background(), md)
 	c.Assert(err, chk.NotNil)
-	c.Assert(strings.Contains(err.Error(), validationErrorSubstring), chk.Equals, true)
 }
 
 func (s *ShareURLSuite) TestShareGetStats(c *chk.C) {
@@ -704,9 +702,8 @@ func (s *ShareURLSuite) TestShareCreateSnapshotNegativeMetadataInvalid(c *chk.C)
 	share, _ := createNewShare(c, fsu)
 	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
 
-	_, err := share.CreateSnapshot(ctx, azfile.Metadata{"Invalid Field!": "value"})
+	_, err := share.CreateSnapshot(ctx, azfile.Metadata{"!@#$%^&*()": "!@#$%^&*()"})
 	c.Assert(err, chk.NotNil)
-	c.Assert(strings.Contains(err.Error(), validationErrorSubstring), chk.Equals, true)
 }
 
 // Note behavior is different from blob's snapshot.

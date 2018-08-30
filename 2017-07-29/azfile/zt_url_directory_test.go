@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Azure/azure-storage-file-go/2017-07-29/azfile"
@@ -273,12 +272,11 @@ func (s *DirectoryURLSuite) TestDirSetMetadataNegative(c *chk.C) {
 	defer delDirectory(c, directory)
 
 	md := azfile.Metadata{
-		"foo 123": "FooValuE",
+		"!@#$%^&*()": "!@#$%^&*()",
 	}
 
 	_, err := directory.SetMetadata(context.Background(), md)
 	c.Assert(err, chk.NotNil)
-	c.Assert(strings.Contains(err.Error(), validationErrorSubstring), chk.Equals, true)
 }
 
 func (s *DirectoryURLSuite) TestDirGetPropertiesNegative(c *chk.C) {

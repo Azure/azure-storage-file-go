@@ -139,9 +139,8 @@ func (s *FileURLSuite) TestFileCreateNegativeMetadataInvalid(c *chk.C) {
 	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
 	fileURL, _ := getFileURLFromShare(c, shareURL)
 
-	_, err := fileURL.Create(ctx, 0, azfile.FileHTTPHeaders{}, azfile.Metadata{"In valid1": "bar"})
-	c.Assert(strings.Contains(err.Error(), validationErrorSubstring), chk.Equals, true)
-
+	_, err := fileURL.Create(ctx, 0, azfile.FileHTTPHeaders{}, azfile.Metadata{"!@#$%^&*()": "!@#$%^&*()"})
+	c.Assert(err, chk.NotNil)
 }
 
 func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
@@ -327,9 +326,8 @@ func (s *FileURLSuite) TestFileSetMetadataInvalidField(c *chk.C) {
 	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
 	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
 
-	_, err := fileURL.SetMetadata(ctx, azfile.Metadata{"Invalid field!": "value"})
+	_, err := fileURL.SetMetadata(ctx, azfile.Metadata{"!@#$%^&*()": "!@#$%^&*()"})
 	c.Assert(err, chk.NotNil)
-	c.Assert(strings.Contains(err.Error(), validationErrorSubstring), chk.Equals, true)
 }
 
 func (s *FileURLSuite) TestStartCopyDefault(c *chk.C) {
@@ -485,9 +483,8 @@ func (s *FileURLSuite) TestFileStartCopyNegativeMetadataInvalidField(c *chk.C) {
 	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
 	copyFileURL, _ := getFileURLFromShare(c, shareURL)
 
-	_, err := copyFileURL.StartCopy(ctx, fileURL.URL(), azfile.Metadata{"I nvalid.": "bar"})
+	_, err := copyFileURL.StartCopy(ctx, fileURL.URL(), azfile.Metadata{"!@#$%^&*()": "!@#$%^&*()"})
 	c.Assert(err, chk.NotNil)
-	c.Assert(strings.Contains(err.Error(), validationErrorSubstring), chk.Equals, true)
 }
 
 func (s *FileURLSuite) TestFileStartCopySourceNonExistant(c *chk.C) {
