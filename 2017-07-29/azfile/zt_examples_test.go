@@ -1,4 +1,4 @@
-package azfile
+package azfile_test
 
 import (
 	"bytes"
@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
+	"github.com/Azure/azure-storage-file-go/2017-07-29/azfile"
 )
 
 // Please set environment variable ACCOUNT_NAME and ACCOUNT_KEY to your storage accout name and account key,
@@ -27,7 +28,7 @@ func Example() {
 	accountName, accountKey := accountInfo()
 
 	// Use your Storage account's name and key to create a credential object; this is used to access your account.
-	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,14 +36,14 @@ func Example() {
 	// Create a request pipeline that is used to process HTTP(S) requests and responses. It requires
 	// your account credentials. In more advanced scenarios, you can configure telemetry, retry policies,
 	// logging, and other options. Also, you can configure multiple request pipelines for different scenarios.
-	p := NewPipeline(credential, PipelineOptions{})
+	p := azfile.NewPipeline(credential, azfile.PipelineOptions{})
 
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	// The URL typically looks like this:
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net", accountName))
 
 	// Create an ServiceURL object that wraps the service URL and a request pipeline.
-	serviceURL := NewServiceURL(*u, p)
+	serviceURL := azfile.NewServiceURL(*u, p)
 
 	// Now, you can use the serviceURL to perform various share and file operations.
 
@@ -56,8 +57,8 @@ func Example() {
 	shareURL := serviceURL.NewShareURL("mysharehelloworld") // Share names require lowercase
 
 	// Create the share on the service (with no metadata and default quota size)
-	_, err = shareURL.Create(ctx, Metadata{}, 0)
-	if err != nil && err.(StorageError) != nil && err.(StorageError).ServiceCode() != ServiceCodeShareAlreadyExists {
+	_, err = shareURL.Create(ctx, azfile.Metadata{}, 0)
+	if err != nil && err.(azfile.StorageError) != nil && err.(azfile.StorageError).ServiceCode() != azfile.ServiceCodeShareAlreadyExists {
 		log.Fatal(err)
 	}
 
@@ -72,7 +73,7 @@ func Example() {
 	// Create the file with string (plain text) content.
 	data := "Hello World!"
 	length := int64(len(data))
-	_, err = fileURL.Create(ctx, length, FileHTTPHeaders{ContentType: "text/plain"}, Metadata{})
+	_, err = fileURL.Create(ctx, length, azfile.FileHTTPHeaders{ContentType: "text/plain"}, azfile.Metadata{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,14 +84,14 @@ func Example() {
 	}
 
 	// Download the file's contents and verify that it worked correctly.
-	// User can specify 0 as offset and CountToEnd(-1) as count to indiciate downloading the entire file.
-	get, err := fileURL.Download(ctx, 0, CountToEnd, false)
+	// User can specify 0 as offset and azfile.CountToEnd(-1) as count to indiciate downloading the entire file.
+	get, err := fileURL.Download(ctx, 0, azfile.CountToEnd, false)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	downloadedData := &bytes.Buffer{}
-	retryReader := get.Body(RetryReaderOptions{})
+	retryReader := get.Body(azfile.RetryReaderOptions{})
 	defer retryReader.Close() // The client must close the response body when finished with it
 
 	downloadedData.ReadFrom(retryReader)
@@ -98,15 +99,15 @@ func Example() {
 
 	// New a reference to a directory with name DemoDir in share, and create the directory.
 	directoryDemoURL := shareURL.NewDirectoryURL("DemoDir")
-	_, err = directoryDemoURL.Create(ctx, Metadata{})
-	if err != nil && err.(StorageError) != nil && err.(StorageError).ServiceCode() != ServiceCodeResourceAlreadyExists {
+	_, err = directoryDemoURL.Create(ctx, azfile.Metadata{})
+	if err != nil && err.(azfile.StorageError) != nil && err.(azfile.StorageError).ServiceCode() != azfile.ServiceCodeResourceAlreadyExists {
 		log.Fatal(err)
 	}
 
 	// List the file(s) and directory(s) in our share's root directory; since a directory may hold millions of files and directories, this is done 1 segment at a time.
-	for marker := (Marker{}); marker.NotDone(); { // The parentheses around Marker{} are required to avoid compiler error.
+	for marker := (azfile.Marker{}); marker.NotDone(); { // The parentheses around azfile.Marker{} are required to avoid compiler error.
 		// Get a result segment starting with the file indicated by the current Marker.
-		listResponse, err := directoryURL.ListFilesAndDirectoriesSegment(ctx, marker, ListFilesAndDirectoriesOptions{})
+		listResponse, err := directoryURL.ListFilesAndDirectoriesSegment(ctx, marker, azfile.ListFilesAndDirectoriesOptions{})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -131,8 +132,8 @@ func Example() {
 		log.Fatal(err)
 	}
 
-	// Delete the share we created earlier (with DeleteSnapshotsOptionNone as no snapshot exists and needs to be deleted).
-	_, err = shareURL.Delete(ctx, DeleteSnapshotsOptionNone)
+	// Delete the share we created earlier (with azfile.DeleteSnapshotsOptionNone as no snapshot exists and needs to be deleted).
+	_, err = shareURL.Delete(ctx, azfile.DeleteSnapshotsOptionNone)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -151,18 +152,18 @@ func ExampleNewPipeline() {
 
 	// Create/configure a request pipeline options object.
 	// All PipelineOptions' fields are optional; reasonable defaults are set for anything you do not specify
-	po := PipelineOptions{
+	po := azfile.PipelineOptions{
 		// Set RetryOptions to control how HTTP request are retried when retryable failures occur
-		Retry: RetryOptions{
-			Policy:        RetryPolicyExponential, // Use exponential backoff as opposed to linear
-			MaxTries:      3,                      // Try at most 3 times to perform the operation (set to 1 to disable retries)
-			TryTimeout:    time.Second * 3,        // Maximum time allowed for any single try
-			RetryDelay:    time.Second * 1,        // Backoff amount for each retry (exponential or linear)
-			MaxRetryDelay: time.Second * 3,        // Max delay between retries
+		Retry: azfile.RetryOptions{
+			Policy:        azfile.RetryPolicyExponential, // Use exponential backoff as opposed to linear
+			MaxTries:      3,                             // Try at most 3 times to perform the operation (set to 1 to disable retries)
+			TryTimeout:    time.Second * 3,               // Maximum time allowed for any single try
+			RetryDelay:    time.Second * 1,               // Backoff amount for each retry (exponential or linear)
+			MaxRetryDelay: time.Second * 3,               // Max delay between retries
 		},
 
 		// Set RequestLogOptions to control how each HTTP request & its response is logged
-		RequestLog: RequestLogOptions{
+		RequestLog: azfile.RequestLogOptions{
 			LogWarningIfTryOverThreshold: time.Millisecond * 200, // A successful response taking more than this time to arrive is logged as a warning
 		},
 
@@ -180,11 +181,11 @@ func ExampleNewPipeline() {
 
 	// Create a request pipeline object configured with credentials and with pipeline options. Once created,
 	// a pipeline object is goroutine-safe and can be safely used with many XxxURL objects simultaneously.
-	p := NewPipeline(NewAnonymousCredential(), po) // A pipeline always requires some credential object
+	p := azfile.NewPipeline(azfile.NewAnonymousCredential(), po) // A pipeline always requires some credential object
 
 	// Once you've created a pipeline object, associate it with an XxxURL object so that you can perform HTTP requests with it.
 	u, _ := url.Parse("https://myaccount.file.core.windows.net")
-	serviceURL := NewServiceURL(*u, p)
+	serviceURL := azfile.NewServiceURL(*u, p)
 	// Use the serviceURL as desired...
 
 	// NOTE: When you use an XxxURL object to create another XxxURL object, the new XxxURL object inherits the
@@ -199,14 +200,14 @@ func ExampleNewPipeline() {
 
 	// In this example, I reconfigure the retry policies, create a new pipeline, and then create a new
 	// ShareURL object that has the same URL as its parent.
-	po.Retry = RetryOptions{
-		Policy:        RetryPolicyFixed, // Use linear backoff
-		MaxTries:      4,                // Try at most 3 times to perform the operation (set to 1 to disable retries)
-		TryTimeout:    time.Minute * 1,  // Maximum time allowed for any single try
-		RetryDelay:    time.Second * 5,  // Backoff amount for each retry (exponential or linear)
-		MaxRetryDelay: time.Second * 10, // Max delay between retries
+	po.Retry = azfile.RetryOptions{
+		Policy:        azfile.RetryPolicyFixed, // Use linear backoff
+		MaxTries:      4,                       // Try at most 3 times to perform the operation (set to 1 to disable retries)
+		TryTimeout:    time.Minute * 1,         // Maximum time allowed for any single try
+		RetryDelay:    time.Second * 5,         // Backoff amount for each retry (exponential or linear)
+		MaxRetryDelay: time.Second * 10,        // Max delay between retries
 	}
-	newShareURL := shareURL.WithPipeline(NewPipeline(NewAnonymousCredential(), po))
+	newShareURL := shareURL.WithPipeline(azfile.NewPipeline(azfile.NewAnonymousCredential(), po))
 
 	// Now, any XxxDirectoryURL object created using newShareURL inherits the pipeline with the new retry policy.
 	newDirectoryURL := newShareURL.NewDirectoryURL("mynewdirectory")
@@ -232,21 +233,21 @@ func ExampleStorageError() {
 	//    the network failure.
 
 	// 3. A network request did reach the Azure Storage Service but the service failed to perform the
-	//    requested operation. In this case, an object implementing the StorageError interface is returned.
-	//    The StorageError interface also implements the net.Error interface and, if you use the retry policy,
-	//    you would most likely ignore the Timeout/Temporary methods. However, the StorageError interface exposes
+	//    requested operation. In this case, an object implementing the azfile.StorageError interface is returned.
+	//    The azfile.StorageError interface also implements the net.Error interface and, if you use the retry policy,
+	//    you would most likely ignore the Timeout/Temporary methods. However, the azfile.StorageError interface exposes
 	//    richer information such as a service error code, an error description, details data, and the
 	//    service-returned http.Response. And, from the http.Response, you can get the initiating http.Request.
 
 	u, _ := url.Parse("http://myaccount.file.core.windows.net/myshare") // Suppose there is an existing storage account with name myaccount
-	shareURL := NewShareURL(*u, NewPipeline(NewAnonymousCredential(), PipelineOptions{}))
-	create, err := shareURL.Create(context.Background(), Metadata{}, 0)
+	shareURL := azfile.NewShareURL(*u, azfile.NewPipeline(azfile.NewAnonymousCredential(), azfile.PipelineOptions{}))
+	create, err := shareURL.Create(context.Background(), azfile.Metadata{}, 0)
 
 	if err != nil { // Suppose there is an error occurred
-		if serr, ok := err.(StorageError); ok { // This error is a Service-specific error
-			// StorageError also implements net.Error so you could call its Timeout/Temporary methods if you want.
+		if serr, ok := err.(azfile.StorageError); ok { // This error is a Service-specific error
+			// azfile.StorageError also implements net.Error so you could call its Timeout/Temporary methods if you want.
 			switch serr.ServiceCode() { // Compare serviceCode to various ServiceCodeXxx constants
-			case ServiceCodeShareAlreadyExists:
+			case azfile.ServiceCodeShareAlreadyExists:
 				// You can also look at the http.Response object that failed.
 				if failedResponse := serr.Response(); failedResponse != nil {
 					// From the response object, you can get the initiating http.Request object
@@ -254,7 +255,7 @@ func ExampleStorageError() {
 					_ = failedRequest // Avoid compiler's "declared and not used" error
 				}
 
-			case ServiceCodeShareBeingDeleted:
+			case azfile.ServiceCodeShareBeingDeleted:
 				// Handle this error ...
 			default:
 				// Handle other errors ...
@@ -282,7 +283,7 @@ func ExampleFileURLParts() {
 		"spr=https,http&si=myIdentifier&ss=bf&srt=s&sig=92836758923659283652983562==")
 
 	// You can parse this URL into its constituent parts:
-	parts := NewFileURLParts(*u)
+	parts := azfile.NewFileURLParts(*u)
 
 	// Now, we access the parts (this example prints them).
 	fmt.Println(parts.Host, parts.ShareName, parts.DirectoryOrFilePath, parts.ShareSnapshot)
@@ -291,15 +292,15 @@ func ExampleFileURLParts() {
 		sas.IPRange(), sas.Protocol(), sas.Identifier(), sas.Services(), sas.ResourceTypes(), sas.Signature())
 
 	// You can then change some of the fields and construct a new URL:
-	parts.SAS = SASQueryParameters{} // Remove the SAS query parameters
-	parts.ShareSnapshot = ""         // Remove the share snapshot timestamp
-	parts.ShareName = "othershare"   // Change the share name
+	parts.SAS = azfile.SASQueryParameters{} // Remove the SAS query parameters
+	parts.ShareSnapshot = ""                // Remove the share snapshot timestamp
+	parts.ShareName = "othershare"          // Change the share name
 	// In this example, we'll keep the path of file or directory as is.
 
 	// Construct a new URL from the parts:
 	newURL := parts.URL()
 	fmt.Print(newURL.String())
-	// NOTE: You can pass the new URL to NewFileURLParts (or similar methods) to manipulate the file.
+	// NOTE: You can pass the new URL to azfile.NewFileURLParts (or similar methods) to manipulate the file.
 
 	// Output:
 	// myaccount.file.core.windows.net myshare mydirectory/ReadMe.txt 2018-03-08T02:29:11.0000000Z
@@ -313,18 +314,18 @@ func ExampleAccountSASSignatureValues() {
 	accountName, accountKey := accountInfo()
 
 	// Use your Storage account's name and key to create a credential object; this is required to sign a SAS.
-	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Set the desired SAS signature values and sign them with the shared key credentials to get the SAS query parameters.
-	sasQueryParams := AccountSASSignatureValues{
-		Protocol:      SASProtocolHTTPS,                     // Users MUST use HTTPS (not HTTP)
+	sasQueryParams := azfile.AccountSASSignatureValues{
+		Protocol:      azfile.SASProtocolHTTPS,              // Users MUST use HTTPS (not HTTP)
 		ExpiryTime:    time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
-		Permissions:   AccountSASPermissions{Read: true, List: true}.String(),
-		Services:      AccountSASServices{File: true}.String(),
-		ResourceTypes: AccountSASResourceTypes{Container: true, Object: true}.String(),
+		Permissions:   azfile.AccountSASPermissions{Read: true, List: true}.String(),
+		Services:      azfile.AccountSASServices{File: true}.String(),
+		ResourceTypes: azfile.AccountSASResourceTypes{Container: true, Object: true}.String(),
 	}.NewSASQueryParameters(credential)
 
 	qp := sasQueryParams.Encode()
@@ -338,11 +339,11 @@ func ExampleAccountSASSignatureValues() {
 
 	// Create an ServiceURL object that wraps the service URL (and its SAS) and a pipeline.
 	// When using a SAS URLs, anonymous credentials are required.
-	serviceURL := NewServiceURL(*u, NewPipeline(NewAnonymousCredential(), PipelineOptions{}))
+	serviceURL := azfile.NewServiceURL(*u, azfile.NewPipeline(azfile.NewAnonymousCredential(), azfile.PipelineOptions{}))
 	// Now, you can use this serviceURL just like any other to make requests of the resource.
 
 	// You can parse a URL into its constituent parts:
-	fileURLParts := NewFileURLParts(serviceURL.URL())
+	fileURLParts := azfile.NewFileURLParts(serviceURL.URL())
 	fmt.Printf("SAS Protocol=%v\n", fileURLParts.SAS.Protocol())
 	fmt.Printf("SAS Permissions=%v\n", fileURLParts.SAS.Permissions())
 	fmt.Printf("SAS Services=%v\n", fileURLParts.SAS.Services())
@@ -363,7 +364,7 @@ func ExampleFileSASSignatureValues() {
 	accountName, accountKey := accountInfo()
 
 	// Use your Storage account's name and key to create a credential object; this is required to sign a SAS.
-	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -373,15 +374,15 @@ func ExampleFileSASSignatureValues() {
 	filePath := "mydirectory/HelloWorld.txt" // Directory and file path can be mixed case and is case insensitive
 
 	// Set the desired SAS signature values and sign them with the shared key credentials to get the SAS query parameters.
-	sasQueryParams := FileSASSignatureValues{
-		Protocol:   SASProtocolHTTPS,                     // Users MUST use HTTPS (not HTTP)
+	sasQueryParams := azfile.FileSASSignatureValues{
+		Protocol:   azfile.SASProtocolHTTPS,              // Users MUST use HTTPS (not HTTP)
 		ExpiryTime: time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
 		ShareName:  shareName,
 		FilePath:   filePath,
 
 		// To produce a share SAS (as opposed to a file SAS in this example), assign to Permissions using
 		// ShareSASPermissions and make sure the FilePath field is "" (the default).
-		Permissions: FileSASPermissions{Read: true, Write: true}.String(),
+		Permissions: azfile.FileSASPermissions{Read: true, Write: true}.String(),
 	}.NewSASQueryParameters(credential)
 
 	// Create the URL of the resource you wish to access and append the SAS query parameters.
@@ -398,11 +399,11 @@ func ExampleFileSASSignatureValues() {
 
 	// Create an FileURL object that wraps the file URL (and its SAS) and a pipeline.
 	// When using a SAS URLs, anonymous credentials are required.
-	fileURL := NewFileURL(*u, NewPipeline(NewAnonymousCredential(), PipelineOptions{}))
+	fileURL := azfile.NewFileURL(*u, azfile.NewPipeline(azfile.NewAnonymousCredential(), azfile.PipelineOptions{}))
 	// Now, you can use this fileURL just like any other to make requests of the resource.
 
 	// If you have a SAS query parameter string, you can parse it into its parts:
-	fileURLParts := NewFileURLParts(fileURL.URL())
+	fileURLParts := azfile.NewFileURLParts(fileURL.URL())
 	fmt.Printf("SAS expiry time=%v", fileURLParts.SAS.ExpiryTime())
 	fmt.Printf(urlToSendToSomeone)
 
@@ -416,18 +417,18 @@ func ExampleShareURL() {
 
 	// Create a ShareURL object that wraps a soon-to-be-created share's URL and a default pipeline.
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/mysharegeneral", accountName))
-	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
 	}
-	shareURL := NewShareURL(*u, NewPipeline(credential, PipelineOptions{}))
+	shareURL := azfile.NewShareURL(*u, azfile.NewPipeline(credential, azfile.PipelineOptions{}))
 
 	ctx := context.Background() // This example uses a never-expiring context
 
 	// Create a share with some metadata (string key/value pairs) and default quota.
 	// NOTE: Metadata key names are always converted to lowercase before being sent to the Storage Service.
 	// Therefore, you should always use lowercase letters; especially when querying a map for a metadata key.
-	_, err = shareURL.Create(ctx, Metadata{"createdby": "Jeffrey&Jiachen"}, 0)
+	_, err = shareURL.Create(ctx, azfile.Metadata{"createdby": "Jeffrey&Jiachen"}, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -454,7 +455,7 @@ func ExampleShareURL() {
 	// NOTE: The SetMetadata & SetQuota methods update the share's ETag & LastModified properties
 
 	// Delete the share
-	_, err = shareURL.Delete(ctx, DeleteSnapshotsOptionNone)
+	_, err = shareURL.Delete(ctx, azfile.DeleteSnapshotsOptionNone)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -467,21 +468,21 @@ func ExampleShareURL() {
 func ExampleShareURL_SetQuota() {
 	// Create a request pipeline using your Storage account's name and account key.
 	accountName, accountKey := accountInfo()
-	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
 	}
-	p := NewPipeline(credential, PipelineOptions{})
+	p := azfile.NewPipeline(credential, azfile.PipelineOptions{})
 
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	sURL, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/newshareforquotademo", accountName))
 
 	// Create an ShareURL object that wraps the share URL and a request pipeline to making requests.
-	shareURL := NewShareURL(*sURL, p)
+	shareURL := azfile.NewShareURL(*sURL, p)
 
 	ctx := context.Background() // This example uses a never-expiring context
 
-	_, err = shareURL.Create(ctx, Metadata{}, 0)
+	_, err = shareURL.Create(ctx, azfile.Metadata{}, 0)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -501,7 +502,7 @@ func ExampleShareURL_SetQuota() {
 		fmt.Printf("Updated share usage: %d GB\n", properties.Quota())
 	}
 
-	_, err = shareURL.Delete(ctx, DeleteSnapshotsOptionNone)
+	_, err = shareURL.Delete(ctx, azfile.DeleteSnapshotsOptionNone)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -515,7 +516,7 @@ func ExampleShareURL_SetQuota() {
 func ExampleShareURL_CreateSnapshot() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
-	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -523,31 +524,31 @@ func ExampleShareURL_CreateSnapshot() {
 	ctx := context.Background() // This example uses a never-expiring context
 
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net", accountName))
-	serviceURL := NewServiceURL(*u, NewPipeline(credential, PipelineOptions{}))
+	serviceURL := azfile.NewServiceURL(*u, azfile.NewPipeline(credential, azfile.PipelineOptions{}))
 
 	shareName := "baseshare"
 	shareURL := serviceURL.NewShareURL(shareName)
 
-	_, err = shareURL.Create(ctx, Metadata{}, 0)
+	_, err = shareURL.Create(ctx, azfile.Metadata{}, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	defer shareURL.Delete(ctx, DeleteSnapshotsOptionInclude)
+	defer shareURL.Delete(ctx, azfile.DeleteSnapshotsOptionInclude)
 
 	// Let's create a file in the base share.
 	fileURL := shareURL.NewRootDirectoryURL().NewFileURL("myfile")
-	_, err = fileURL.Create(ctx, 0, FileHTTPHeaders{}, Metadata{})
+	_, err = fileURL.Create(ctx, 0, azfile.FileHTTPHeaders{}, azfile.Metadata{})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create share snapshot, the snapshot contains the created file.
-	snapshotShare, err := shareURL.CreateSnapshot(ctx, Metadata{})
+	snapshotShare, err := shareURL.CreateSnapshot(ctx, azfile.Metadata{})
 	fmt.Printf("Created share snapshot: %s", snapshotShare.Snapshot())
 
 	// List share snapshots.
-	listSnapshot, err := serviceURL.ListSharesSegment(ctx, Marker{}, ListSharesOptions{Detail: ListSharesDetail{Snapshots: true}})
+	listSnapshot, err := serviceURL.ListSharesSegment(ctx, azfile.Marker{}, azfile.ListSharesOptions{Detail: azfile.ListSharesDetail{Snapshots: true}})
 	for _, share := range listSnapshot.ShareItems {
 		if share.Snapshot != nil {
 			fmt.Printf("Listed share snapshot: %s\n", *share.Snapshot)
@@ -562,30 +563,30 @@ func ExampleShareURL_CreateSnapshot() {
 
 	// Restore file from share snapshot.
 	// Create a SAS.
-	sasQueryParams := FileSASSignatureValues{
-		Protocol:   SASProtocolHTTPS,                     // Users MUST use HTTPS (not HTTP)
+	sasQueryParams := azfile.FileSASSignatureValues{
+		Protocol:   azfile.SASProtocolHTTPS,              // Users MUST use HTTPS (not HTTP)
 		ExpiryTime: time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
 		ShareName:  shareName,
 
 		// To produce a share SAS (as opposed to a file SAS), assign to Permissions using
 		// ShareSASPermissions and make sure the DirectoryAndFilePath field is "" (the default).
-		Permissions: ShareSASPermissions{Read: true, Write: true}.String(),
+		Permissions: azfile.ShareSASPermissions{Read: true, Write: true}.String(),
 	}.NewSASQueryParameters(credential)
 
 	// Build a file snapshot URL.
-	fileParts := NewFileURLParts(fileURL.URL())
+	fileParts := azfile.NewFileURLParts(fileURL.URL())
 	fileParts.ShareSnapshot = snapshotShare.Snapshot()
 	fileParts.SAS = sasQueryParams
 	sourceURL := fileParts.URL()
 
 	// Do restore.
-	fileURL.StartCopy(ctx, sourceURL, Metadata{})
+	fileURL.StartCopy(ctx, sourceURL, azfile.Metadata{})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Delete share snapshot. To delete individual share snapshot, please use DeleteSnapshotsOptionNone
-	_, err = shareURL.WithSnapshot(snapshotShare.Snapshot()).Delete(ctx, DeleteSnapshotsOptionNone)
+	// Delete share snapshot. To delete individual share snapshot, please use azfile.DeleteSnapshotsOptionNone
+	_, err = shareURL.WithSnapshot(snapshotShare.Snapshot()).Delete(ctx, azfile.DeleteSnapshotsOptionNone)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -597,28 +598,28 @@ func ExampleFileURL() {
 	accountName, accountKey := accountInfo()
 
 	ctx := context.Background() // This example uses a never-expiring context
-	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Prepare a share for the file example.
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare", accountName))
-	shareURL := NewShareURL(*u, NewPipeline(credential, PipelineOptions{}))
+	shareURL := azfile.NewShareURL(*u, azfile.NewPipeline(credential, azfile.PipelineOptions{}))
 
-	_, err = shareURL.Create(ctx, Metadata{}, 0)
-	if err != nil && err.(StorageError) != nil && err.(StorageError).ServiceCode() != ServiceCodeShareAlreadyExists {
+	_, err = shareURL.Create(ctx, azfile.Metadata{}, 0)
+	if err != nil && err.(azfile.StorageError) != nil && err.(azfile.StorageError).ServiceCode() != azfile.ServiceCodeShareAlreadyExists {
 		panic(err)
 	}
 
 	// Create a FileURL object with a default pipeline.
 	u, _ = url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/MyFile.txt", accountName))
-	fileURL := NewFileURL(*u, NewPipeline(credential, PipelineOptions{}))
+	fileURL := azfile.NewFileURL(*u, azfile.NewPipeline(credential, azfile.PipelineOptions{}))
 
 	// Create the file with string (plain text) content.
 	d1 := "Hello "
 	d1Length := int64(len(d1))
-	_, err = fileURL.Create(ctx, d1Length, FileHTTPHeaders{ContentType: "text/plain"}, Metadata{})
+	_, err = fileURL.Create(ctx, d1Length, azfile.FileHTTPHeaders{ContentType: "text/plain"}, azfile.Metadata{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -650,8 +651,8 @@ func ExampleFileURL() {
 	}
 
 	// Let's get all the data saved in the file, and verify if data is correct.
-	// User can specify 0 as offset and CountToEnd(-1) as count to indiciate downloading the entire file.
-	get, err := fileURL.Download(ctx, 0, CountToEnd, false)
+	// User can specify 0 as offset and azfile.CountToEnd(-1) as count to indiciate downloading the entire file.
+	get, err := fileURL.Download(ctx, 0, azfile.CountToEnd, false)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -659,7 +660,7 @@ func ExampleFileURL() {
 	fileData := &bytes.Buffer{}
 	// The resilient reader can help to read stream in a resilient way, by default it returns a raw stream,
 	// which will not provide additional retry mechanism.
-	retryReader := get.Body(RetryReaderOptions{})
+	retryReader := get.Body(azfile.RetryReaderOptions{})
 	defer retryReader.Close() // The client must close the response body when finished with it
 
 	_, err = fileData.ReadFrom(retryReader)
@@ -677,21 +678,21 @@ func ExampleFileURL() {
 func ExampleFileURL_GetProperties() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
-	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create a FileURL with default pipeline based on an existing share with name myshare.
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/ReadMe.txt", accountName))
-	fileURL := NewFileURL(*u, NewPipeline(credential, PipelineOptions{}))
+	fileURL := azfile.NewFileURL(*u, azfile.NewPipeline(credential, azfile.PipelineOptions{}))
 
 	ctx := context.Background() // This example uses a never-expiring context
 
 	// Create a file with metadata (string key/value pairs)
 	// NOTE: Metadata key names are always converted to lowercase before being sent to the Storage Service.
 	// Therefore, you should always use lowercase letters; especially when querying a map for a metadata key.
-	_, err = fileURL.Create(ctx, 0, FileHTTPHeaders{}, Metadata{"createdby": "Jeffrey&Jiachen"}) // With size 0
+	_, err = fileURL.Create(ctx, 0, azfile.FileHTTPHeaders{}, azfile.Metadata{"createdby": "Jeffrey&Jiachen"}) // With size 0
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -731,24 +732,24 @@ func ExampleFileURL_GetProperties() {
 func ExampleFileURL_SetHTTPHeaders() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
-	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create a FileURL with default pipeline based on an existing share with name myshare.
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/HelpForHTTPHeader.txt", accountName))
-	fileURL := NewFileURL(*u, NewPipeline(credential, PipelineOptions{}))
+	fileURL := azfile.NewFileURL(*u, azfile.NewPipeline(credential, azfile.PipelineOptions{}))
 
 	ctx := context.Background() // This example uses a never-expiring context
 
 	// Create a file with HTTP headers
 	_, err = fileURL.Create(ctx, 0,
-		FileHTTPHeaders{
+		azfile.FileHTTPHeaders{
 			ContentType:        "text/html; charset=utf-8",
 			ContentDisposition: "attachment",
 		},
-		Metadata{}) // With size 0
+		azfile.Metadata{}) // With size 0
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -782,17 +783,17 @@ func ExampleFileURL_SetHTTPHeaders() {
 func ExampleFileURL_progressUploadDownload() {
 	// Create a request pipeline using your Storage account's name and account key.
 	accountName, accountKey := accountInfo()
-	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
 	}
-	p := NewPipeline(credential, PipelineOptions{})
+	p := azfile.NewPipeline(credential, azfile.PipelineOptions{})
 
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	sURL, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare", accountName))
 
 	// Create a ShareURL object that wraps the share URL and a request pipeline to making requests.
-	shareURL := NewShareURL(*sURL, p)
+	shareURL := azfile.NewShareURL(*sURL, p)
 
 	ctx := context.Background() // This example uses a never-expiring context
 	fileURL := shareURL.NewRootDirectoryURL().NewFileURL("Data.bin")
@@ -803,11 +804,11 @@ func ExampleFileURL_progressUploadDownload() {
 
 	// Wrap the request body in a RequestBodyProgress and pass a callback function for progress reporting.
 	_, err = fileURL.Create(ctx, int64(size),
-		FileHTTPHeaders{
+		azfile.FileHTTPHeaders{
 			ContentType:        "text/html; charset=utf-8",
 			ContentDisposition: "attachment",
 		},
-		Metadata{})
+		azfile.Metadata{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -821,12 +822,12 @@ func ExampleFileURL_progressUploadDownload() {
 	}
 
 	// Here's how to read the file's data with progress reporting:
-	get, err := fileURL.Download(ctx, 0, CountToEnd, false)
+	get, err := fileURL.Download(ctx, 0, azfile.CountToEnd, false)
 	if err != nil {
 		log.Fatal(err)
 	}
 	// Wrap the response body in a ResponseBodyProgress and pass a callback function for progress reporting.
-	responseBody := pipeline.NewResponseBodyProgress(get.Body(RetryReaderOptions{}), func(bytesTransferred int64) {
+	responseBody := pipeline.NewResponseBodyProgress(get.Body(azfile.RetryReaderOptions{}), func(bytesTransferred int64) {
 		fmt.Printf("Read %d of %d bytes.\n", bytesTransferred, get.ContentLength())
 	})
 
@@ -840,7 +841,7 @@ func ExampleFileURL_progressUploadDownload() {
 func ExampleFileURL_StartCopy() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
-	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -848,7 +849,7 @@ func ExampleFileURL_StartCopy() {
 	// Create a ShareURL object to a share where we'll create a file and its snapshot.
 	// Create a BlockFileURL object to a file in the share.
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/CopiedFile.bin", accountName))
-	fileURL := NewFileURL(*u, NewPipeline(credential, PipelineOptions{}))
+	fileURL := azfile.NewFileURL(*u, azfile.NewPipeline(credential, azfile.PipelineOptions{}))
 
 	ctx := context.Background() // This example uses a never-expiring context
 
@@ -860,7 +861,7 @@ func ExampleFileURL_StartCopy() {
 
 	copyID := startCopy.CopyID()
 	copyStatus := startCopy.CopyStatus()
-	for copyStatus == CopyStatusPending {
+	for copyStatus == azfile.CopyStatusPending {
 		time.Sleep(time.Second * 2)
 		properties, err := fileURL.GetProperties(ctx)
 		if err != nil {
@@ -877,7 +878,7 @@ func ExampleFileURL_StartCopy() {
 func ExampleFileURL_Download() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
-	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -885,10 +886,10 @@ func ExampleFileURL_Download() {
 	// Create a FileURL object to a file in the share (we assume the share & file already exist).
 	// Note: You can call GetProperties first to ensure the Azure file exists before downloading.
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/BigFile.bin", accountName))
-	fileURL := NewFileURL(*u, NewPipeline(credential, PipelineOptions{}))
+	fileURL := azfile.NewFileURL(*u, azfile.NewPipeline(credential, azfile.PipelineOptions{}))
 
 	// Trigger download.
-	downloadResponse, err := fileURL.Download(context.Background(), 0, CountToEnd, false) // 0 offset and CountToEnd(-1) count means download entire file.
+	downloadResponse, err := fileURL.Download(context.Background(), 0, azfile.CountToEnd, false) // 0 offset and azfile.CountToEnd(-1) count means download entire file.
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -896,7 +897,7 @@ func ExampleFileURL_Download() {
 	contentLength := downloadResponse.ContentLength() // Used for progress reporting to report the total number of bytes being downloaded.
 
 	// Setup RetryReader options for stream reading retry.
-	retryReader := downloadResponse.Body(RetryReaderOptions{MaxRetryRequests: 3})
+	retryReader := downloadResponse.Body(azfile.RetryReaderOptions{MaxRetryRequests: 3})
 
 	// NewResponseBodyStream wraps the RetryReader with progress reporting; it returns an io.ReadCloser.
 	progressReader := pipeline.NewResponseBodyProgress(retryReader,
@@ -932,7 +933,7 @@ func ExampleUploadFileToAzureFile() {
 
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
-	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -940,20 +941,20 @@ func ExampleUploadFileToAzureFile() {
 	// Create a FileURL object to a file in the share (we assume the share already exists).
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/BigFile.bin", accountName))
 
-	fileURL := NewFileURL(*u, NewPipeline(credential, PipelineOptions{}))
+	fileURL := azfile.NewFileURL(*u, azfile.NewPipeline(credential, azfile.PipelineOptions{}))
 
 	ctx := context.Background() // This example uses a never-expiring context
 
 	// Trigger parallel upload with Parallelism set to 3. Note if there is an Azure file
 	// with same name exists, UploadFileToAzureFile will overwrite the existing Azure file with new content,
-	// and set specified FileHTTPHeaders and Metadata.
-	err = UploadFileToAzureFile(ctx, file, fileURL,
-		UploadToAzureFileOptions{
+	// and set specified azfile.FileHTTPHeaders and Metadata.
+	err = azfile.UploadFileToAzureFile(ctx, file, fileURL,
+		azfile.UploadToAzureFileOptions{
 			Parallelism: 3,
-			FileHTTPHeaders: FileHTTPHeaders{
+			FileHTTPHeaders: azfile.FileHTTPHeaders{
 				CacheControl: "no-transform",
 			},
-			Metadata: Metadata{
+			Metadata: azfile.Metadata{
 				"createdby": "Jeffrey&Jiachen",
 			},
 			// If Progress is non-nil, this function is called periodically as bytes are uploaded.
@@ -970,14 +971,14 @@ func ExampleUploadFileToAzureFile() {
 func ExampleDownloadAzureFileToFile() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
-	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create a FileURL object to a file in the share (we assume the share & file already exist).
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/BigFile.bin", accountName))
-	fileURL := NewFileURL(*u, NewPipeline(credential, PipelineOptions{}))
+	fileURL := azfile.NewFileURL(*u, azfile.NewPipeline(credential, azfile.PipelineOptions{}))
 
 	file, err := os.Create("BigFile.bin") // Create the file to hold the downloaded file contents.
 	if err != nil {
@@ -987,8 +988,8 @@ func ExampleDownloadAzureFileToFile() {
 
 	// Trigger parallel download with Parallelism set to 3, MaxRetryRequestsPerRange means the count of retry requests
 	// could be sent if there is error during reading stream.
-	downloadResponse, err := DownloadAzureFileToFile(context.Background(), fileURL, file,
-		DownloadFromAzureFileOptions{
+	downloadResponse, err := azfile.DownloadAzureFileToFile(context.Background(), fileURL, file,
+		azfile.DownloadFromAzureFileOptions{
 			Parallelism:              3,
 			MaxRetryRequestsPerRange: 2,
 			Progress: func(bytesTransferred int64) {
