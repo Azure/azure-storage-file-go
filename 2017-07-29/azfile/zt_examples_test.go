@@ -27,7 +27,10 @@ func Example() {
 	accountName, accountKey := accountInfo()
 
 	// Use your Storage account's name and key to create a credential object; this is used to access your account.
-	credential := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create a request pipeline that is used to process HTTP(S) requests and responses. It requires
 	// your account credentials. In more advanced scenarios, you can configure telemetry, retry policies,
@@ -53,7 +56,7 @@ func Example() {
 	shareURL := serviceURL.NewShareURL("mysharehelloworld") // Share names require lowercase
 
 	// Create the share on the service (with no metadata and default quota size)
-	_, err := shareURL.Create(ctx, Metadata{}, 0)
+	_, err = shareURL.Create(ctx, Metadata{}, 0)
 	if err != nil && err.(StorageError) != nil && err.(StorageError).ServiceCode() != ServiceCodeShareAlreadyExists {
 		log.Fatal(err)
 	}
@@ -310,7 +313,10 @@ func ExampleAccountSASSignatureValues() {
 	accountName, accountKey := accountInfo()
 
 	// Use your Storage account's name and key to create a credential object; this is required to sign a SAS.
-	credential := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Set the desired SAS signature values and sign them with the shared key credentials to get the SAS query parameters.
 	sasQueryParams := AccountSASSignatureValues{
@@ -357,7 +363,10 @@ func ExampleFileSASSignatureValues() {
 	accountName, accountKey := accountInfo()
 
 	// Use your Storage account's name and key to create a credential object; this is required to sign a SAS.
-	credential := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// This is the name of the share and path of the file that we're creating a SAS to.
 	shareName := "myshare"                   // Share names require lowercase
@@ -407,15 +416,18 @@ func ExampleShareURL() {
 
 	// Create a ShareURL object that wraps a soon-to-be-created share's URL and a default pipeline.
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/mysharegeneral", accountName))
-	shareURL := NewShareURL(*u,
-		NewPipeline(NewSharedKeyCredential(accountName, accountKey), PipelineOptions{}))
+	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	shareURL := NewShareURL(*u, NewPipeline(credential, PipelineOptions{}))
 
 	ctx := context.Background() // This example uses a never-expiring context
 
 	// Create a share with some metadata (string key/value pairs) and default quota.
 	// NOTE: Metadata key names are always converted to lowercase before being sent to the Storage Service.
 	// Therefore, you should always use lowercase letters; especially when querying a map for a metadata key.
-	_, err := shareURL.Create(ctx, Metadata{"createdby": "Jeffrey&Jiachen"}, 0)
+	_, err = shareURL.Create(ctx, Metadata{"createdby": "Jeffrey&Jiachen"}, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -455,7 +467,10 @@ func ExampleShareURL() {
 func ExampleShareURL_SetQuota() {
 	// Create a request pipeline using your Storage account's name and account key.
 	accountName, accountKey := accountInfo()
-	credential := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 	p := NewPipeline(credential, PipelineOptions{})
 
 	// From the Azure portal, get your Storage account file service URL endpoint.
@@ -466,7 +481,7 @@ func ExampleShareURL_SetQuota() {
 
 	ctx := context.Background() // This example uses a never-expiring context
 
-	_, err := shareURL.Create(ctx, Metadata{}, 0)
+	_, err = shareURL.Create(ctx, Metadata{}, 0)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -500,7 +515,10 @@ func ExampleShareURL_SetQuota() {
 func ExampleShareURL_CreateSnapshot() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
-	credential := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	ctx := context.Background() // This example uses a never-expiring context
 
@@ -510,7 +528,7 @@ func ExampleShareURL_CreateSnapshot() {
 	shareName := "baseshare"
 	shareURL := serviceURL.NewShareURL(shareName)
 
-	_, err := shareURL.Create(ctx, Metadata{}, 0)
+	_, err = shareURL.Create(ctx, Metadata{}, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -579,21 +597,23 @@ func ExampleFileURL() {
 	accountName, accountKey := accountInfo()
 
 	ctx := context.Background() // This example uses a never-expiring context
+	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Prepare a share for the file example.
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare", accountName))
-	shareURL := NewShareURL(*u,
-		NewPipeline(NewSharedKeyCredential(accountName, accountKey), PipelineOptions{}))
+	shareURL := NewShareURL(*u, NewPipeline(credential, PipelineOptions{}))
 
-	_, err := shareURL.Create(ctx, Metadata{}, 0)
+	_, err = shareURL.Create(ctx, Metadata{}, 0)
 	if err != nil && err.(StorageError) != nil && err.(StorageError).ServiceCode() != ServiceCodeShareAlreadyExists {
 		panic(err)
 	}
 
 	// Create a FileURL object with a default pipeline.
 	u, _ = url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/MyFile.txt", accountName))
-	fileURL := NewFileURL(*u,
-		NewPipeline(NewSharedKeyCredential(accountName, accountKey), PipelineOptions{}))
+	fileURL := NewFileURL(*u, NewPipeline(credential, PipelineOptions{}))
 
 	// Create the file with string (plain text) content.
 	d1 := "Hello "
@@ -657,18 +677,21 @@ func ExampleFileURL() {
 func ExampleFileURL_GetProperties() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
+	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create a FileURL with default pipeline based on an existing share with name myshare.
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/ReadMe.txt", accountName))
-	fileURL := NewFileURL(*u,
-		NewPipeline(NewSharedKeyCredential(accountName, accountKey), PipelineOptions{}))
+	fileURL := NewFileURL(*u, NewPipeline(credential, PipelineOptions{}))
 
 	ctx := context.Background() // This example uses a never-expiring context
 
 	// Create a file with metadata (string key/value pairs)
 	// NOTE: Metadata key names are always converted to lowercase before being sent to the Storage Service.
 	// Therefore, you should always use lowercase letters; especially when querying a map for a metadata key.
-	_, err := fileURL.Create(ctx, 0, FileHTTPHeaders{}, Metadata{"createdby": "Jeffrey&Jiachen"}) // With size 0
+	_, err = fileURL.Create(ctx, 0, FileHTTPHeaders{}, Metadata{"createdby": "Jeffrey&Jiachen"}) // With size 0
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -708,16 +731,19 @@ func ExampleFileURL_GetProperties() {
 func ExampleFileURL_SetHTTPHeaders() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
+	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create a FileURL with default pipeline based on an existing share with name myshare.
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/HelpForHTTPHeader.txt", accountName))
-	fileURL := NewFileURL(*u,
-		NewPipeline(NewSharedKeyCredential(accountName, accountKey), PipelineOptions{}))
+	fileURL := NewFileURL(*u, NewPipeline(credential, PipelineOptions{}))
 
 	ctx := context.Background() // This example uses a never-expiring context
 
 	// Create a file with HTTP headers
-	_, err := fileURL.Create(ctx, 0,
+	_, err = fileURL.Create(ctx, 0,
 		FileHTTPHeaders{
 			ContentType:        "text/html; charset=utf-8",
 			ContentDisposition: "attachment",
@@ -756,7 +782,10 @@ func ExampleFileURL_SetHTTPHeaders() {
 func ExampleFileURL_progressUploadDownload() {
 	// Create a request pipeline using your Storage account's name and account key.
 	accountName, accountKey := accountInfo()
-	credential := NewSharedKeyCredential(accountName, accountKey)
+	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 	p := NewPipeline(credential, PipelineOptions{})
 
 	// From the Azure portal, get your Storage account file service URL endpoint.
@@ -773,7 +802,7 @@ func ExampleFileURL_progressUploadDownload() {
 	size := requestBody.Len()
 
 	// Wrap the request body in a RequestBodyProgress and pass a callback function for progress reporting.
-	_, err := fileURL.Create(ctx, int64(size),
+	_, err = fileURL.Create(ctx, int64(size),
 		FileHTTPHeaders{
 			ContentType:        "text/html; charset=utf-8",
 			ContentDisposition: "attachment",
@@ -811,12 +840,15 @@ func ExampleFileURL_progressUploadDownload() {
 func ExampleFileURL_StartCopy() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
+	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create a ShareURL object to a share where we'll create a file and its snapshot.
 	// Create a BlockFileURL object to a file in the share.
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/CopiedFile.bin", accountName))
-	fileURL := NewFileURL(*u,
-		NewPipeline(NewSharedKeyCredential(accountName, accountKey), PipelineOptions{}))
+	fileURL := NewFileURL(*u, NewPipeline(credential, PipelineOptions{}))
 
 	ctx := context.Background() // This example uses a never-expiring context
 
@@ -845,11 +877,15 @@ func ExampleFileURL_StartCopy() {
 func ExampleFileURL_Download() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
+	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create a FileURL object to a file in the share (we assume the share & file already exist).
 	// Note: You can call GetProperties first to ensure the Azure file exists before downloading.
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/BigFile.bin", accountName))
-	fileURL := NewFileURL(*u, NewPipeline(NewSharedKeyCredential(accountName, accountKey), PipelineOptions{}))
+	fileURL := NewFileURL(*u, NewPipeline(credential, PipelineOptions{}))
 
 	// Trigger download.
 	downloadResponse, err := fileURL.Download(context.Background(), 0, CountToEnd, false) // 0 offset and CountToEnd(-1) count means download entire file.
@@ -896,11 +932,15 @@ func ExampleUploadFileToAzureFile() {
 
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
+	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create a FileURL object to a file in the share (we assume the share already exists).
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/BigFile.bin", accountName))
 
-	fileURL := NewFileURL(*u, NewPipeline(NewSharedKeyCredential(accountName, accountKey), PipelineOptions{}))
+	fileURL := NewFileURL(*u, NewPipeline(credential, PipelineOptions{}))
 
 	ctx := context.Background() // This example uses a never-expiring context
 
@@ -930,10 +970,14 @@ func ExampleUploadFileToAzureFile() {
 func ExampleDownloadAzureFileToFile() {
 	// From the Azure portal, get your Storage account file service URL endpoint.
 	accountName, accountKey := accountInfo()
+	credential, err := NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create a FileURL object to a file in the share (we assume the share & file already exist).
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/myshare/BigFile.bin", accountName))
-	fileURL := NewFileURL(*u, NewPipeline(NewSharedKeyCredential(accountName, accountKey), PipelineOptions{}))
+	fileURL := NewFileURL(*u, NewPipeline(credential, PipelineOptions{}))
 
 	file, err := os.Create("BigFile.bin") // Create the file to hold the downloaded file contents.
 	if err != nil {

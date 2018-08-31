@@ -146,7 +146,10 @@ func getFSU() ServiceURL {
 	name, key := getAccountAndKey()
 	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/", name))
 
-	credential := NewSharedKeyCredential(name, key)
+	credential, err := NewSharedKeyCredential(name, key)
+	if err != nil {
+		panic(err)
+	}
 	pipeline := NewPipeline(credential, PipelineOptions{})
 	return NewServiceURL(*u, pipeline)
 }

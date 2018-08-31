@@ -45,10 +45,13 @@ func getAccountAndKey() (string, string) {
 }
 
 func getFSU() azfile.ServiceURL {
-	name, key := getAccountAndKey()
-	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/", name))
+	accountName, accountKey := getAccountAndKey()
+	u, _ := url.Parse(fmt.Sprintf("https://%s.file.core.windows.net/", accountName))
 
-	credential := azfile.NewSharedKeyCredential(name, key)
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		panic(err)
+	}
 	pipeline := azfile.NewPipeline(credential, azfile.PipelineOptions{})
 	return azfile.NewServiceURL(*u, pipeline)
 }
@@ -60,16 +63,24 @@ func getAlternateFSU() (azfile.ServiceURL, error) {
 	}
 	fsURL, _ := url.Parse("https://" + secondaryAccountName + ".file.core.windows.net/")
 
-	credentials := azfile.NewSharedKeyCredential(secondaryAccountName, secondaryAccountKey)
-	pipeline := azfile.NewPipeline(credentials, azfile.PipelineOptions{ /*Log: pipeline.NewLogWrapper(pipeline.LogInfo, log.New(os.Stderr, "", log.LstdFlags))*/ })
+	credential, err := azfile.NewSharedKeyCredential(secondaryAccountName, secondaryAccountKey)
+	if err != nil {
+		return azfile.ServiceURL{}, err
+	}
+	pipeline := azfile.NewPipeline(credential, azfile.PipelineOptions{ /*Log: pipeline.NewLogWrapper(pipeline.LogInfo, log.New(os.Stderr, "", log.LstdFlags))*/ })
 
 	return azfile.NewServiceURL(*fsURL, pipeline), nil
 }
 
 func getCredential() (*azfile.SharedKeyCredential, string) {
-	name, key := getAccountAndKey()
+	accountName, accountKey := getAccountAndKey()
 
-	return azfile.NewSharedKeyCredential(name, key), name
+	credential, err := azfile.NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		panic(err)
+	}
+
+	return credential, accountName
 }
 
 // This function generates an entity name by concatenating the passed prefix,
