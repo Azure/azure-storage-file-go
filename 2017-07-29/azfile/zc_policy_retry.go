@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
@@ -322,6 +323,11 @@ func isNotRetriable(errToParse net.Error) bool {
 	switch genericErr.(type) {
 	case *net.AddrError, net.UnknownNetworkError, *net.DNSError, net.InvalidAddrError, *net.ParseError, *net.DNSConfigError:
 		// If the error is one of the ones listed, then it is NOT retriable.
+		return true
+	}
+
+	// If it's invalid header field name/value error thrown by http module, then it is NOT retriable.
+	if strings.Contains(genericErr.Error(), "invalid header field") {
 		return true
 	}
 
