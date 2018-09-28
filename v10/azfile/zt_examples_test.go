@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
-	"github.com/Azure/azure-storage-file-go/2017-07-29/azfile"
+	"github.com/Azure/azure-storage-file-go/v10/azfile"
 )
 
 // Please set environment variable ACCOUNT_NAME and ACCOUNT_KEY to your storage accout name and account key,
@@ -78,7 +78,7 @@ func Example() {
 		log.Fatal(err)
 	}
 
-	_, err = fileURL.UploadRange(ctx, 0, strings.NewReader(data))
+	_, err = fileURL.UploadRange(ctx, 0, strings.NewReader(data), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -626,7 +626,7 @@ func ExampleFileURL() {
 
 	// UploadRange updates data in the file with the range for d1.
 	// In this stage, file created has one range: [0, d1Length-1]
-	_, err = fileURL.UploadRange(ctx, 0, strings.NewReader(d1))
+	_, err = fileURL.UploadRange(ctx, 0, strings.NewReader(d1), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -645,7 +645,7 @@ func ExampleFileURL() {
 
 	// UploadRange updates data in the file with the range for d2.
 	// In this stage, file created has two ranges: [0, length-1] for data and [d2Offset, totalLength-1] for d2.
-	_, err = fileURL.UploadRange(ctx, d2Offset, strings.NewReader(d2))
+	_, err = fileURL.UploadRange(ctx, d2Offset, strings.NewReader(d2), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -816,7 +816,7 @@ func ExampleFileURL_progressUploadDownload() {
 	_, err = fileURL.UploadRange(ctx, 0,
 		pipeline.NewRequestBodyProgress(requestBody, func(bytesTransferred int64) {
 			fmt.Printf("Wrote %d of %d bytes.\n", bytesTransferred, size)
-		}))
+		}), nil)
 	if err != nil {
 		log.Fatal(err)
 	}

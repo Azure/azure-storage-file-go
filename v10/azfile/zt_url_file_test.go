@@ -3,6 +3,7 @@ package azfile_test
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-storage-file-go/2018-03-28/azfile"
+	"github.com/Azure/azure-storage-file-go/v10/azfile"
 	chk "gopkg.in/check.v1" // go get gopkg.in/check.v1
 )
 
@@ -341,7 +342,7 @@ func (s *FileURLSuite) TestStartCopyDefault(c *chk.C) {
 	destFile, _ := getFileURLFromShare(c, shareURL)
 	defer delFile(c, destFile)
 
-	_, err := srcFile.UploadRange(context.Background(), 0, getReaderToRandomBytes(2048))
+	_, err := srcFile.UploadRange(context.Background(), 0, getReaderToRandomBytes(2048), nil)
 	c.Assert(err, chk.IsNil)
 
 	copyResp, err := destFile.StartCopy(context.Background(), srcFile.URL(), nil)
@@ -600,11 +601,11 @@ func (s *FileURLSuite) TestFileAbortCopyInProgress(c *chk.C) {
 	_, err := fileURL.Create(ctx, int64(fileSize), azfile.FileHTTPHeaders{}, nil)
 	c.Assert(err, chk.IsNil)
 
-	_, err = fileURL.UploadRange(ctx, 0, bytes.NewReader(fileData[0:4*1024*1024]))
+	_, err = fileURL.UploadRange(ctx, 0, bytes.NewReader(fileData[0:4*1024*1024]), nil)
 	c.Assert(err, chk.IsNil)
-	_, err = fileURL.UploadRange(ctx, 4*1024*1024, bytes.NewReader(fileData[4*1024*1024:8*1024*1024]))
+	_, err = fileURL.UploadRange(ctx, 4*1024*1024, bytes.NewReader(fileData[4*1024*1024:8*1024*1024]), nil)
 	c.Assert(err, chk.IsNil)
-	_, err = fileURL.UploadRange(ctx, 8*1024*1024, bytes.NewReader(fileData[8*1024*1024:]))
+	_, err = fileURL.UploadRange(ctx, 8*1024*1024, bytes.NewReader(fileData[8*1024*1024:]), nil)
 	c.Assert(err, chk.IsNil)
 	serviceSASValues := azfile.FileSASSignatureValues{ExpiryTime: time.Now().Add(time.Hour).UTC(),
 		Permissions: azfile.FileSASPermissions{Read: true, Write: true, Create: true}.String(), ShareName: shareName, FilePath: fileName}
@@ -726,7 +727,7 @@ func (f *FileURLSuite) TestServiceSASShareSAS(c *chk.C) {
 	s := "Hello"
 	_, err := fileURL.Create(ctx, int64(len(s)), azfile.FileHTTPHeaders{}, azfile.Metadata{})
 	c.Assert(err, chk.IsNil)
-	_, err = fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte(s)))
+	_, err = fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte(s)), nil)
 	c.Assert(err, chk.IsNil)
 	_, err = fileURL.Download(ctx, 0, azfile.CountToEnd, false)
 	c.Assert(err, chk.IsNil)
@@ -766,7 +767,7 @@ func (f *FileURLSuite) TestServiceSASFileSAS(c *chk.C) {
 	s := "Hello"
 	_, err := fileURL.Create(ctx, int64(len(s)), azfile.FileHTTPHeaders{}, azfile.Metadata{})
 	c.Assert(err, chk.IsNil)
-	_, err = fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte(s)))
+	_, err = fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte(s)), nil)
 	c.Assert(err, chk.IsNil)
 	_, err = fileURL.Download(ctx, 0, azfile.CountToEnd, false)
 	c.Assert(err, chk.IsNil)
@@ -823,7 +824,7 @@ func (s *FileURLSuite) TestUploadDownloadDefaultNonDefaultMD5(c *chk.C) {
 
 	contentR, contentD := getRandomDataAndReader(2048)
 
-	pResp, err := fileURL.UploadRange(context.Background(), 0, contentR)
+	pResp, err := fileURL.UploadRange(context.Background(), 0, contentR, nil)
 	c.Assert(err, chk.IsNil)
 	c.Assert(pResp.ContentMD5(), chk.NotNil)
 	c.Assert(pResp.StatusCode(), chk.Equals, http.StatusCreated)
@@ -1019,7 +1020,7 @@ func (s *FileURLSuite) TestFileUploadRangeNegativeInvalidOffset(c *chk.C) {
 	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
 	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
 
-	c.Assert(func() { fileURL.UploadRange(ctx, -2, strings.NewReader(fileDefaultData)) }, chk.Panics, "offset must be >= 0")
+	c.Assert(func() { fileURL.UploadRange(ctx, -2, strings.NewReader(fileDefaultData), nil) }, chk.Panics, "offset must be >= 0")
 }
 
 func (s *FileURLSuite) TestFileUploadRangeNilBody(c *chk.C) {
@@ -1033,7 +1034,7 @@ func (s *FileURLSuite) TestFileUploadRangeNilBody(c *chk.C) {
 		recover()
 	}()
 
-	fileURL.UploadRange(ctx, 0, nil)
+	fileURL.UploadRange(ctx, 0, nil, nil)
 	c.Fail()
 }
 
@@ -1043,7 +1044,7 @@ func (s *FileURLSuite) TestFileUploadRangeEmptyBody(c *chk.C) {
 	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
 	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
 
-	c.Assert(func() { fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte{})) }, chk.Panics, "body must contain readable data whose size is > 0")
+	c.Assert(func() { fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte{}), nil) }, chk.Panics, "body must contain readable data whose size is > 0")
 }
 
 func (s *FileURLSuite) TestFileUploadRangeNonExistantFile(c *chk.C) {
@@ -1052,8 +1053,63 @@ func (s *FileURLSuite) TestFileUploadRangeNonExistantFile(c *chk.C) {
 	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
 	fileURL, _ := getFileURLFromShare(c, shareURL)
 
-	_, err := fileURL.UploadRange(ctx, 0, getReaderToRandomBytes(12))
+	_, err := fileURL.UploadRange(ctx, 0, getReaderToRandomBytes(12), nil)
 	validateStorageError(c, err, azfile.ServiceCodeResourceNotFound)
+}
+
+func (s *FileURLSuite) TestFileUploadRangeTransactionalMD5(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	fileURL, _ := createNewFileFromShare(c, shareURL, 2048)
+	defer delFile(c, fileURL)
+
+	contentR, contentD := getRandomDataAndReader(2048)
+	md5 := md5.Sum(contentD)
+
+	// Upload range with correct transactional MD5
+	pResp, err := fileURL.UploadRange(context.Background(), 0, contentR, md5[:])
+	c.Assert(err, chk.IsNil)
+	c.Assert(pResp.ContentMD5(), chk.NotNil)
+	c.Assert(pResp.StatusCode(), chk.Equals, http.StatusCreated)
+	c.Assert(pResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
+	c.Assert(pResp.LastModified().IsZero(), chk.Equals, false)
+	c.Assert(pResp.RequestID(), chk.Not(chk.Equals), "")
+	c.Assert(pResp.Version(), chk.Not(chk.Equals), "")
+	c.Assert(pResp.Date().IsZero(), chk.Equals, false)
+	c.Assert(pResp.ContentMD5(), chk.DeepEquals, md5[:])
+
+	// Upload range with empty MD5, nil MD5 is covered by other cases.
+	pResp, err = fileURL.UploadRange(context.Background(), 1024, bytes.NewReader(contentD[1024:]), []byte{})
+	c.Assert(err, chk.IsNil)
+	c.Assert(pResp.ContentMD5(), chk.NotNil)
+	c.Assert(pResp.StatusCode(), chk.Equals, http.StatusCreated)
+
+	resp, err := fileURL.Download(context.Background(), 0, azfile.CountToEnd, false)
+	c.Assert(err, chk.IsNil)
+	c.Assert(resp.StatusCode(), chk.Equals, http.StatusOK)
+	c.Assert(resp.ContentLength(), chk.Equals, int64(2048))
+
+	download, err := ioutil.ReadAll(resp.Response().Body)
+	c.Assert(err, chk.IsNil)
+	c.Assert(download, chk.DeepEquals, contentD[:])
+}
+
+func (s *FileURLSuite) TestFileUploadRangeIncorrectTransactionalMD5(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	fileURL, _ := createNewFileFromShare(c, shareURL, 2048)
+	defer delFile(c, fileURL)
+
+	contentR, _ := getRandomDataAndReader(2048)
+	_, incorrectMD5 := getRandomDataAndReader(16)
+
+	// Upload range with incorrect transactional MD5
+	_, err := fileURL.UploadRange(context.Background(), 0, contentR, incorrectMD5[:])
+	validateStorageError(c, err, azfile.ServiceCodeMd5Mismatch)
 }
 
 // Testings for GetRangeList and ClearRange
@@ -1070,7 +1126,7 @@ func (s *FileURLSuite) TestGetRangeListNonDefaultExact(c *chk.C) {
 
 	defer delFile(c, fileURL)
 
-	putResp, err := fileURL.UploadRange(context.Background(), 0, getReaderToRandomBytes(1024))
+	putResp, err := fileURL.UploadRange(context.Background(), 0, getReaderToRandomBytes(1024), nil)
 	c.Assert(err, chk.IsNil)
 	c.Assert(putResp.Response().StatusCode, chk.Equals, 201)
 	c.Assert(putResp.LastModified().IsZero(), chk.Equals, false)
@@ -1102,7 +1158,7 @@ func (s *FileURLSuite) TestClearRangeDefault(c *chk.C) {
 	fileURL, _ := createNewFileFromShare(c, shareURL, 2048)
 	defer delFile(c, fileURL)
 
-	_, err := fileURL.UploadRange(context.Background(), 0, getReaderToRandomBytes(2048))
+	_, err := fileURL.UploadRange(context.Background(), 0, getReaderToRandomBytes(2048), nil)
 	c.Assert(err, chk.IsNil)
 
 	clearResp, err := fileURL.ClearRange(context.Background(), 0, 2048)
@@ -1122,7 +1178,7 @@ func (s *FileURLSuite) TestClearRangeNonDefault(c *chk.C) {
 	fileURL, _ := createNewFileFromShare(c, shareURL, 4096)
 	defer delFile(c, fileURL)
 
-	_, err := fileURL.UploadRange(context.Background(), 2048, getReaderToRandomBytes(2048))
+	_, err := fileURL.UploadRange(context.Background(), 2048, getReaderToRandomBytes(2048), nil)
 	c.Assert(err, chk.IsNil)
 
 	clearResp, err := fileURL.ClearRange(context.Background(), 2048, 2048)
@@ -1142,7 +1198,7 @@ func (s *FileURLSuite) TestClearRangeMultipleRanges(c *chk.C) {
 	fileURL, _ := createNewFileFromShare(c, shareURL, 2048)
 	defer delFile(c, fileURL)
 
-	_, err := fileURL.UploadRange(context.Background(), 0, getReaderToRandomBytes(2048))
+	_, err := fileURL.UploadRange(context.Background(), 0, getReaderToRandomBytes(2048), nil)
 	c.Assert(err, chk.IsNil)
 
 	clearResp, err := fileURL.ClearRange(context.Background(), 1024, 1024)
@@ -1165,7 +1221,7 @@ func (s *FileURLSuite) TestClearRangeNonDefault1Count(c *chk.C) {
 	defer delFile(c, fileURL)
 
 	d := []byte{1}
-	_, err := fileURL.UploadRange(context.Background(), 0, bytes.NewReader(d))
+	_, err := fileURL.UploadRange(context.Background(), 0, bytes.NewReader(d), nil)
 	c.Assert(err, chk.IsNil)
 
 	clearResp, err := fileURL.ClearRange(context.Background(), 0, 1)
@@ -1205,7 +1261,7 @@ func setupGetRangeListTest(c *chk.C) (shareURL azfile.ShareURL, fileURL azfile.F
 	shareURL, _ = createNewShare(c, fsu)
 	fileURL, _ = createNewFileFromShare(c, shareURL, int64(testFileRangeSize))
 
-	_, err := fileURL.UploadRange(ctx, 0, getReaderToRandomBytes(testFileRangeSize))
+	_, err := fileURL.UploadRange(ctx, 0, getReaderToRandomBytes(testFileRangeSize), nil)
 	c.Assert(err, chk.IsNil)
 
 	return
@@ -1243,7 +1299,7 @@ func (s *FileURLSuite) TestFileGetRangeListNonContiguousRanges(c *chk.C) {
 	_, err := fileURL.Resize(ctx, int64(testFileRangeSize*3))
 	c.Assert(err, chk.IsNil)
 
-	_, err = fileURL.UploadRange(ctx, testFileRangeSize*2, getReaderToRandomBytes(testFileRangeSize))
+	_, err = fileURL.UploadRange(ctx, testFileRangeSize*2, getReaderToRandomBytes(testFileRangeSize), nil)
 	c.Assert(err, chk.IsNil)
 	resp, err := fileURL.GetRangeList(ctx, 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)

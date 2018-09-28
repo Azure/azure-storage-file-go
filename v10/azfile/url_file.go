@@ -158,7 +158,7 @@ func (f FileURL) Resize(ctx context.Context, length int64) (*FileSetHTTPHeadersR
 // UploadRange writes bytes to a file.
 // offset indiciates the offset at which to begin writing, in bytes.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/put-range.
-func (f FileURL) UploadRange(ctx context.Context, offset int64, body io.ReadSeeker) (*FileUploadRangeResponse, error) {
+func (f FileURL) UploadRange(ctx context.Context, offset int64, body io.ReadSeeker, transactionalMD5 []byte) (*FileUploadRangeResponse, error) {
 	if offset < 0 {
 		panic("offset must be >= 0")
 	}
@@ -172,7 +172,7 @@ func (f FileURL) UploadRange(ctx context.Context, offset int64, body io.ReadSeek
 	}
 
 	// TransactionalContentMD5 isn't supported currently.
-	return f.fileClient.UploadRange(ctx, *toRange(offset, count), FileRangeWriteUpdate, count, body, nil, nil)
+	return f.fileClient.UploadRange(ctx, *toRange(offset, count), FileRangeWriteUpdate, count, body, nil, transactionalMD5)
 }
 
 // ClearRange clears the specified range and releases the space used in storage for that range.

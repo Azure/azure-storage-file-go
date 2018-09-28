@@ -1,7 +1,11 @@
-language: python
-python:
-  - 3.6
-services:
-- docker
+language: go
+go:
+- "1.10"
+- "1.11"
 script:
-- make all
+- export GO111MODULE=on
+- cd ./v10/azfile
+- GOOS=linux go build
+- GOOS=darwin go build
+- GOOS=windows go build
+- go test -race -short -cover -v

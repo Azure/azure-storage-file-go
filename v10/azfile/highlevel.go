@@ -95,7 +95,7 @@ func UploadBufferToAzureFile(ctx context.Context, b []byte,
 					})
 			}
 
-			_, err := fileURL.UploadRange(ctx, int64(offset), body)
+			_, err := fileURL.UploadRange(ctx, int64(offset), body, nil)
 			return err
 		},
 		operationName: "UploadBufferToAzureFile",

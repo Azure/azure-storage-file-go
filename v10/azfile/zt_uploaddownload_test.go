@@ -186,7 +186,7 @@ func (ud *uploadDownloadSuite) TestDownloadBasic(c *chk.C) {
 
 	contentR, contentD := getRandomDataAndReader(fileSize)
 
-	pResp, err := file.UploadRange(context.Background(), 0, contentR)
+	pResp, err := file.UploadRange(context.Background(), 0, contentR, nil)
 	c.Assert(err, chk.IsNil)
 	c.Assert(pResp.ContentMD5(), chk.Not(chk.Equals), nil)
 	c.Assert(pResp.StatusCode(), chk.Equals, http.StatusCreated)
@@ -292,7 +292,7 @@ func (ud *uploadDownloadSuite) TestDownloadRetry(c *chk.C) {
 
 	contentR, contentD := getRandomDataAndReader(fileSize)
 
-	pResp, err := file.UploadRange(context.Background(), 0, contentR)
+	pResp, err := file.UploadRange(context.Background(), 0, contentR, nil)
 	c.Assert(err, chk.IsNil)
 	c.Assert(pResp.ContentMD5(), chk.Not(chk.Equals), nil)
 	c.Assert(pResp.StatusCode(), chk.Equals, http.StatusCreated)

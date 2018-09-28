@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-storage-file-go/2018-03-28/azfile"
+	"github.com/Azure/azure-storage-file-go/v10/azfile"
 	chk "gopkg.in/check.v1"
 )
 
@@ -235,7 +235,7 @@ func createNewFileFromShareWithDefaultData(c *chk.C, share azfile.ShareURL) (fil
 	c.Assert(err, chk.IsNil)
 	c.Assert(cResp.StatusCode(), chk.Equals, 201)
 
-	_, err = file.UploadRange(ctx, 0, strings.NewReader(fileDefaultData))
+	_, err = file.UploadRange(ctx, 0, strings.NewReader(fileDefaultData), nil)
 	c.Assert(err, chk.IsNil)
 
 	return file, name

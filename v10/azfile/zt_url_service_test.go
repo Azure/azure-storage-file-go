@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
-	"github.com/Azure/azure-storage-file-go/2018-03-28/azfile"
+	"github.com/Azure/azure-storage-file-go/v10/azfile"
 	chk "gopkg.in/check.v1"
 )
 
