@@ -16,7 +16,7 @@ const (
 	FileMaxUploadRangeBytes = 4 * 1024 * 1024 // 4MB
 
 	// FileMaxSizeInBytes indicates the maxiumum file size, in bytes.
-	FileMaxSizeInBytes = 1 * 1024 * 1024 * 1024 * 1024 // 1TB
+	FileMaxSizeInBytes int64 = 1 * 1024 * 1024 * 1024 * 1024 // 1TB
 )
 
 // A FileURL represents a URL to an Azure Storage file.
