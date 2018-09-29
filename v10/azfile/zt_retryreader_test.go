@@ -182,23 +182,4 @@ func (r *retryReaderSuite) TestRetryReaderReadNegativeNonRetriableError(c *chk.C
 	c.Assert(err, chk.Equals, body.injectedError)
 }
 
-func (r *retryReaderSuite) TestRetryReaderNewRetryReaderDefaultNegativePanic(c *chk.C) {
-	startResponse := http.Response{}
-
-	// Check getter
-	c.Assert(func() { _ = NewRetryReader(ctx, &startResponse, HTTPGetterInfo{}, RetryReaderOptions{}, nil) }, chk.Panics, "getter must not be nil")
-
-	getter := func(ctx context.Context, info HTTPGetterInfo) (*http.Response, error) { return nil, nil }
-	// Check info.Count
-	c.Assert(func() {
-		_ = NewRetryReader(ctx, &startResponse, HTTPGetterInfo{Count: -1}, RetryReaderOptions{}, getter)
-	}, chk.Panics, "info.Count must be >= 0")
-
-	// Check o.MaxRetryRequests
-	c.Assert(func() {
-		_ = NewRetryReader(ctx, &startResponse, HTTPGetterInfo{}, RetryReaderOptions{MaxRetryRequests: -1}, getter)
-	}, chk.Panics, "o.MaxRetryRequests must be >= 0")
-
-}
-
 // End testings for RetryReader

@@ -19,10 +19,8 @@ type ServiceURL struct {
 }
 
 // NewServiceURL creates a ServiceURL object using the specified URL and request policy pipeline.
+// Note: p can't be nil.
 func NewServiceURL(url url.URL, p pipeline.Pipeline) ServiceURL {
-	if p == nil {
-		panic("p can't be nil")
-	}
 	client := newServiceClient(url, p)
 	return ServiceURL{client: client}
 }
@@ -95,9 +93,6 @@ func (o *ListSharesOptions) pointers() (prefix *string, include []ListSharesIncl
 		prefix = &o.Prefix
 	}
 	if o.MaxResults != 0 {
-		if o.MaxResults < 0 {
-			panic("MaxResults must be >= 0")
-		}
 		maxResults = &o.MaxResults
 	}
 	include = o.Detail.toArray()

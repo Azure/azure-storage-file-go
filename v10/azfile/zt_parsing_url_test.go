@@ -157,13 +157,14 @@ func (s *ParsingURLSuite) TestFileURLPartsWithSnapshotAndSAS(c *chk.C) {
 
 	currentTime := time.Now().UTC()
 	credential, accountName := getCredential()
-	sasQueryParams := azfile.AccountSASSignatureValues{
+	sasQueryParams, err := azfile.AccountSASSignatureValues{
 		Protocol:      azfile.SASProtocolHTTPS,
 		ExpiryTime:    currentTime.Add(48 * time.Hour),
 		Permissions:   azfile.AccountSASPermissions{Read: true, List: true}.String(),
 		Services:      azfile.AccountSASServices{File: true}.String(),
 		ResourceTypes: azfile.AccountSASResourceTypes{Container: true, Object: true}.String(),
 	}.NewSASQueryParameters(credential)
+	c.Assert(err, chk.IsNil)
 
 	parts := azfile.NewFileURLParts(fileURL.URL())
 	parts.SAS = sasQueryParams

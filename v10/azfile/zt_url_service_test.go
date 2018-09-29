@@ -3,8 +3,8 @@ package azfile_test
 import (
 	"context"
 	"errors"
-	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
@@ -31,10 +31,6 @@ func (s *StorageAccountSuite) TestAccountNewServiceURLValidName(c *chk.C) {
 
 	correctURL := "https://" + os.Getenv("ACCOUNT_NAME") + ".file.core.windows.net/"
 	c.Assert(fsu.String(), chk.Equals, correctURL)
-}
-
-func (s *StorageAccountSuite) TestAccountNewServiceURLNegative(c *chk.C) {
-	c.Assert(func() { azfile.NewServiceURL(url.URL{}, nil) }, chk.Panics, "p can't be nil")
 }
 
 type testPipeline struct{}
@@ -275,15 +271,11 @@ func (s *StorageAccountSuite) TestAccountListSharesNegativeMaxResults(c *chk.C) 
 	shareURL, _ := createNewShare(c, fsu)
 
 	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
-	// The library should panic if MaxResults < -1
-	defer func() {
-		recover()
-	}()
 
-	fsu.ListSharesSegment(ctx,
+	_, err := fsu.ListSharesSegment(ctx,
 		azfile.Marker{}, *(&azfile.ListSharesOptions{Prefix: sharePrefix, MaxResults: -2}))
-
-	c.Fail() // If the list call doesn't panic, we fail
+	c.Assert(err, chk.NotNil)
+	c.Assert(strings.Contains(err.Error(), "validation fail"), chk.Equals, true)
 }
 
 func (s *StorageAccountSuite) TestAccountSAS(c *chk.C) {
@@ -293,17 +285,18 @@ func (s *StorageAccountSuite) TestAccountSAS(c *chk.C) {
 	fileURL, _ := getFileURLFromDirectory(c, dirURL)
 
 	credential, _ := getCredential()
-	sasQueryParams := azfile.AccountSASSignatureValues{
+	sasQueryParams, err := azfile.AccountSASSignatureValues{
 		Protocol:      azfile.SASProtocolHTTPS,
 		ExpiryTime:    time.Now().Add(48 * time.Hour),
 		Permissions:   azfile.AccountSASPermissions{Read: true, List: true, Write: true, Delete: true, Add: true, Create: true, Update: true, Process: true}.String(),
 		Services:      azfile.AccountSASServices{File: true, Blob: true, Queue: true}.String(),
 		ResourceTypes: azfile.AccountSASResourceTypes{Service: true, Container: true, Object: true}.String(),
 	}.NewSASQueryParameters(credential)
+	c.Assert(err, chk.IsNil)
 
 	// Reverse valiadation all parse logics work as expect.
 	ap := &azfile.AccountSASPermissions{}
-	err := ap.Parse(sasQueryParams.Permissions())
+	err = ap.Parse(sasQueryParams.Permissions())
 	c.Assert(err, chk.IsNil)
 	c.Assert(*ap, chk.DeepEquals, azfile.AccountSASPermissions{Read: true, List: true, Write: true, Delete: true, Add: true, Create: true, Update: true, Process: true})
 

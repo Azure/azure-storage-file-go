@@ -2,6 +2,7 @@ package azfile
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
@@ -39,22 +40,20 @@ type UploadToAzureFileOptions struct {
 }
 
 // UploadBufferToAzureFile uploads a buffer to an Azure file.
+// Note: o.RangeSize must be >= 0 and <= FileMaxUploadRangeBytes, and if not specified, method will use FileMaxUploadRangeBytes by default.
+// The total size to be uploaded should be <= FileMaxSizeInBytes.
 func UploadBufferToAzureFile(ctx context.Context, b []byte,
 	fileURL FileURL, o UploadToAzureFileOptions) error {
 
 	// 1. Validate parameters, and set defaults.
 	if o.RangeSize < 0 || o.RangeSize > FileMaxUploadRangeBytes {
-		panic(fmt.Sprintf("o.RangeSize must be >= 0 and <= %d, in bytes", FileMaxUploadRangeBytes))
+		return fmt.Errorf("invalid argument, o.RangeSize must be >= 0 and <= %d, in bytes", FileMaxUploadRangeBytes)
 	}
 	if o.RangeSize == 0 {
 		o.RangeSize = FileMaxUploadRangeBytes
 	}
 
 	size := int64(len(b))
-
-	if size > FileMaxSizeInBytes {
-		panic(fmt.Sprintf("b's length must be <= %d, in bytes", FileMaxSizeInBytes))
-	}
 
 	parallelism := o.Parallelism
 	if parallelism == 0 {
@@ -137,12 +136,13 @@ type DownloadFromAzureFileOptions struct {
 }
 
 // downloadAzureFileToBuffer downloads an Azure file to a buffer with parallel.
+// Note: o.RangeSize must be >= 0.
 func downloadAzureFileToBuffer(ctx context.Context, fileURL FileURL, azfileProperties *FileGetPropertiesResponse,
 	b []byte, o DownloadFromAzureFileOptions) (*FileGetPropertiesResponse, error) {
 
 	// 1. Validate parameters, and set defaults.
 	if o.RangeSize < 0 {
-		panic("RangeSize option must be >= 0")
+		return nil, errors.New("invalid argument, o.RangeSize must be >= 0")
 	}
 	if o.RangeSize == 0 {
 		o.RangeSize = FileMaxUploadRangeBytes
@@ -163,7 +163,7 @@ func downloadAzureFileToBuffer(ctx context.Context, fileURL FileURL, azfilePrope
 	}
 
 	if int64(len(b)) < azfileSize {
-		panic(fmt.Sprintf("The buffer's size should be equal to or larger than Azure file's size: %d.", azfileSize))
+		sanityCheckFailed(fmt.Sprintf("The buffer's size should be equal to or larger than Azure file's size: %d.", azfileSize))
 	}
 
 	parallelism := o.Parallelism
@@ -219,11 +219,11 @@ func DownloadAzureFileToBuffer(ctx context.Context, fileURL FileURL,
 
 // DownloadAzureFileToFile downloads an Azure file to a local file.
 // The file would be created if it doesn't exist, and would be truncated if the size doesn't match.
+// Note: file can't be nil.
 func DownloadAzureFileToFile(ctx context.Context, fileURL FileURL, file *os.File, o DownloadFromAzureFileOptions) (*FileGetPropertiesResponse, error) {
-
 	// 1. Validate parameters.
 	if file == nil {
-		panic("file should not be nil")
+		return nil, errors.New("invalid argument, file can't be nil")
 	}
 
 	// 2. Try to get Azure file's size.

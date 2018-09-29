@@ -164,7 +164,7 @@ func (f *SharedKeyCredential) buildCanonicalizedResource(u *url.URL) string {
 	// params is a map[string][]string; param name is key; params values is []string
 	params, err := url.ParseQuery(u.RawQuery) // Returns URL decoded values
 	if err != nil {
-		panic(err)
+		sanityCheckFailed(err.Error())
 	}
 
 	if len(params) > 0 { // There is at least 1 query parameter

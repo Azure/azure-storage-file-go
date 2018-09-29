@@ -60,21 +60,12 @@ func (o RetryOptions) retryReadsFromSecondaryHost() string {
 }
 
 func (o RetryOptions) defaults() RetryOptions {
-	if o.Policy != RetryPolicyExponential && o.Policy != RetryPolicyFixed {
-		panic("RetryPolicy must be RetryPolicyExponential or RetryPolicyFixed")
-	}
-	if o.MaxTries < 0 {
-		panic("MaxTries must be >= 0")
-	}
-	if o.TryTimeout < 0 || o.RetryDelay < 0 || o.MaxRetryDelay < 0 {
-		panic("TryTimeout, RetryDelay, and MaxRetryDelay must all be >= 0")
-	}
-	if o.RetryDelay > o.MaxRetryDelay {
-		panic("RetryDelay must be <= MaxRetryDelay")
-	}
-	if (o.RetryDelay == 0 && o.MaxRetryDelay != 0) || (o.RetryDelay != 0 && o.MaxRetryDelay == 0) {
-		panic("Both RetryDelay and MaxRetryDelay must be 0 or neither can be 0")
-	}
+	// We assume the following:
+	// 1. o.Policy should either be RetryPolicyExponential or RetryPolicyFixed
+	// 2. o.MaxTries >= 0
+	// 3. o.TryTimeout, o.RetryDelay, and o.MaxRetryDelay >=0
+	// 4. o.RetryDelay <= o.MaxRetryDelay
+	// 5. Both o.RetryDelay and o.MaxRetryDelay must be 0 or neither can be 0
 
 	IfDefault := func(current *time.Duration, desired time.Duration) {
 		if *current == time.Duration(0) {
@@ -170,7 +161,7 @@ func NewRetryPolicyFactory(o RetryOptions) pipeline.Factory {
 				// the stream may not be at offset 0 when we first get it and we want the same behavior for the
 				// 1st try as for additional tries.
 				if err = requestCopy.RewindBody(); err != nil {
-					panic(err)
+					sanityCheckFailed(err.Error())
 				}
 				if !tryingPrimary {
 					requestCopy.Request.URL.Host = o.retryReadsFromSecondaryHost()
@@ -257,7 +248,7 @@ func NewRetryPolicyFactory(o RetryOptions) pipeline.Factory {
 							// as for client, the response should not be nil if request is sent and the operations is executed successfully.
 							// Another option, is that execute the cancel function when response or response.Response() is nil,
 							// as in this case, current per-try has nothing to do in future.
-							panic("invalid state, response should not be nil when the operation is executed successfully")
+							sanityCheckFailed("invalid state, response should not be nil when the operation is executed successfully")
 						}
 
 						response.Response().Body = &contextCancelReadCloser{cf: tryCancel, body: response.Response().Body}

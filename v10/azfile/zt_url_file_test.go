@@ -53,9 +53,9 @@ func (s *FileURLSuite) TestFileWithNewPipeline(c *chk.C) {
 	c.Assert(err.Error(), chk.Equals, testPipelineMessage)
 }
 
-func (s *FileURLSuite) TestFileNewFileURLNegative(c *chk.C) {
-	c.Assert(func() { azfile.NewFileURL(url.URL{}, nil) }, chk.Panics, "p can't be nil")
-}
+// func (s *FileURLSuite) TestFileNewFileURLNegative(c *chk.C) {
+// 	c.Assert(func() { azfile.NewFileURL(url.URL{}, nil) }, chk.Panics, "p can't be nil")
+// }
 
 func (s *FileURLSuite) TestFileCreateDeleteDefault(c *chk.C) {
 	fsu := getFSU()
@@ -510,7 +510,8 @@ func (s *FileURLSuite) TestFileStartCopyUsingSASSrc(c *chk.C) {
 	serviceSASValues := azfile.FileSASSignatureValues{Version: "2015-04-05", StartTime: time.Now().Add(-1 * time.Hour).UTC(),
 		ExpiryTime: time.Now().Add(time.Hour).UTC(), Permissions: azfile.FileSASPermissions{Read: true, Write: true, Create: true, Delete: true}.String(),
 		ShareName: shareName, FilePath: fileName}
-	queryParams := serviceSASValues.NewSASQueryParameters(credential)
+	queryParams, err := serviceSASValues.NewSASQueryParameters(credential)
+	c.Assert(err, chk.IsNil)
 
 	// Create URLs to the destination file with sas parameters
 	sasURL := fileURL.URL()
@@ -546,7 +547,8 @@ func (s *FileURLSuite) TestFileStartCopyUsingSASDest(c *chk.C) {
 	serviceSASValues := azfile.FileSASSignatureValues{ExpiryTime: time.Now().Add(time.Hour).UTC(),
 		Permissions: azfile.FileSASPermissions{Read: true, Write: true, Create: true}.String(), ShareName: shareName, FilePath: fileName}
 	credentials, _ := getCredential()
-	queryParams := serviceSASValues.NewSASQueryParameters(credentials)
+	queryParams, err := serviceSASValues.NewSASQueryParameters(credentials)
+	c.Assert(err, chk.IsNil)
 
 	copyShareURL, copyShareName := createNewShare(c, fsu)
 	defer delShare(c, copyShareURL, azfile.DeleteSnapshotsOptionNone)
@@ -556,7 +558,8 @@ func (s *FileURLSuite) TestFileStartCopyUsingSASDest(c *chk.C) {
 	copyServiceSASvalues := azfile.FileSASSignatureValues{StartTime: time.Now().Add(-1 * time.Hour).UTC(),
 		ExpiryTime: time.Now().Add(time.Hour).UTC(), Permissions: azfile.FileSASPermissions{Read: true, Write: true}.String(),
 		ShareName: copyShareName, FilePath: copyFileName}
-	copyQueryParams := copyServiceSASvalues.NewSASQueryParameters(credentials)
+	copyQueryParams, err := copyServiceSASvalues.NewSASQueryParameters(credentials)
+	c.Assert(err, chk.IsNil)
 
 	// Generate anonymous URL to destination with SAS
 	anonURL := fsu.URL()
@@ -610,7 +613,8 @@ func (s *FileURLSuite) TestFileAbortCopyInProgress(c *chk.C) {
 	serviceSASValues := azfile.FileSASSignatureValues{ExpiryTime: time.Now().Add(time.Hour).UTC(),
 		Permissions: azfile.FileSASPermissions{Read: true, Write: true, Create: true}.String(), ShareName: shareName, FilePath: fileName}
 	credentials, _ := getCredential()
-	queryParams := serviceSASValues.NewSASQueryParameters(credentials)
+	queryParams, err := serviceSASValues.NewSASQueryParameters(credentials)
+	c.Assert(err, chk.IsNil)
 	srcFileWithSasURL := fileURL.URL()
 	srcFileWithSasURL.RawQuery = queryParams.Encode()
 
@@ -702,12 +706,13 @@ func (f *FileURLSuite) TestServiceSASShareSAS(c *chk.C) {
 
 	credential, accountName := getCredential()
 
-	sasQueryParams := azfile.FileSASSignatureValues{
+	sasQueryParams, err := azfile.FileSASSignatureValues{
 		Protocol:    azfile.SASProtocolHTTPS,
 		ExpiryTime:  time.Now().UTC().Add(48 * time.Hour),
 		ShareName:   shareName,
 		Permissions: azfile.ShareSASPermissions{Create: true, Read: true, Write: true, Delete: true, List: true}.String(),
 	}.NewSASQueryParameters(credential)
+	c.Assert(err, chk.IsNil)
 
 	qp := sasQueryParams.Encode()
 
@@ -725,7 +730,7 @@ func (f *FileURLSuite) TestServiceSASShareSAS(c *chk.C) {
 	dirURL := azfile.NewDirectoryURL(*du, azfile.NewPipeline(azfile.NewAnonymousCredential(), azfile.PipelineOptions{}))
 
 	s := "Hello"
-	_, err := fileURL.Create(ctx, int64(len(s)), azfile.FileHTTPHeaders{}, azfile.Metadata{})
+	_, err = fileURL.Create(ctx, int64(len(s)), azfile.FileHTTPHeaders{}, azfile.Metadata{})
 	c.Assert(err, chk.IsNil)
 	_, err = fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte(s)), nil)
 	c.Assert(err, chk.IsNil)
@@ -748,12 +753,13 @@ func (f *FileURLSuite) TestServiceSASFileSAS(c *chk.C) {
 
 	credential, accountName := getCredential()
 
-	sasQueryParams := azfile.FileSASSignatureValues{
+	sasQueryParams, err := azfile.FileSASSignatureValues{
 		Protocol:    azfile.SASProtocolHTTPS,
 		ExpiryTime:  time.Now().UTC().Add(48 * time.Hour),
 		ShareName:   shareName,
 		Permissions: azfile.FileSASPermissions{Create: true, Read: true, Write: true, Delete: true}.String(),
 	}.NewSASQueryParameters(credential)
+	c.Assert(err, chk.IsNil)
 
 	qp := sasQueryParams.Encode()
 
@@ -765,7 +771,7 @@ func (f *FileURLSuite) TestServiceSASFileSAS(c *chk.C) {
 	fileURL := azfile.NewFileURL(*u, azfile.NewPipeline(azfile.NewAnonymousCredential(), azfile.PipelineOptions{}))
 
 	s := "Hello"
-	_, err := fileURL.Create(ctx, int64(len(s)), azfile.FileHTTPHeaders{}, azfile.Metadata{})
+	_, err = fileURL.Create(ctx, int64(len(s)), azfile.FileHTTPHeaders{}, azfile.Metadata{})
 	c.Assert(err, chk.IsNil)
 	_, err = fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte(s)), nil)
 	c.Assert(err, chk.IsNil)
@@ -931,20 +937,17 @@ func (s *FileURLSuite) TestFileDownloadDataNonExistantFile(c *chk.C) {
 	validateStorageError(c, err, azfile.ServiceCodeResourceNotFound)
 }
 
-func (s *FileURLSuite) TestFileDownloadDataNegativeOffset(c *chk.C) {
-	fsu := getFSU()
-	shareURL, _ := createNewShare(c, fsu)
-	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
-	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
+// Don't check offset by design.
+// func (s *FileURLSuite) TestFileDownloadDataNegativeOffset(c *chk.C) {
+// 	fsu := getFSU()
+// 	shareURL, _ := createNewShare(c, fsu)
+// 	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+// 	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
 
-	defer func() { // The library should fail if it seems numeric parameters that are guaranteed invalid
-		recover()
-	}()
-
-	fileURL.Download(ctx, -1, azfile.CountToEnd, false)
-
-	c.Fail()
-}
+// 	_, err := fileURL.Download(ctx, -1, azfile.CountToEnd, false)
+// 	c.Assert(err, chk.NotNil)
+// 	c.Assert(strings.Contains(err.Error(), "offset must be >= 0"), chk.Equals, true)
+// }
 
 func (s *FileURLSuite) TestFileDownloadDataOffsetOutOfRange(c *chk.C) {
 	fsu := getFSU()
@@ -956,20 +959,17 @@ func (s *FileURLSuite) TestFileDownloadDataOffsetOutOfRange(c *chk.C) {
 	validateStorageError(c, err, azfile.ServiceCodeInvalidRange)
 }
 
-func (s *FileURLSuite) TestFileDownloadDataInvalidCount(c *chk.C) {
-	fsu := getFSU()
-	shareURL, _ := createNewShare(c, fsu)
-	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
-	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
+// Don't check count by design.
+// func (s *FileURLSuite) TestFileDownloadDataInvalidCount(c *chk.C) {
+// 	fsu := getFSU()
+// 	shareURL, _ := createNewShare(c, fsu)
+// 	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+// 	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
 
-	defer func() { // The library should panic if it sees numeric parameters that are guaranteed invalid
-		recover()
-	}()
-
-	fileURL.Download(ctx, 0, -100, false)
-
-	c.Fail()
-}
+// 	_, err := fileURL.Download(ctx, 0, -100, false)
+// 	c.Assert(err, chk.NotNil)
+// 	c.Assert(strings.Contains(err.Error(), "count must be >= 0"), chk.Equals, true)
+// }
 
 func (s *FileURLSuite) TestFileDownloadDataEntireFile(c *chk.C) {
 	fsu := getFSU()
@@ -1014,14 +1014,17 @@ func (s *FileURLSuite) TestFileDownloadDataCountOutOfRange(c *chk.C) {
 	c.Assert(string(data), chk.Equals, fileDefaultData)
 }
 
-func (s *FileURLSuite) TestFileUploadRangeNegativeInvalidOffset(c *chk.C) {
-	fsu := getFSU()
-	shareURL, _ := createNewShare(c, fsu)
-	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
-	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
+// Don't check offset by design.
+// func (s *FileURLSuite) TestFileUploadRangeNegativeInvalidOffset(c *chk.C) {
+// 	fsu := getFSU()
+// 	shareURL, _ := createNewShare(c, fsu)
+// 	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+// 	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
 
-	c.Assert(func() { fileURL.UploadRange(ctx, -2, strings.NewReader(fileDefaultData), nil) }, chk.Panics, "offset must be >= 0")
-}
+// 	_, err := fileURL.UploadRange(ctx, -2, strings.NewReader(fileDefaultData), nil)
+// 	c.Assert(err, chk.NotNil)
+// 	c.Assert(strings.Contains(err.Error(), "offset must be >= 0"), chk.Equals, true)
+// }
 
 func (s *FileURLSuite) TestFileUploadRangeNilBody(c *chk.C) {
 	fsu := getFSU()
@@ -1029,13 +1032,9 @@ func (s *FileURLSuite) TestFileUploadRangeNilBody(c *chk.C) {
 	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
 	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
 
-	// A page range that starts and ends at 0 should panic
-	defer func() {
-		recover()
-	}()
-
-	fileURL.UploadRange(ctx, 0, nil, nil)
-	c.Fail()
+	_, err := fileURL.UploadRange(ctx, 0, nil, nil)
+	c.Assert(err, chk.NotNil)
+	c.Assert(strings.Contains(err.Error(), "body must not be nil"), chk.Equals, true)
 }
 
 func (s *FileURLSuite) TestFileUploadRangeEmptyBody(c *chk.C) {
@@ -1044,7 +1043,9 @@ func (s *FileURLSuite) TestFileUploadRangeEmptyBody(c *chk.C) {
 	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
 	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
 
-	c.Assert(func() { fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte{}), nil) }, chk.Panics, "body must contain readable data whose size is > 0")
+	_, err := fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte{}), nil)
+	c.Assert(err, chk.NotNil)
+	c.Assert(strings.Contains(err.Error(), "body must contain readable data whose size is > 0"), chk.Equals, true)
 }
 
 func (s *FileURLSuite) TestFileUploadRangeNonExistantFile(c *chk.C) {
@@ -1240,20 +1241,25 @@ func (s *FileURLSuite) TestClearRangeNonDefault1Count(c *chk.C) {
 	c.Assert(bytes, chk.DeepEquals, []byte{0})
 }
 
-func (s *FileURLSuite) TestFileClearRangeNegativeInvalidOffset(c *chk.C) {
-	fsu := getFSU()
-	shareURL, _ := getShareURL(c, fsu)
-	fileURL, _ := getFileURLFromShare(c, shareURL)
+// Don't check offset by design.
+// func (s *FileURLSuite) TestFileClearRangeNegativeInvalidOffset(c *chk.C) {
+// 	fsu := getFSU()
+// 	shareURL, _ := getShareURL(c, fsu)
+// 	fileURL, _ := getFileURLFromShare(c, shareURL)
 
-	c.Assert(func() { fileURL.ClearRange(ctx, -1, 1) }, chk.Panics, "offset must be >= 0")
-}
+// 	_, err := fileURL.ClearRange(ctx, -1, 1)
+// 	c.Assert(err, chk.NotNil)
+// 	c.Assert(strings.Contains(err.Error(), "offset must be >= 0"), chk.Equals, true)
+// }
 
 func (s *FileURLSuite) TestFileClearRangeNegativeInvalidCount(c *chk.C) {
 	fsu := getFSU()
 	shareURL, _ := getShareURL(c, fsu)
 	fileURL, _ := getFileURLFromShare(c, shareURL)
 
-	c.Assert(func() { fileURL.ClearRange(ctx, 0, 0) }, chk.Panics, "count cannot be CountToEnd, and must be > 0")
+	_, err := fileURL.ClearRange(ctx, 0, 0)
+	c.Assert(err, chk.NotNil)
+	c.Assert(strings.Contains(err.Error(), "count cannot be CountToEnd, and must be > 0"), chk.Equals, true)
 }
 
 func setupGetRangeListTest(c *chk.C) (shareURL azfile.ShareURL, fileURL azfile.FileURL) {
@@ -1338,18 +1344,24 @@ func (s *FileURLSuite) TestFileGetRangeListSnapshot(c *chk.C) {
 	validateBasicGetRangeList(c, resp2, err)
 }
 
-func (s *FileURLSuite) TestFileGetRangeListNegativeInvalidOffset(c *chk.C) {
-	fsu := getFSU()
-	shareURL, _ := getShareURL(c, fsu)
-	fileURL, _ := getFileURLFromShare(c, shareURL)
+// Don't check offset by design.
+// func (s *FileURLSuite) TestFileGetRangeListNegativeInvalidOffset(c *chk.C) {
+// 	fsu := getFSU()
+// 	shareURL, _ := getShareURL(c, fsu)
+// 	fileURL, _ := getFileURLFromShare(c, shareURL)
 
-	c.Assert(func() { fileURL.GetRangeList(ctx, -2, 500) }, chk.Panics, "The range offset must be >= 0")
-}
+// 	_, err := fileURL.GetRangeList(ctx, -2, 500)
+// 	c.Assert(err, chk.NotNil)
+// 	c.Assert(strings.Contains(err.Error(), "offset must be >= 0"), chk.Equals, true)
+// }
 
-func (s *FileURLSuite) TestFileGetRangeListNegativeInvalidCount(c *chk.C) {
-	fsu := getFSU()
-	shareURL, _ := getShareURL(c, fsu)
-	fileURL, _ := getFileURLFromShare(c, shareURL)
+// Don't check count by design.
+// func (s *FileURLSuite) TestFileGetRangeListNegativeInvalidCount(c *chk.C) {
+// 	fsu := getFSU()
+// 	shareURL, _ := getShareURL(c, fsu)
+// 	fileURL, _ := getFileURLFromShare(c, shareURL)
 
-	c.Assert(func() { fileURL.GetRangeList(ctx, 0, -3) }, chk.Panics, "The range count must be either equal to CountToEnd (0) or > 0")
-}
+// 	_, err := fileURL.GetRangeList(ctx, 0, -3)
+// 	c.Assert(err, chk.NotNil)
+// 	c.Assert(strings.Contains(err.Error(), "count must be >= 0"), chk.Equals, true)
+// }
