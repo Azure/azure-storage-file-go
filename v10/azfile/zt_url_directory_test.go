@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-storage-file-go/v10/azfile"
@@ -32,9 +33,10 @@ func (s *DirectoryURLSuite) TestDirNewDirectoryURL(c *chk.C) {
 	c.Assert(testURL.String(), chk.Equals, correctURL)
 }
 
-func (s *DirectoryURLSuite) TestDirNewDirectoryURLNegative(c *chk.C) {
-	c.Assert(func() { azfile.NewDirectoryURL(url.URL{}, nil) }, chk.Panics, "p can't be nil")
-}
+// TODO: Remove panics. Consider to enhance argument checking after go v2 error involved.
+// func (s *DirectoryURLSuite) TestDirNewDirectoryURLNegative(c *chk.C) {
+// 	c.Assert(func() { azfile.NewDirectoryURL(url.URL{}, nil) }, chk.Panics, "p can't be nil")
+// }
 
 func (s *DirectoryURLSuite) TestDirCreateFileURL(c *chk.C) {
 	fsu := getFSU()
@@ -507,14 +509,9 @@ func (s *DirectoryURLSuite) TestDirListNegativeMaxResults(c *chk.C) {
 	createNewFileFromShare(c, shareURL, 0)
 	dirURL := shareURL.NewRootDirectoryURL()
 
-	// If ListFilesAndDirectoriesSegment panics, as it should, this function will be called and recover from the panic, allowing the test to pass
-	defer func() {
-		recover()
-	}()
-	dirURL.ListFilesAndDirectoriesSegment(ctx, azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{MaxResults: -2})
-
-	// We will only reach this if we did not panic
-	c.Fail()
+	_, err := dirURL.ListFilesAndDirectoriesSegment(ctx, azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{MaxResults: -2})
+	c.Assert(err, chk.NotNil)
+	c.Assert(strings.Contains(err.Error(), "validation failed"), chk.Equals, true)
 }
 
 func (s *DirectoryURLSuite) TestDirListNonDefaultMaxResultsZero(c *chk.C) {
@@ -561,12 +558,13 @@ func (s *DirectoryURLSuite) TestDirListWithShareSAS(c *chk.C) {
 	defer delDirectory(c, dir)
 
 	// Create share service SAS
-	sasQueryParams := azfile.FileSASSignatureValues{
+	sasQueryParams, err := azfile.FileSASSignatureValues{
 		Protocol:    azfile.SASProtocolHTTPS,              // Users MUST use HTTPS (not HTTP)
 		ExpiryTime:  time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
 		ShareName:   shareName,
 		Permissions: azfile.ShareSASPermissions{Read: true, Write: true, List: true}.String(),
 	}.NewSASQueryParameters(credential)
+	c.Assert(err, chk.IsNil)
 
 	// Create the URL of the resource you wish to access and append the SAS query parameters.
 	// Since this is a file SAS, the URL is to the Azure storage file.

@@ -1,7 +1,6 @@
 package azfile
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -25,12 +24,6 @@ type httpRange struct {
 func (r httpRange) pointers() *string {
 	if r.offset == 0 && r.count == CountToEnd { // Do common case first for performance
 		return nil // No specified range
-	}
-	if r.offset < 0 {
-		panic("The range offset must be >= 0")
-	}
-	if r.count <= 0 && r.count != CountToEnd {
-		panic("The range count must be either equal to CountToEnd (0) or > 0")
 	}
 
 	return toRange(r.offset, r.count)
@@ -56,7 +49,7 @@ func validateSeekableStreamAt0AndGetCount(body io.ReadSeeker) int64 {
 	validateSeekableStreamAt0(body)
 	count, err := body.Seek(0, io.SeekEnd)
 	if err != nil {
-		panic("failed to seek stream")
+		sanityCheckFailed(err.Error())
 	}
 	body.Seek(0, io.SeekStart)
 	return count
@@ -68,8 +61,8 @@ func validateSeekableStreamAt0(body io.ReadSeeker) {
 	}
 	if pos, err := body.Seek(0, io.SeekCurrent); pos != 0 || err != nil {
 		if err != nil {
-			panic(err)
+			sanityCheckFailed(err.Error())
 		}
-		panic(errors.New("stream must be set to position 0"))
+		sanityCheckFailed("stream must be set to position 0")
 	}
 }

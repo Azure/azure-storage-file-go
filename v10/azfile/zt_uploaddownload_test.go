@@ -371,14 +371,10 @@ func (ud *uploadDownloadSuite) TestDownloadNegativePanic(c *chk.C) {
 	file, _ := createNewFileFromShare(c, share, int64(fileSize))
 	defer delFile(c, file)
 
-	// Check illegal count
-	c.Assert(func() { file.Download(context.Background(), 0, -2, false) }, chk.Panics, "The range count must be either equal to CountToEnd (0) or > 0")
-
-	// Check illegal offset
-	c.Assert(func() { file.Download(context.Background(), -1, 3, false) }, chk.Panics, "The range offset must be >= 0")
-
 	// Check illegal rangeGetContentMD5
-	c.Assert(func() { file.Download(context.Background(), 0, CountToEnd, true) }, chk.Panics, "rangeGetContentMD5 only work with partial data downloading")
+	_, err := file.Download(context.Background(), 0, CountToEnd, true)
+	c.Assert(err, chk.NotNil)
+	c.Assert(strings.Contains(err.Error(), "rangeGetContentMD5 only works with partial data downloading"), chk.Equals, true)
 }
 
 func (ud *uploadDownloadSuite) TestDownloadNegativeError(c *chk.C) {
@@ -610,10 +606,9 @@ func (ud *uploadDownloadSuite) TestUploadFileToAzureFileNegativeInvalidRangeSize
 	shareURL, _ := getShareURL(c, fsu)
 	fileURL, _ := getFileURLFromShare(c, shareURL)
 
-	c.Assert(
-		func() { UploadBufferToAzureFile(ctx, srcBytes, fileURL, UploadToAzureFileOptions{RangeSize: -1}) },
-		chk.Panics,
-		"o.RangeSize must be >= 0 and <= 4194304, in bytes")
+	err := UploadBufferToAzureFile(ctx, srcBytes, fileURL, UploadToAzureFileOptions{RangeSize: -1})
+	c.Assert(err, chk.NotNil)
+	c.Assert(strings.Contains(err.Error(), "o.RangeSize must be >= 0"), chk.Equals, true)
 }
 
 func (ud *uploadDownloadSuite) TestUploadFileToAzureFileNegativeInvalidRangeSize2(c *chk.C) {
@@ -623,12 +618,9 @@ func (ud *uploadDownloadSuite) TestUploadFileToAzureFileNegativeInvalidRangeSize
 	shareURL, _ := getShareURL(c, fsu)
 	fileURL, _ := getFileURLFromShare(c, shareURL)
 
-	c.Assert(
-		func() {
-			UploadBufferToAzureFile(ctx, srcBytes, fileURL, UploadToAzureFileOptions{RangeSize: FileMaxUploadRangeBytes + 1})
-		},
-		chk.Panics,
-		"o.RangeSize must be >= 0 and <= 4194304, in bytes")
+	err := UploadBufferToAzureFile(ctx, srcBytes, fileURL, UploadToAzureFileOptions{RangeSize: FileMaxUploadRangeBytes + 1})
+	c.Assert(err, chk.NotNil)
+	c.Assert(strings.Contains(err.Error(), "o.RangeSize must be >= 0 and <= 4194304, in bytes"), chk.Equals, true)
 }
 
 func (ud *uploadDownloadSuite) TestUploadFileToAzureFileNegativeInvalidLocalFile(c *chk.C) {
@@ -654,7 +646,9 @@ func (ud *uploadDownloadSuite) TestDownloadAzureFileToFileNegativeInvalidLocalFi
 
 	fileURL, _ := createNewFileFromShare(c, share, 1)
 
-	c.Assert(func() { DownloadAzureFileToFile(ctx, fileURL, nil, DownloadFromAzureFileOptions{}) }, chk.Panics, "file should not be nil")
+	_, err := DownloadAzureFileToFile(ctx, fileURL, nil, DownloadFromAzureFileOptions{})
+	c.Assert(err, chk.NotNil)
+	c.Assert(strings.Contains(err.Error(), "file can't be nil"), chk.Equals, true)
 }
 
 // Download Azure file to a larger existing file, which need overwrite and truncate

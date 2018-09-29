@@ -23,6 +23,6 @@ func (m *mmf) unmap() {
 	err := unix.Munmap(*m)
 	*m = nil
 	if err != nil {
-		panic(err)
+		sanityCheckFailed(err.Error())
 	}
 }

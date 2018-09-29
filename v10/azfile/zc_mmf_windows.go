@@ -35,6 +35,6 @@ func (m *mmf) unmap() {
 	*m = mmf{}
 	err := windows.UnmapViewOfFile(addr)
 	if err != nil {
-		panic(err)
+		sanityCheckFailed(err.Error())
 	}
 }

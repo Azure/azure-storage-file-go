@@ -2,6 +2,7 @@ package azfile
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -27,9 +28,9 @@ type FileSASSignatureValues struct {
 
 // NewSASQueryParameters uses an account's shared key credential to sign this signature values to produce
 // the proper SAS query parameters.
-func (v FileSASSignatureValues) NewSASQueryParameters(sharedKeyCredential *SharedKeyCredential) SASQueryParameters {
+func (v FileSASSignatureValues) NewSASQueryParameters(sharedKeyCredential *SharedKeyCredential) (SASQueryParameters, error) {
 	if sharedKeyCredential == nil {
-		panic("sharedKeyCredential can't be nil")
+		return SASQueryParameters{}, errors.New("sharedKeyCredential can't be nil")
 	}
 
 	resource := "s"
@@ -37,7 +38,7 @@ func (v FileSASSignatureValues) NewSASQueryParameters(sharedKeyCredential *Share
 		// Make sure the permission characters are in the correct order
 		perms := &ShareSASPermissions{}
 		if err := perms.Parse(v.Permissions); err != nil {
-			panic(err)
+			return SASQueryParameters{}, err
 		}
 		v.Permissions = perms.String()
 	} else {
@@ -45,7 +46,7 @@ func (v FileSASSignatureValues) NewSASQueryParameters(sharedKeyCredential *Share
 		// Make sure the permission characters are in the correct order
 		perms := &FileSASPermissions{}
 		if err := perms.Parse(v.Permissions); err != nil {
-			panic(err)
+			return SASQueryParameters{}, err
 		}
 		v.Permissions = perms.String()
 	}
@@ -88,7 +89,7 @@ func (v FileSASSignatureValues) NewSASQueryParameters(sharedKeyCredential *Share
 		// Calculated SAS signature
 		signature: signature,
 	}
-	return p
+	return p, nil
 }
 
 // getCanonicalName computes the canonical name for a share or file resource for SAS signing.

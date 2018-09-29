@@ -15,10 +15,8 @@ type ShareURL struct {
 }
 
 // NewShareURL creates a ShareURL object using the specified URL and request policy pipeline.
+// Note: p can't be nil.
 func NewShareURL(url url.URL, p pipeline.Pipeline) ShareURL {
-	if p == nil {
-		panic("p can't be nil")
-	}
 	shareClient := newShareClient(url, p)
 	return ShareURL{shareClient: shareClient}
 }

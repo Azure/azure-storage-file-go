@@ -13,10 +13,8 @@ type DirectoryURL struct {
 }
 
 // NewDirectoryURL creates a DirectoryURL object using the specified URL and request policy pipeline.
+// Note: p can't be nil.
 func NewDirectoryURL(url url.URL, p pipeline.Pipeline) DirectoryURL {
-	if p == nil {
-		panic("p can't be nil")
-	}
 	directoryClient := newDirectoryClient(url, p)
 	return DirectoryURL{directoryClient: directoryClient}
 }
@@ -92,9 +90,6 @@ func (o *ListFilesAndDirectoriesOptions) pointers() (prefix *string, maxResults 
 		prefix = &o.Prefix
 	}
 	if o.MaxResults != 0 {
-		if o.MaxResults < 0 {
-			panic("MaxResults must be >= 0")
-		}
 		maxResults = &o.MaxResults
 	}
 	return

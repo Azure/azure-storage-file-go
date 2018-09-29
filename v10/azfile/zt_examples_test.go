@@ -320,13 +320,16 @@ func ExampleAccountSASSignatureValues() {
 	}
 
 	// Set the desired SAS signature values and sign them with the shared key credentials to get the SAS query parameters.
-	sasQueryParams := azfile.AccountSASSignatureValues{
+	sasQueryParams, err := azfile.AccountSASSignatureValues{
 		Protocol:      azfile.SASProtocolHTTPS,              // Users MUST use HTTPS (not HTTP)
 		ExpiryTime:    time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
 		Permissions:   azfile.AccountSASPermissions{Read: true, List: true}.String(),
 		Services:      azfile.AccountSASServices{File: true}.String(),
 		ResourceTypes: azfile.AccountSASResourceTypes{Container: true, Object: true}.String(),
 	}.NewSASQueryParameters(credential)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	qp := sasQueryParams.Encode()
 	urlToSendToSomeone := fmt.Sprintf("https://%s.file.core.windows.net?%s", accountName, qp)
@@ -374,7 +377,7 @@ func ExampleFileSASSignatureValues() {
 	filePath := "mydirectory/HelloWorld.txt" // Directory and file path can be mixed case and is case insensitive
 
 	// Set the desired SAS signature values and sign them with the shared key credentials to get the SAS query parameters.
-	sasQueryParams := azfile.FileSASSignatureValues{
+	sasQueryParams, err := azfile.FileSASSignatureValues{
 		Protocol:   azfile.SASProtocolHTTPS,              // Users MUST use HTTPS (not HTTP)
 		ExpiryTime: time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
 		ShareName:  shareName,
@@ -384,6 +387,9 @@ func ExampleFileSASSignatureValues() {
 		// ShareSASPermissions and make sure the FilePath field is "" (the default).
 		Permissions: azfile.FileSASPermissions{Read: true, Write: true}.String(),
 	}.NewSASQueryParameters(credential)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create the URL of the resource you wish to access and append the SAS query parameters.
 	// Since this is a file SAS, the URL is to the Azure storage file.
@@ -484,7 +490,7 @@ func ExampleShareURL_SetQuota() {
 
 	_, err = shareURL.Create(ctx, azfile.Metadata{}, 0)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 
 	// Check current usage stats for the share.
@@ -563,7 +569,7 @@ func ExampleShareURL_CreateSnapshot() {
 
 	// Restore file from share snapshot.
 	// Create a SAS.
-	sasQueryParams := azfile.FileSASSignatureValues{
+	sasQueryParams, err := azfile.FileSASSignatureValues{
 		Protocol:   azfile.SASProtocolHTTPS,              // Users MUST use HTTPS (not HTTP)
 		ExpiryTime: time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
 		ShareName:  shareName,
@@ -572,6 +578,9 @@ func ExampleShareURL_CreateSnapshot() {
 		// ShareSASPermissions and make sure the DirectoryAndFilePath field is "" (the default).
 		Permissions: azfile.ShareSASPermissions{Read: true, Write: true}.String(),
 	}.NewSASQueryParameters(credential)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Build a file snapshot URL.
 	fileParts := azfile.NewFileURLParts(fileURL.URL())
@@ -609,7 +618,7 @@ func ExampleFileURL() {
 
 	_, err = shareURL.Create(ctx, azfile.Metadata{}, 0)
 	if err != nil && err.(azfile.StorageError) != nil && err.(azfile.StorageError).ServiceCode() != azfile.ServiceCodeShareAlreadyExists {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	// Create a FileURL object with a default pipeline.

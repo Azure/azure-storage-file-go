@@ -42,10 +42,6 @@ func (s *ShareURLSuite) TestShareCreateDirectoryURL(c *chk.C) {
 	c.Assert(testURL.String(), chk.Equals, correctURL)
 }
 
-func (s *ShareURLSuite) TestShareNewShareURLNegative(c *chk.C) {
-	c.Assert(func() { azfile.NewShareURL(url.URL{}, nil) }, chk.Panics, "p can't be nil")
-}
-
 func (s *ShareURLSuite) TestShareWithNewPipeline(c *chk.C) {
 	fsu := getFSU()
 	pipeline := testPipeline{}
@@ -664,7 +660,7 @@ func (s *ShareURLSuite) TestShareCreateSnapshotDefault(c *chk.C) {
 
 	// Restore file from share snapshot.
 	// Create a SAS.
-	sasQueryParams := azfile.FileSASSignatureValues{
+	sasQueryParams, err := azfile.FileSASSignatureValues{
 		Protocol:   azfile.SASProtocolHTTPS,              // Users MUST use HTTPS (not HTTP)
 		ExpiryTime: time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
 		ShareName:  shareName,
@@ -673,6 +669,7 @@ func (s *ShareURLSuite) TestShareCreateSnapshotDefault(c *chk.C) {
 		// ShareSASPermissions and make sure the DirectoryAndFilePath field is "" (the default).
 		Permissions: azfile.ShareSASPermissions{Read: true, Write: true}.String(),
 	}.NewSASQueryParameters(credential)
+	c.Assert(err, chk.IsNil)
 
 	// Build a file snapshot URL.
 	fileParts := azfile.NewFileURLParts(fileURL.URL())
