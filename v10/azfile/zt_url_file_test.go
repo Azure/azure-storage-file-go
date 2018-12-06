@@ -753,11 +753,22 @@ func (f *FileURLSuite) TestServiceSASFileSAS(c *chk.C) {
 
 	credential, accountName := getCredential()
 
+	cacheControlVal := "cache-control-override"
+	contentDispositionVal := "content-disposition-override"
+	contentEncodingVal := "content-encoding-override"
+	contentLanguageVal := "content-language-override"
+	contentTypeVal := "content-type-override"
+
 	sasQueryParams, err := azfile.FileSASSignatureValues{
-		Protocol:    azfile.SASProtocolHTTPS,
-		ExpiryTime:  time.Now().UTC().Add(48 * time.Hour),
-		ShareName:   shareName,
-		Permissions: azfile.FileSASPermissions{Create: true, Read: true, Write: true, Delete: true}.String(),
+		Protocol:           azfile.SASProtocolHTTPS,
+		ExpiryTime:         time.Now().UTC().Add(48 * time.Hour),
+		ShareName:          shareName,
+		Permissions:        azfile.FileSASPermissions{Create: true, Read: true, Write: true, Delete: true}.String(),
+		CacheControl:       cacheControlVal,
+		ContentDisposition: contentDispositionVal,
+		ContentEncoding:    contentEncodingVal,
+		ContentLanguage:    contentLanguageVal,
+		ContentType:        contentTypeVal,
 	}.NewSASQueryParameters(credential)
 	c.Assert(err, chk.IsNil)
 
@@ -775,8 +786,13 @@ func (f *FileURLSuite) TestServiceSASFileSAS(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	_, err = fileURL.UploadRange(ctx, 0, bytes.NewReader([]byte(s)), nil)
 	c.Assert(err, chk.IsNil)
-	_, err = fileURL.Download(ctx, 0, azfile.CountToEnd, false)
+	dResp, err := fileURL.Download(ctx, 0, azfile.CountToEnd, false)
 	c.Assert(err, chk.IsNil)
+	c.Assert(dResp.CacheControl(), chk.Equals, cacheControlVal)
+	c.Assert(dResp.ContentDisposition(), chk.Equals, contentDispositionVal)
+	c.Assert(dResp.ContentEncoding(), chk.Equals, contentEncodingVal)
+	c.Assert(dResp.ContentLanguage(), chk.Equals, contentLanguageVal)
+	c.Assert(dResp.ContentType(), chk.Equals, contentTypeVal)
 	_, err = fileURL.Delete(ctx)
 	c.Assert(err, chk.IsNil)
 }
