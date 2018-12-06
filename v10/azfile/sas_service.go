@@ -83,8 +83,13 @@ func (v FileSASSignatureValues) NewSASQueryParameters(sharedKeyCredential *Share
 		ipRange:     v.IPRange,
 
 		// Share/File-specific SAS parameters
-		resource:   resource,
-		identifier: v.Identifier,
+		resource:           resource,
+		identifier:         v.Identifier,
+		cacheControl:       v.CacheControl,
+		contentDisposition: v.ContentDisposition,
+		contentEncoding:    v.ContentEncoding,
+		contentLanguage:    v.ContentLanguage,
+		contentType:        v.ContentType,
 
 		// Calculated SAS signature
 		signature: signature,
