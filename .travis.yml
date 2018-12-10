@@ -1,10 +1,9 @@
 language: go
 go:
-- "1.10"
 - "1.11"
 script:
 - export GO111MODULE=on
-- cd ./v10/azfile
+- cd ./azfile
 - GOOS=linux go build
 - GOOS=darwin go build
 - GOOS=windows go build
