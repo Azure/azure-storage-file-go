@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
-	"github.com/Azure/azure-storage-file-go/v10/azfile"
+	"github.com/Azure/azure-storage-file-go/azfile"
 )
 
 // Please set environment variable ACCOUNT_NAME and ACCOUNT_KEY to your storage accout name and account key,

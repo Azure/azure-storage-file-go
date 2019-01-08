@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-storage-file-go/v10/azfile"
+	"github.com/Azure/azure-storage-file-go/azfile"
 	chk "gopkg.in/check.v1" // go get gopkg.in/check.v1
 )
 
