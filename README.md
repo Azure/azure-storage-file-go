@@ -18,7 +18,7 @@ This repository contains the open source File SDK for Go.
     * Dep: add ```github.com/Azure/azure-storage-file-go``` to Gopkg.toml:
         ```
         [[constraint]]
-          version = "0.4.0"
+          version = "0.4.1"
           name = "github.com/Azure/azure-storage-file-go"
         ```
     * Module: simply import the SDK and Go will download it for you
@@ -31,9 +31,9 @@ This repository contains the open source File SDK for Go.
 | Service Version | Corresponding SDK Version | Import Path                                              |
 |-----------------|---------------------------|----------------------------------------------------------|
 | 2017-07-29      | 0.3.0                     | github.com/Azure/azure-storage-file-go/2017-07-29/azfile |
-| 2018-03-28      | 0.4.0+                    | github.com/Azure/azure-storage-file-go/azfile            |
+| 2018-03-28      | 0.4.1+                    | github.com/Azure/azure-storage-file-go/azfile            |
 
-Note: the directory structure of the SDK has changed dramatically since 0.4.0. The different Service Versions are no longer sub-directories;
+Note: the directory structure of the SDK has changed dramatically since 0.4.1. The different Service Versions are no longer sub-directories;
 the latest `azfile` is directly under the root directory. In the future, each new Service Version will be introduced with a new major semantic version.
 	
 

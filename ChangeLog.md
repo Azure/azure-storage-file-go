@@ -2,6 +2,9 @@
 
 > See [BreakingChanges](BreakingChanges.md) for a detailed list of API breaks.
 
+## Version 0.4.1:
+- Updated module settings.
+
 ## Version 0.4.0:
 - [Breaking] Upgraded service version to 2018-03-28. Upgraded to latest protocol layer's models.
 - [Breaking] Optimized error reporting and minimized panics. Removed most panics from the library. Several functions now return an error.
