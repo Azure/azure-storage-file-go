@@ -2,20 +2,43 @@
 
 
 [[projects]]
+  digest = "1:d2ccb697dc13c8fbffafa37baae97594d5592ae8f7e113471084137315536e2b"
   name = "github.com/Azure/azure-pipeline-go"
   packages = ["pipeline"]
-  revision = "7571e8eb0876932ab505918ff7ed5107773e5ee2"
-  version = "0.1.7"
+  pruneopts = "UT"
+  revision = "b8e3409182fd52e74f7d7bdfbff5833591b3b655"
+  version = "v0.1.8"
+
+[[projects]]
+  digest = "1:ca955a9cd5b50b0f43d2cc3aeb35c951473eeca41b34eb67507f1dbcc0542394"
+  name = "github.com/kr/pretty"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "73f6ac0b30a98e433b289500d779f50c1a6f0712"
+  version = "v0.1.0"
+
+[[projects]]
+  digest = "1:15b5cc79aad436d47019f814fde81a10221c740dc8ddf769221a65097fb6c2e9"
+  name = "github.com/kr/text"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e2ffdb16a802fe2bb95e2e35ff34f0e53aeef34f"
+  version = "v0.1.0"
 
 [[projects]]
   branch = "v1"
+  digest = "1:af715ae33cc1f5695c4b2a4e4b21d008add8802a99e15bb467ac7c32edb5000d"
   name = "gopkg.in/check.v1"
   packages = ["."]
-  revision = "20d25e2804050c1cd24a7eea1e7a6447dd0e74ec"
+  pruneopts = "UT"
+  revision = "788fd78401277ebd861206a03c884797c6ec5541"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4ec9e5afc79fe4ee4cda3c29eb54ef0c821cff794515fd5aa72aad36f6501428"
+  input-imports = [
+    "github.com/Azure/azure-pipeline-go/pipeline",
+    "gopkg.in/check.v1",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
