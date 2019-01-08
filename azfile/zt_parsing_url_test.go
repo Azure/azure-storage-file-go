@@ -177,3 +177,118 @@ func (s *ParsingURLSuite) TestFileURLPartsWithSnapshotAndSAS(c *chk.C) {
 		"?" + "sharesnapshot=" + currentTime.Format("2006-01-02T15:04:05.0000000Z07:00") + "&" + sasQueryParams.Encode()
 	c.Assert(testURL.String(), chk.Equals, correctURL)
 }
+
+func (s *ParsingURLSuite) TestFileURLPartsStSe(c *chk.C) {
+	u, _ := url.Parse("https://myaccount.file.core.windows.net/myshare/mydirectory/ReadMe.txt?" +
+		"sharesnapshot=2018-03-08T02:29:11.0000000Z&" +
+		"sv=2015-02-21&sr=b&st=2111-01-09T01:42:34.936Z&se=2222-03-09T01:42:34.936Z&sp=rw&sip=168.1.5.60-168.1.5.70&" +
+		"spr=https,http&si=myIdentifier&ss=bf&srt=s&sig=92836758923659283652983562==")
+
+	parts := azfile.NewFileURLParts(*u)
+	c.Assert(parts.Host, chk.Equals, "myaccount.file.core.windows.net")
+	c.Assert(parts.ShareName, chk.Equals, "myshare")
+	c.Assert(parts.DirectoryOrFilePath, chk.Equals, "mydirectory/ReadMe.txt")
+	c.Assert(parts.ShareSnapshot, chk.Equals, "2018-03-08T02:29:11.0000000Z")
+
+	sas := parts.SAS
+	c.Assert(sas.Version(), chk.Equals, "2015-02-21")
+	c.Assert(sas.Resource(), chk.Equals, "b")
+	c.Assert(sas.StartTime().String(), chk.Equals, "2111-01-09 01:42:34.936 +0000 UTC")
+	c.Assert(sas.ExpiryTime().String(), chk.Equals, "2222-03-09 01:42:34.936 +0000 UTC")
+	c.Assert(sas.Permissions(), chk.Equals, "rw")
+	ipRange := sas.IPRange()
+	c.Assert(ipRange.String(), chk.Equals, "168.1.5.60-168.1.5.70")
+	c.Assert(string(sas.Protocol()), chk.Equals, "https,http")
+	c.Assert(sas.Identifier(), chk.Equals, "myIdentifier")
+	c.Assert(sas.Services(), chk.Equals, "bf")
+	c.Assert(sas.ResourceTypes(), chk.Equals, "s")
+	c.Assert(sas.Signature(), chk.Equals, "92836758923659283652983562==")
+
+	uResult := parts.URL()
+	c.Assert(uResult.String(), chk.Equals, "https://myaccount.file.core.windows.net/myshare/mydirectory/ReadMe.txt?sharesnapshot=2018-03-08T02:29:11.0000000Z&se=2222-03-09T01%3A42%3A34Z&si=myIdentifier&sig=92836758923659283652983562%3D%3D&sip=168.1.5.60-168.1.5.70&sp=rw&spr=https%2Chttp&sr=b&srt=s&ss=bf&st=2111-01-09T01%3A42%3A34Z&sv=2015-02-21")
+
+	u2, _ := url.Parse("https://myaccount.file.core.windows.net/myshare/mydirectory/ReadMe.txt?" +
+		"sharesnapshot=2018-03-08T02:29:11.0000000Z&" +
+		"sv=2015-02-21&sr=b&st=2111-01-09T01:42Z&se=2222-03-09T01:42Z&sp=rw&sip=168.1.5.60-168.1.5.70&" +
+		"spr=https,http&si=myIdentifier&ss=bf&srt=s&sig=92836758923659283652983562==")
+
+	parts = azfile.NewFileURLParts(*u2)
+	c.Assert(parts.Host, chk.Equals, "myaccount.file.core.windows.net")
+	c.Assert(parts.ShareName, chk.Equals, "myshare")
+	c.Assert(parts.DirectoryOrFilePath, chk.Equals, "mydirectory/ReadMe.txt")
+	c.Assert(parts.ShareSnapshot, chk.Equals, "2018-03-08T02:29:11.0000000Z")
+
+	sas = parts.SAS
+	c.Assert(sas.Version(), chk.Equals, "2015-02-21")
+	c.Assert(sas.Resource(), chk.Equals, "b")
+	c.Assert(sas.StartTime().String(), chk.Equals, "2111-01-09 01:42:00 +0000 UTC")
+	c.Assert(sas.ExpiryTime().String(), chk.Equals, "2222-03-09 01:42:00 +0000 UTC")
+	c.Assert(sas.Permissions(), chk.Equals, "rw")
+	ipRange = sas.IPRange()
+	c.Assert(ipRange.String(), chk.Equals, "168.1.5.60-168.1.5.70")
+	c.Assert(string(sas.Protocol()), chk.Equals, "https,http")
+	c.Assert(sas.Identifier(), chk.Equals, "myIdentifier")
+	c.Assert(sas.Services(), chk.Equals, "bf")
+	c.Assert(sas.ResourceTypes(), chk.Equals, "s")
+	c.Assert(sas.Signature(), chk.Equals, "92836758923659283652983562==")
+
+	uResult = parts.URL()
+	c.Assert(uResult.String(), chk.Equals, "https://myaccount.file.core.windows.net/myshare/mydirectory/ReadMe.txt?sharesnapshot=2018-03-08T02:29:11.0000000Z&se=2222-03-09T01%3A42Z&si=myIdentifier&sig=92836758923659283652983562%3D%3D&sip=168.1.5.60-168.1.5.70&sp=rw&spr=https%2Chttp&sr=b&srt=s&ss=bf&st=2111-01-09T01%3A42Z&sv=2015-02-21")
+
+	u3, _ := url.Parse("https://myaccount.file.core.windows.net/myshare/mydirectory/ReadMe.txt?" +
+		"sharesnapshot=2018-03-08T02:29:11.0000000Z&" +
+		"sv=2015-02-21&sr=b&st=2111-01-09&se=2222-03-09&sp=rw&sip=168.1.5.60-168.1.5.70&" +
+		"spr=https,http&si=myIdentifier&ss=bf&srt=s&sig=92836758923659283652983562==")
+
+	parts = azfile.NewFileURLParts(*u3)
+	c.Assert(parts.Host, chk.Equals, "myaccount.file.core.windows.net")
+	c.Assert(parts.ShareName, chk.Equals, "myshare")
+	c.Assert(parts.DirectoryOrFilePath, chk.Equals, "mydirectory/ReadMe.txt")
+	c.Assert(parts.ShareSnapshot, chk.Equals, "2018-03-08T02:29:11.0000000Z")
+
+	sas = parts.SAS
+	c.Assert(sas.Version(), chk.Equals, "2015-02-21")
+	c.Assert(sas.Resource(), chk.Equals, "b")
+	c.Assert(sas.StartTime().String(), chk.Equals, "2111-01-09 00:00:00 +0000 UTC")
+	c.Assert(sas.ExpiryTime().String(), chk.Equals, "2222-03-09 00:00:00 +0000 UTC")
+	c.Assert(sas.Permissions(), chk.Equals, "rw")
+	ipRange = sas.IPRange()
+	c.Assert(ipRange.String(), chk.Equals, "168.1.5.60-168.1.5.70")
+	c.Assert(string(sas.Protocol()), chk.Equals, "https,http")
+	c.Assert(sas.Identifier(), chk.Equals, "myIdentifier")
+	c.Assert(sas.Services(), chk.Equals, "bf")
+	c.Assert(sas.ResourceTypes(), chk.Equals, "s")
+	c.Assert(sas.Signature(), chk.Equals, "92836758923659283652983562==")
+
+	uResult = parts.URL()
+	c.Assert(uResult.String(), chk.Equals, "https://myaccount.file.core.windows.net/myshare/mydirectory/ReadMe.txt?sharesnapshot=2018-03-08T02:29:11.0000000Z&se=2222-03-09&si=myIdentifier&sig=92836758923659283652983562%3D%3D&sip=168.1.5.60-168.1.5.70&sp=rw&spr=https%2Chttp&sr=b&srt=s&ss=bf&st=2111-01-09&sv=2015-02-21")
+
+	// Hybrid format
+	u4, _ := url.Parse("https://myaccount.file.core.windows.net/myshare/mydirectory/ReadMe.txt?" +
+		"sharesnapshot=2018-03-08T02:29:11.0000000Z&" +
+		"sv=2015-02-21&sr=b&st=2111-01-09T01:42Z&se=2222-03-09&sp=rw&sip=168.1.5.60-168.1.5.70&" +
+		"spr=https,http&si=myIdentifier&ss=bf&srt=s&sig=92836758923659283652983562==")
+
+	parts = azfile.NewFileURLParts(*u4)
+	c.Assert(parts.Host, chk.Equals, "myaccount.file.core.windows.net")
+	c.Assert(parts.ShareName, chk.Equals, "myshare")
+	c.Assert(parts.DirectoryOrFilePath, chk.Equals, "mydirectory/ReadMe.txt")
+	c.Assert(parts.ShareSnapshot, chk.Equals, "2018-03-08T02:29:11.0000000Z")
+
+	sas = parts.SAS
+	c.Assert(sas.Version(), chk.Equals, "2015-02-21")
+	c.Assert(sas.Resource(), chk.Equals, "b")
+	c.Assert(sas.StartTime().String(), chk.Equals, "2111-01-09 01:42:00 +0000 UTC")
+	c.Assert(sas.ExpiryTime().String(), chk.Equals, "2222-03-09 00:00:00 +0000 UTC")
+	c.Assert(sas.Permissions(), chk.Equals, "rw")
+	ipRange = sas.IPRange()
+	c.Assert(ipRange.String(), chk.Equals, "168.1.5.60-168.1.5.70")
+	c.Assert(string(sas.Protocol()), chk.Equals, "https,http")
+	c.Assert(sas.Identifier(), chk.Equals, "myIdentifier")
+	c.Assert(sas.Services(), chk.Equals, "bf")
+	c.Assert(sas.ResourceTypes(), chk.Equals, "s")
+	c.Assert(sas.Signature(), chk.Equals, "92836758923659283652983562==")
+
+	uResult = parts.URL()
+	c.Assert(uResult.String(), chk.Equals, "https://myaccount.file.core.windows.net/myshare/mydirectory/ReadMe.txt?sharesnapshot=2018-03-08T02:29:11.0000000Z&se=2222-03-09&si=myIdentifier&sig=92836758923659283652983562%3D%3D&sip=168.1.5.60-168.1.5.70&sp=rw&spr=https%2Chttp&sr=b&srt=s&ss=bf&st=2111-01-09T01%3A42Z&sv=2015-02-21")
+}

@@ -25,17 +25,42 @@ const (
 func FormatTimesForSASSigning(startTime, expiryTime time.Time) (string, string) {
 	ss := ""
 	if !startTime.IsZero() {
-		ss = startTime.Format(SASTimeFormat) // "yyyy-MM-ddTHH:mm:ssZ"
+		ss = formatSASTimeWithDefaultFormat(&startTime)
 	}
 	se := ""
 	if !expiryTime.IsZero() {
-		se = expiryTime.Format(SASTimeFormat) // "yyyy-MM-ddTHH:mm:ssZ"
+		se = formatSASTimeWithDefaultFormat(&expiryTime)
 	}
 	return ss, se
 }
 
-// SASTimeFormat represents the format of a SAS start or expiry time. Use it when formatting/parsing a time.Time.
-const SASTimeFormat = "2006-01-02T15:04:05Z" //"2017-07-27T00:00:00Z" // ISO 8601
+// SASTimeFormats represents the format of a SAS start or expiry time. Use it when formatting/parsing a time.Time.
+var SASTimeFormats = []string{"2006-01-02T15:04:05Z", "2006-01-02T15:04Z", "2006-01-02"} //"2017-07-27T00:00:00Z" // ISO 8601 https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-a-service-sas
+
+// formatSASTimeWithDefaultFormat format time with ISO 8601 in "yyyy-MM-ddTHH:mm:ssZ".
+func formatSASTimeWithDefaultFormat(t *time.Time) string {
+	return formatSASTime(t, SASTimeFormats[0]) // By default, "yyyy-MM-ddTHH:mm:ssZ" is used
+}
+
+// formatSASTime format time with given format, use ISO 8601 in "yyyy-MM-ddTHH:mm:ssZ" by default.
+func formatSASTime(t *time.Time, format string) string {
+	if format != "" {
+		return t.Format(format)
+	}
+	return t.Format(SASTimeFormats[0]) // By default, "yyyy-MM-ddTHH:mm:ssZ" is used
+}
+
+// parseSASTimeString try to parse sas time string.
+func parseSASTimeString(val string) (t time.Time, timeFormat string, err error) {
+	for _, sasTimeFormat := range SASTimeFormats {
+		t, err = time.Parse(sasTimeFormat, val)
+		if err == nil {
+			timeFormat = sasTimeFormat
+			break
+		}
+	}
+	return
+}
 
 // https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-a-service-sas
 
@@ -63,6 +88,10 @@ type SASQueryParameters struct {
 	contentEncoding    string      `param:"rsce"`
 	contentLanguage    string      `param:"rscl"`
 	contentType        string      `param:"rsct"`
+
+	// private member used for startTime and expiryTime formatting.
+	stTimeFormat string
+	seTimeFormat string
 }
 
 func (p *SASQueryParameters) Version() string {
@@ -161,9 +190,9 @@ func newSASQueryParameters(values url.Values, deleteSASParametersFromValues bool
 		case "spr":
 			p.protocol = SASProtocol(val)
 		case "st":
-			p.startTime, _ = time.Parse(SASTimeFormat, val)
+			p.startTime, p.stTimeFormat, _ = parseSASTimeString(val)
 		case "se":
-			p.expiryTime, _ = time.Parse(SASTimeFormat, val)
+			p.expiryTime, p.seTimeFormat, _ = parseSASTimeString(val)
 		case "sip":
 			dashIndex := strings.Index(val, "-")
 			if dashIndex == -1 {
@@ -215,10 +244,10 @@ func (p *SASQueryParameters) addToValues(v url.Values) url.Values {
 		v.Add("spr", string(p.protocol))
 	}
 	if !p.startTime.IsZero() {
-		v.Add("st", p.startTime.Format(SASTimeFormat))
+		v.Add("st", formatSASTime(&(p.startTime), p.stTimeFormat))
 	}
 	if !p.expiryTime.IsZero() {
-		v.Add("se", p.expiryTime.Format(SASTimeFormat))
+		v.Add("se", formatSASTime(&(p.expiryTime), p.seTimeFormat))
 	}
 	if len(p.ipRange.Start) > 0 {
 		v.Add("sip", p.ipRange.String())
