@@ -1,6 +1,7 @@
 package azfile
 
 import (
+	"errors"
 	"net"
 	"net/url"
 	"strings"
@@ -35,7 +36,7 @@ func FormatTimesForSASSigning(startTime, expiryTime time.Time) (string, string) 
 }
 
 // SASTimeFormats represents the format of a SAS start or expiry time. Use it when formatting/parsing a time.Time.
-var SASTimeFormats = []string{"2006-01-02T15:04:05Z", "2006-01-02T15:04Z", "2006-01-02"} //"2017-07-27T00:00:00Z" // ISO 8601 https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-a-service-sas
+var SASTimeFormats = []string{"2006-01-02T15:04:05Z", "2006-01-02T15:04Z", "2006-01-02"} // ISO 8601 formats, please refer to https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-a-service-sas for more details.
 
 // formatSASTimeWithDefaultFormat format time with ISO 8601 in "yyyy-MM-ddTHH:mm:ssZ".
 func formatSASTimeWithDefaultFormat(t *time.Time) string {
@@ -59,6 +60,11 @@ func parseSASTimeString(val string) (t time.Time, timeFormat string, err error) 
 			break
 		}
 	}
+
+	if err != nil {
+		err = errors.New("fail to parse time with IOS 8601 formats, please refer to https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-a-service-sas for more details")
+	}
+
 	return
 }
 
