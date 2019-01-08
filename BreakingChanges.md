@@ -4,5 +4,5 @@
 
 ## Version 0.4.0:
 - Upgraded service version to 2018-03-28. Upgraded to latest protocol layer's models.
-- Optimize error reporting and minimize panics. Removed most panics from the library. Several functions now return an error.
-- Removed 2017 service versions.
+- Optimized error reporting and minimized panics. Removed most panics from the library. Several functions now return an error.
+- Removed 2017 service version.
