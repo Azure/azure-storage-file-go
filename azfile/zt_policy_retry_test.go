@@ -122,4 +122,5 @@ func (s *policyRetrySuite) TestExponentialRetry(c *chk.C) {
 	c.Assert(strings.Contains(str, "Try=3"), chk.Equals, true) // Min: 0.64 * 3 = 1.92
 	c.Assert(strings.Contains(str, "Try=4"), chk.Equals, true)
 	c.Assert(strings.Contains(str, "try=4, Delay=2s"), chk.Equals, true) // Min: 0.512 * 7 = 3.584
+	// TODO add assertion here about minimum time taken
 }
