@@ -166,7 +166,8 @@ func NewRetryPolicyFactory(o RetryOptions) pipeline.Factory {
 					sanityCheckFailed(err.Error())
 				}
 				if !tryingPrimary {
-					requestCopy.Request.URL.Host = o.retryReadsFromSecondaryHost()
+					requestCopy.URL.Host = o.retryReadsFromSecondaryHost()
+					requestCopy.Host = o.retryReadsFromSecondaryHost()
 				}
 
 				// Set the server-side timeout query parameter "timeout=[seconds]"
