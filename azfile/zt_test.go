@@ -89,15 +89,20 @@ func getCredential() (*azfile.SharedKeyCredential, string) {
 // them, and determine the order in which they were created.
 // Note that this imposes a restriction on the length of test names
 func generateName(prefix string) string {
-	// These next lines up through the for loop are obtaining and walking up the stack
-	// trace to extrat the test name, which is stored in name
-	pc := make([]uintptr, 10)
-	runtime.Callers(0, pc)
-	f := runtime.FuncForPC(pc[0])
-	name := f.Name()
-	for i := 0; !strings.Contains(name, "Suite"); i++ { // The tests are all scoped to the suite, so this ensures getting the actual test name
-		f = runtime.FuncForPC(pc[i])
-		name = f.Name()
+	// The following lines step up the stack find the name of the test method
+	// Note: the way to do this changed in go 1.12, refer to release notes for more info
+	var pcs [10]uintptr
+	n := runtime.Callers(1, pcs[:])
+	frames := runtime.CallersFrames(pcs[:n])
+	name := "TestFoo" // default stub "Foo" is used if anything goes wrong with this procedure
+	for {
+		frame, more := frames.Next()
+		if strings.Contains(frame.Func.Name(), "Suite") {
+			name = frame.Func.Name()
+			break
+		} else if !more {
+			break
+		}
 	}
 	funcNameStart := strings.Index(name, "Test")
 	name = name[funcNameStart+len("Test"):] // Just get the name of the test and not any of the garbage at the beginning
