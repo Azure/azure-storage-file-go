@@ -2,6 +2,11 @@
 
 > See [BreakingChanges](BreakingChanges.md) for a detailed list of API breaks.
 
+## Version 0.5.0:
+- Align jitter calculations exactly to blob SDK
+- General secondary host improvements
+- Log error body
+
 ## Version 0.4.1:
 - Updated module settings.
 

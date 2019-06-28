@@ -2,12 +2,12 @@
 
 
 [[projects]]
-  digest = "1:d2ccb697dc13c8fbffafa37baae97594d5592ae8f7e113471084137315536e2b"
+  digest = "1:602649ff074ccee9273e1d3b25c4069f13a70fa0c232957c7d68a6f02fb7a9ea"
   name = "github.com/Azure/azure-pipeline-go"
   packages = ["pipeline"]
   pruneopts = "UT"
-  revision = "b8e3409182fd52e74f7d7bdfbff5833591b3b655"
-  version = "v0.1.8"
+  revision = "105d6349faa1dec531c0b932b5863540c1f6aafb"
+  version = "v0.2.1"
 
 [[projects]]
   digest = "1:ca955a9cd5b50b0f43d2cc3aeb35c951473eeca41b34eb67507f1dbcc0542394"
@@ -26,6 +26,62 @@
   version = "v0.1.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:f1df16c368a97edecc18c8c061c278cb6a342450bb83d5da4738e5b330abd522"
+  name = "github.com/mattn/go-ieproxy"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "91bb50d981495aef1c208d31be3d77d904384f20"
+
+[[projects]]
+  branch = "master"
+  digest = "1:eed34f58b48a40c48d4072fdbe70b8c8992875539d193fca02f7a8cdcd99663f"
+  name = "golang.org/x/net"
+  packages = [
+    "http/httpproxy",
+    "idna",
+  ]
+  pruneopts = "UT"
+  revision = "da137c7871d730100384dbcf36e6f8fa493aef5b"
+
+[[projects]]
+  branch = "master"
+  digest = "1:2c770d8251a8a2127b648f57602d75c8e40457ba070b57b38176013472f31326"
+  name = "golang.org/x/sys"
+  packages = [
+    "unix",
+    "windows",
+    "windows/registry",
+  ]
+  pruneopts = "UT"
+  revision = "04f50cda93cbb67f2afa353c52f342100e80e625"
+
+[[projects]]
+  digest = "1:8d8faad6b12a3a4c819a3f9618cb6ee1fa1cfc33253abeeea8b55336721e3405"
+  name = "golang.org/x/text"
+  packages = [
+    "collate",
+    "collate/build",
+    "internal/colltab",
+    "internal/gen",
+    "internal/language",
+    "internal/language/compact",
+    "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
+    "language",
+    "secure/bidirule",
+    "transform",
+    "unicode/bidi",
+    "unicode/cldr",
+    "unicode/norm",
+    "unicode/rangetable",
+  ]
+  pruneopts = "UT"
+  revision = "342b2e1fbaa52c93f31447ad2c6abc048c63e475"
+  version = "v0.3.2"
+
+[[projects]]
   branch = "v1"
   digest = "1:af715ae33cc1f5695c4b2a4e4b21d008add8802a99e15bb467ac7c32edb5000d"
   name = "gopkg.in/check.v1"
@@ -38,6 +94,8 @@
   analyzer-version = 1
   input-imports = [
     "github.com/Azure/azure-pipeline-go/pipeline",
+    "golang.org/x/sys/unix",
+    "golang.org/x/sys/windows",
     "gopkg.in/check.v1",
   ]
   solver-name = "gps-cdcl"
