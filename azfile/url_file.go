@@ -59,9 +59,10 @@ func (f FileURL) WithSnapshot(shareSnapshot string) FileURL {
 // Create creates a new file or replaces a file. Note that this method only initializes the file.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/create-file.
 func (f FileURL) Create(ctx context.Context, size int64, h FileHTTPHeaders, metadata Metadata) (*FileCreateResponse, error) {
-	return f.fileClient.Create(ctx, size, nil,
+	defaultPermissions := "inherit"
+	return f.fileClient.Create(ctx, size, "None", "now", "now", nil,
 		&h.ContentType, &h.ContentEncoding, &h.ContentLanguage, &h.CacheControl,
-		h.ContentMD5, &h.ContentDisposition, metadata)
+		h.ContentMD5, &h.ContentDisposition, metadata, &defaultPermissions, nil)
 }
 
 // StartCopy copies the data at the source URL to a file.
@@ -83,7 +84,7 @@ func (f FileURL) AbortCopy(ctx context.Context, copyID string) (*FileAbortCopyRe
 // If count is CountToEnd (0), then data is read from specified offset to the end.
 // rangeGetContentMD5 only works with partial data downloading.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/get-file.
-func (f FileURL) Download(ctx context.Context, offset int64, count int64, rangeGetContentMD5 bool) (*DownloadResponse, error) {
+func (f FileURL) Download(ctx context.Context, offset int64, count int64, rangeGetContentMD5 bool) (*RetryableDownloadResponse, error) {
 	var xRangeGetContentMD5 *bool
 	if rangeGetContentMD5 {
 		if offset == 0 && count == CountToEnd {
@@ -96,7 +97,7 @@ func (f FileURL) Download(ctx context.Context, offset int64, count int64, rangeG
 		return nil, err
 	}
 
-	return &DownloadResponse{
+	return &RetryableDownloadResponse{
 		f:    f,
 		dr:   dr,
 		ctx:  ctx,
@@ -106,7 +107,7 @@ func (f FileURL) Download(ctx context.Context, offset int64, count int64, rangeG
 
 // Body constructs a stream to read data from with a resilient reader option.
 // A zero-value option means to get a raw stream.
-func (dr *DownloadResponse) Body(o RetryReaderOptions) io.ReadCloser {
+func (dr *RetryableDownloadResponse) Body(o RetryReaderOptions) io.ReadCloser {
 	if o.MaxRetryRequests == 0 {
 		return dr.Response().Body
 	}
@@ -140,8 +141,10 @@ func (f FileURL) GetProperties(ctx context.Context) (*FileGetPropertiesResponse,
 // SetHTTPHeaders sets file's system properties.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-file-properties.
 func (f FileURL) SetHTTPHeaders(ctx context.Context, h FileHTTPHeaders) (*FileSetHTTPHeadersResponse, error) {
-	return f.fileClient.SetHTTPHeaders(ctx, nil,
-		nil, &h.ContentType, &h.ContentEncoding, &h.ContentLanguage, &h.CacheControl, h.ContentMD5, &h.ContentDisposition)
+	defaultPermissions := "preserve"
+	return f.fileClient.SetHTTPHeaders(ctx, "preserve", "preserve", "preserve", nil,
+		nil, &h.ContentType, &h.ContentEncoding, &h.ContentLanguage, &h.CacheControl, h.ContentMD5,
+		&h.ContentDisposition, &defaultPermissions, nil)
 }
 
 // SetMetadata sets a file's metadata.
@@ -153,8 +156,10 @@ func (f FileURL) SetMetadata(ctx context.Context, metadata Metadata) (*FileSetMe
 // Resize resizes the file to the specified size.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-file-properties.
 func (f FileURL) Resize(ctx context.Context, length int64) (*FileSetHTTPHeadersResponse, error) {
-	return f.fileClient.SetHTTPHeaders(ctx, nil,
-		&length, nil, nil, nil, nil, nil, nil)
+	defaultPermissions := "preserve"
+	return f.fileClient.SetHTTPHeaders(ctx, "preserve", "preserve", "preserve", nil,
+		&length, nil, nil, nil, nil,
+		nil, nil, &defaultPermissions, nil)
 }
 
 // UploadRange writes bytes to a file.

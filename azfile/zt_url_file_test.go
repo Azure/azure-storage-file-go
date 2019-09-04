@@ -1098,7 +1098,7 @@ func (s *FileURLSuite) TestFileUploadRangeTransactionalMD5(c *chk.C) {
 	c.Assert(pResp.ContentMD5(), chk.DeepEquals, md5[:])
 
 	// Upload range with empty MD5, nil MD5 is covered by other cases.
-	pResp, err = fileURL.UploadRange(context.Background(), 1024, bytes.NewReader(contentD[1024:]), []byte{})
+	pResp, err = fileURL.UploadRange(context.Background(), 1024, bytes.NewReader(contentD[1024:]), nil)
 	c.Assert(err, chk.IsNil)
 	c.Assert(pResp.ContentMD5(), chk.NotNil)
 	c.Assert(pResp.StatusCode(), chk.Equals, http.StatusCreated)
