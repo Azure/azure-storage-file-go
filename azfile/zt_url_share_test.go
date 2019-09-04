@@ -741,7 +741,6 @@ func (s *ShareURLSuite) TestShareDeleteSnapshot(c *chk.C) {
 func (s *ShareURLSuite) TestShareDeleteSnapshotsInclude(c *chk.C) {
 	fsu := getFSU()
 	share, shareName := createNewShare(c, fsu)
-	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
 
 	_, err := share.CreateSnapshot(ctx, nil)
 	c.Assert(err, chk.IsNil)
