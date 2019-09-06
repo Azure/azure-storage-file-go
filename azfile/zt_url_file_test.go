@@ -1162,7 +1162,7 @@ func (f *FileURLSuite) TestUploadRangeFromURL(c *chk.C) {
 	// source and destination have different offsets so we can test both values at the same time
 	dstOffset := 100
 	uploadFromURLResp, err := dstFileURL.UploadRangeFromURL(ctx, rawSrcURL, int64(srcOffset),
-		int64(dstOffset), int64(expectedDataSize), nil)
+		int64(dstOffset), int64(expectedDataSize))
 	c.Assert(err, chk.IsNil)
 	c.Assert(uploadFromURLResp.StatusCode(), chk.Equals, 201)
 

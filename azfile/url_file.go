@@ -182,7 +182,7 @@ func (f FileURL) UploadRange(ctx context.Context, offset int64, body io.ReadSeek
 // Update range with bytes from a specific URL.
 // offset indicates the offset at which to begin writing, in bytes.
 func (f FileURL) UploadRangeFromURL(ctx context.Context, sourceURL url.URL, sourceOffset int64, destOffset int64,
-	count int64, transactionalMD5 []byte) (*FileUploadRangeFromURLResponse, error) {
+	count int64) (*FileUploadRangeFromURLResponse, error) {
 
 	return f.fileClient.UploadRangeFromURL(ctx, *toRange(destOffset, count), sourceURL.String(), 0, nil,
 		toRange(sourceOffset, count), nil, nil, nil)
