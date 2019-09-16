@@ -1098,7 +1098,7 @@ func (s *FileURLSuite) TestFileUploadRangeTransactionalMD5(c *chk.C) {
 	c.Assert(pResp.ContentMD5(), chk.DeepEquals, md5[:])
 
 	// Upload range with empty MD5, nil MD5 is covered by other cases.
-	pResp, err = fileURL.UploadRange(context.Background(), 1024, bytes.NewReader(contentD[1024:]), []byte{})
+	pResp, err = fileURL.UploadRange(context.Background(), 1024, bytes.NewReader(contentD[1024:]), nil)
 	c.Assert(err, chk.IsNil)
 	c.Assert(pResp.ContentMD5(), chk.NotNil)
 	c.Assert(pResp.StatusCode(), chk.Equals, http.StatusCreated)
@@ -1127,6 +1127,51 @@ func (s *FileURLSuite) TestFileUploadRangeIncorrectTransactionalMD5(c *chk.C) {
 	// Upload range with incorrect transactional MD5
 	_, err := fileURL.UploadRange(context.Background(), 0, contentR, incorrectMD5[:])
 	validateStorageError(c, err, azfile.ServiceCodeMd5Mismatch)
+}
+
+func (f *FileURLSuite) TestUploadRangeFromURL(c *chk.C) {
+	fsu := getFSU()
+	shareURL, shareName := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	// create the source file and populate it with random data at a specific offset
+	expectedDataSize := 2048
+	totalFileSize := 4096
+	srcOffset := 999
+	expectedDataReader, expectedData := getRandomDataAndReader(expectedDataSize)
+	srcFileURL, _ := createNewFileFromShare(c, shareURL, int64(totalFileSize))
+	_, err := srcFileURL.UploadRange(context.Background(), int64(srcOffset), expectedDataReader, nil)
+	c.Assert(err, chk.IsNil)
+
+	// generate a URL with SAS pointing to the source file
+	credential, _ := getCredential()
+	sasQueryParams, err := azfile.FileSASSignatureValues{
+		Protocol:    azfile.SASProtocolHTTPS,
+		ExpiryTime:  time.Now().UTC().Add(48 * time.Hour),
+		ShareName:   shareName,
+		Permissions: azfile.FileSASPermissions{Create: true, Read: true, Write: true, Delete: true}.String(),
+	}.NewSASQueryParameters(credential)
+	c.Assert(err, chk.IsNil)
+	rawSrcURL := srcFileURL.URL()
+	rawSrcURL.RawQuery = sasQueryParams.Encode()
+
+	// create the destination file
+	dstFileURL, _ := createNewFileFromShare(c, shareURL, int64(totalFileSize))
+
+	// invoke UploadRange on dstFileURL and put the data at a random range
+	// source and destination have different offsets so we can test both values at the same time
+	dstOffset := 100
+	uploadFromURLResp, err := dstFileURL.UploadRangeFromURL(ctx, rawSrcURL, int64(srcOffset),
+		int64(dstOffset), int64(expectedDataSize))
+	c.Assert(err, chk.IsNil)
+	c.Assert(uploadFromURLResp.StatusCode(), chk.Equals, 201)
+
+	// verify the destination
+	resp, err := dstFileURL.Download(context.Background(), int64(dstOffset), int64(expectedDataSize), false)
+	c.Assert(err, chk.IsNil)
+	download, err := ioutil.ReadAll(resp.Response().Body)
+	c.Assert(err, chk.IsNil)
+	c.Assert(download, chk.DeepEquals, expectedData)
 }
 
 // Testings for GetRangeList and ClearRange

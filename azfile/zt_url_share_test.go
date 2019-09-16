@@ -567,7 +567,7 @@ func (s *ShareURLSuite) TestShareGetStats(c *chk.C) {
 	// c.Assert(gResp.LastModified().IsZero(), chk.Equals, false) // TODO: Even share is once updated, no LastModified would be returned.
 	c.Assert(gResp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(gResp.Version(), chk.Not(chk.Equals), "")
-	c.Assert(gResp.ShareUsage, chk.Equals, int32(0))
+	c.Assert(gResp.ShareUsageBytes, chk.Equals, int32(0))
 }
 
 func (s *ShareURLSuite) TestShareGetStatsNegative(c *chk.C) {
@@ -741,7 +741,6 @@ func (s *ShareURLSuite) TestShareDeleteSnapshot(c *chk.C) {
 func (s *ShareURLSuite) TestShareDeleteSnapshotsInclude(c *chk.C) {
 	fsu := getFSU()
 	share, shareName := createNewShare(c, fsu)
-	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
 
 	_, err := share.CreateSnapshot(ctx, nil)
 	c.Assert(err, chk.IsNil)
