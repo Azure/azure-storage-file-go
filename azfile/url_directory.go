@@ -57,6 +57,7 @@ func (d DirectoryURL) NewDirectoryURL(directoryName string) DirectoryURL {
 
 // Create creates a new directory within a storage account.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/create-directory.
+// Pass default values for SMB properties (ex: "None" for file attributes).
 func (d DirectoryURL) Create(ctx context.Context, metadata Metadata) (*DirectoryCreateResponse, error) {
 	defaultPermissions := "inherit"
 	return d.directoryClient.Create(ctx, "None", "now", "now", nil, metadata,

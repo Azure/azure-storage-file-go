@@ -58,6 +58,7 @@ func (f FileURL) WithSnapshot(shareSnapshot string) FileURL {
 
 // Create creates a new file or replaces a file. Note that this method only initializes the file.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/create-file.
+// Pass default values for SMB properties (ex: "None" for file attributes).
 func (f FileURL) Create(ctx context.Context, size int64, h FileHTTPHeaders, metadata Metadata) (*FileCreateResponse, error) {
 	defaultPermissions := "inherit"
 	return f.fileClient.Create(ctx, size, "None", "now", "now", nil,
