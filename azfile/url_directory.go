@@ -57,8 +57,11 @@ func (d DirectoryURL) NewDirectoryURL(directoryName string) DirectoryURL {
 
 // Create creates a new directory within a storage account.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/create-directory.
+// Pass default values for SMB properties (ex: "None" for file attributes).
 func (d DirectoryURL) Create(ctx context.Context, metadata Metadata) (*DirectoryCreateResponse, error) {
-	return d.directoryClient.Create(ctx, nil, metadata)
+	defaultPermissions := "inherit"
+	return d.directoryClient.Create(ctx, "None", "now", "now", nil, metadata,
+		&defaultPermissions, nil)
 }
 
 // Delete removes the specified empty directory. Note that the directory must be empty before it can be deleted..
@@ -140,5 +143,5 @@ func (o *ListFilesAndDirectoriesOptions) pointers() (prefix *string, maxResults 
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/list-directories-and-files.
 func (d DirectoryURL) ListFilesAndDirectoriesSegment(ctx context.Context, marker Marker, o ListFilesAndDirectoriesOptions) (*ListFilesAndDirectoriesSegmentResponse, error) {
 	prefix, maxResults := o.pointers()
-	return d.directoryClient.ListFilesAndDirectoriesSegment(ctx, prefix, nil, marker.val, maxResults, nil)
+	return d.directoryClient.ListFilesAndDirectoriesSegment(ctx, prefix, nil, marker.Val, maxResults, nil)
 }
