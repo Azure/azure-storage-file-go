@@ -3,6 +3,7 @@ package azfile
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -19,6 +20,11 @@ const (
 	// FileMaxSizeInBytes indicates the maxiumum file size, in bytes.
 	FileMaxSizeInBytes int64 = 1 * 1024 * 1024 * 1024 * 1024 // 1TB
 )
+
+// For all intents and purposes, this is a constant.
+// But you can't take the address of a constant string, so it's a variable.
+var defaultPermissionString = "inherit"
+var defaultPreservePermissionString = "preserve"
 
 // A FileURL represents a URL to an Azure Storage file.
 type FileURL struct {
@@ -60,10 +66,24 @@ func (f FileURL) WithSnapshot(shareSnapshot string) FileURL {
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/create-file.
 // Pass default values for SMB properties (ex: "None" for file attributes).
 func (f FileURL) Create(ctx context.Context, size int64, h FileHTTPHeaders, metadata Metadata) (*FileCreateResponse, error) {
-	defaultPermissions := "inherit"
+	defaultPermissions := &defaultPermissionString
+	// pkptr (permission key pointer) remains nil unless the user defines a permission key.
+	var pkptr *string
+
+	// If the user is supplying a permission key, permissions will be empty.
+	if h.PermissionString != "" {
+		defaultPermissions = &h.PermissionString
+	}
+
+	// This is handled AFTER permissions, in case the user accidentally supplies both.
+	if h.PermissionKey != "" {
+		defaultPermissions = nil
+		pkptr = &h.PermissionKey
+	}
+
 	return f.fileClient.Create(ctx, size, "None", "now", "now", nil,
 		&h.ContentType, &h.ContentEncoding, &h.ContentLanguage, &h.CacheControl,
-		h.ContentMD5, &h.ContentDisposition, metadata, &defaultPermissions, nil)
+		h.ContentMD5, &h.ContentDisposition, metadata, defaultPermissions, pkptr)
 }
 
 // StartCopy copies the data at the source URL to a file.
@@ -142,10 +162,26 @@ func (f FileURL) GetProperties(ctx context.Context) (*FileGetPropertiesResponse,
 // SetHTTPHeaders sets file's system properties.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-file-properties.
 func (f FileURL) SetHTTPHeaders(ctx context.Context, h FileHTTPHeaders) (*FileSetHTTPHeadersResponse, error) {
-	defaultPermissions := "preserve"
+	defaultPermissions := &defaultPreservePermissionString
+	// pkptr (permission key pointer) remains nil unless the user defines a permission key.
+	var pkptr *string
+
+	// If the user is supplying a permission key, permissions will be empty.
+	if h.PermissionString != "" {
+		defaultPermissions = &h.PermissionString
+	}
+
+	// This is handled AFTER permissions, in case the user accidentally supplies both.
+	if h.PermissionKey != "" {
+		defaultPermissions = nil
+		pkptr = &h.PermissionKey
+	}
+
+	fmt.Println(defaultPermissions, *defaultPermissions, pkptr)
+
 	return f.fileClient.SetHTTPHeaders(ctx, "preserve", "preserve", "preserve", nil,
 		nil, &h.ContentType, &h.ContentEncoding, &h.ContentLanguage, &h.CacheControl, h.ContentMD5,
-		&h.ContentDisposition, &defaultPermissions, nil)
+		&h.ContentDisposition, defaultPermissions, nil)
 }
 
 // SetMetadata sets a file's metadata.

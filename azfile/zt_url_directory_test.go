@@ -52,7 +52,7 @@ func (s *DirectoryURLSuite) TestDirWithNewPipeline(c *chk.C) {
 	dirURL := fsu.NewShareURL(sharePrefix).NewDirectoryURL(directoryPrefix)
 
 	newDirURL := dirURL.WithPipeline(testPipeline{})
-	_, err := newDirURL.Create(ctx, azfile.Metadata{})
+	_, err := newDirURL.Create(ctx, azfile.Metadata{}, "", "")
 	c.Assert(err, chk.NotNil)
 	c.Assert(err.Error(), chk.Equals, testPipelineMessage)
 }
@@ -66,7 +66,7 @@ func (s *DirectoryURLSuite) TestDirCreateDeleteDefault(c *chk.C) {
 
 	directory := share.NewDirectoryURL(directoryName)
 
-	cResp, err := directory.Create(context.Background(), azfile.Metadata{})
+	cResp, err := directory.Create(context.Background(), azfile.Metadata{}, "", "")
 	c.Assert(err, chk.IsNil)
 	c.Assert(cResp.Response().StatusCode, chk.Equals, 201)
 	c.Assert(cResp.Date().IsZero(), chk.Equals, false)
@@ -80,6 +80,31 @@ func (s *DirectoryURLSuite) TestDirCreateDeleteDefault(c *chk.C) {
 	c.Assert(gResp.StatusCode(), chk.Equals, 200)
 
 	defer delDirectory(c, directory)
+}
+
+func (s *DirectoryURLSuite) TestDirSetProperties(c *chk.C) {
+	directoryName := generateDirectoryName()
+	sa := getFSU()
+	share, _ := createNewShare(c, sa)
+
+	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
+
+	directory := share.NewDirectoryURL(directoryName)
+
+	cResp, err := directory.Create(ctx, azfile.Metadata{}, "", "")
+	c.Assert(err, chk.IsNil)
+	key := cResp.FilePermissionKey()
+
+	// Set the custom permissions
+	sResp, err := directory.SetProperties(ctx, sampleSDDL, "")
+	c.Assert(err, chk.IsNil)
+	c.Assert(sResp.FilePermissionKey(), chk.Not(chk.Equals), key)
+	key = sResp.FilePermissionKey()
+
+	gResp, err := directory.GetProperties(ctx)
+	c.Assert(err, chk.IsNil)
+	// Ensure the new key is present when we GetProperties
+	c.Assert(gResp.FilePermissionKey(), chk.Equals, key)
 }
 
 func (s *DirectoryURLSuite) TestDirCreateDeleteNonDefault(c *chk.C) {
@@ -96,8 +121,10 @@ func (s *DirectoryURLSuite) TestDirCreateDeleteNonDefault(c *chk.C) {
 		"bar": "bArvaLue",
 	}
 
-	cResp, err := directory.Create(context.Background(), md)
+	cResp, err := directory.Create(context.Background(), md, sampleSDDL, "")
 	c.Assert(err, chk.IsNil)
+	// Ensure that the file key isn't empty, but don't worry about checking the permission. We just need to know it exists.
+	c.Assert(cResp.FilePermissionKey(), chk.Not(chk.Equals), "")
 	c.Assert(cResp.Response().StatusCode, chk.Equals, 201)
 	c.Assert(cResp.Date().IsZero(), chk.Equals, false)
 	c.Assert(cResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
@@ -110,7 +137,7 @@ func (s *DirectoryURLSuite) TestDirCreateDeleteNonDefault(c *chk.C) {
 	c.Assert(gResp.StatusCode(), chk.Equals, 200)
 
 	// Creating again will result in 409 and ResourceAlreadyExists.
-	cResp, err = directory.Create(context.Background(), md)
+	cResp, err = directory.Create(context.Background(), md, "", "")
 	c.Assert(err, chk.Not(chk.IsNil))
 	serr := err.(azfile.StorageError)
 	c.Assert(serr.Response().StatusCode, chk.Equals, 409)
@@ -142,17 +169,17 @@ func (s *DirectoryURLSuite) TestDirCreateDeleteNegativeMultiLevelDir(c *chk.C) {
 	subDirURL := parentDirURL.NewDirectoryURL(subDirName)
 
 	// Directory create with subDirURL
-	cResp, err := subDirURL.Create(context.Background(), nil)
+	cResp, err := subDirURL.Create(context.Background(), nil, "", "")
 	c.Assert(err, chk.NotNil)
 	serr := err.(azfile.StorageError)
 	c.Assert(serr.Response().StatusCode, chk.Equals, 404)
 	c.Assert(serr.ServiceCode(), chk.Equals, azfile.ServiceCodeParentNotFound)
 
-	cResp, err = parentDirURL.Create(context.Background(), nil)
+	cResp, err = parentDirURL.Create(context.Background(), nil, "", "")
 	c.Assert(err, chk.IsNil)
 	c.Assert(cResp.Response().StatusCode, chk.Equals, 201)
 
-	cResp, err = subDirURL.Create(context.Background(), nil)
+	cResp, err = subDirURL.Create(context.Background(), nil, "", "")
 	c.Assert(err, chk.IsNil)
 	c.Assert(cResp.Response().StatusCode, chk.Equals, 201)
 
@@ -187,7 +214,7 @@ func (s *DirectoryURLSuite) TestDirCreateEndWithSlash(c *chk.C) {
 
 	defer delDirectory(c, directory)
 
-	cResp, err := directory.Create(context.Background(), nil)
+	cResp, err := directory.Create(context.Background(), nil, "", "")
 	c.Assert(err, chk.IsNil)
 	c.Assert(cResp.Response().StatusCode, chk.Equals, 201)
 	c.Assert(cResp.Date().IsZero(), chk.Equals, false)

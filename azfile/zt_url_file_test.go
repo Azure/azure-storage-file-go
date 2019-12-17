@@ -163,6 +163,7 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 		ContentMD5:         testMd5,
 		CacheControl:       "no-transform",
 		ContentDisposition: "attachment",
+		PermissionString:   sampleSDDL, // Because our permission string is less than 9KB, it can be used here.
 	}
 	setResp, err := fileURL.SetHTTPHeaders(context.Background(), properties)
 	c.Assert(err, chk.IsNil)
@@ -187,6 +188,8 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 	c.Assert(getResp.CacheControl(), chk.Equals, properties.CacheControl)
 	c.Assert(getResp.ContentDisposition(), chk.Equals, properties.ContentDisposition)
 	c.Assert(getResp.ContentLength(), chk.Equals, int64(0))
+	// We'll just ensure a permission exists, no need to test overlapping functionality.
+	c.Assert(getResp.FilePermissionKey(), chk.Not(chk.Equals), "")
 
 	c.Assert(getResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
 	c.Assert(getResp.RequestID(), chk.Not(chk.Equals), "")
@@ -739,7 +742,7 @@ func (f *FileURLSuite) TestServiceSASShareSAS(c *chk.C) {
 	_, err = fileURL.Delete(ctx)
 	c.Assert(err, chk.IsNil)
 
-	_, err = dirURL.Create(ctx, azfile.Metadata{})
+	_, err = dirURL.Create(ctx, azfile.Metadata{}, "", "")
 	c.Assert(err, chk.IsNil)
 
 	_, err = dirURL.ListFilesAndDirectoriesSegment(ctx, azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{})

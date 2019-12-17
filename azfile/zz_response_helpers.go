@@ -15,6 +15,10 @@ type FileHTTPHeaders struct {
 	ContentLanguage    string
 	ContentDisposition string
 	CacheControl       string
+
+	// NOTE: Permission strings are required to be sub-9KB. Please upload the permission to the share, and submit a key instead if yours exceeds this limit.
+	PermissionString string
+	PermissionKey string
 }
 
 // NewHTTPHeaders returns the user-modifiable properties for this file.

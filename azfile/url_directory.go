@@ -58,10 +58,26 @@ func (d DirectoryURL) NewDirectoryURL(directoryName string) DirectoryURL {
 // Create creates a new directory within a storage account.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/create-directory.
 // Pass default values for SMB properties (ex: "None" for file attributes).
-func (d DirectoryURL) Create(ctx context.Context, metadata Metadata) (*DirectoryCreateResponse, error) {
-	defaultPermissions := "inherit"
+// If permissions is empty, the default permission "inherit" is used.
+// For SDDL strings over 9KB, upload using ShareURL.CreatePermission, and supply the permissionKey.
+func (d DirectoryURL) Create(ctx context.Context, metadata Metadata, permissions, permissionKey string) (*DirectoryCreateResponse, error) {
+	defaultPermissions := &defaultPermissionString
+	// pkptr (permission key pointer) remains nil unless the user defines a permission key.
+	var pkptr *string
+
+	// If the user is supplying a permission key, permissions will be empty.
+	if permissions != "" {
+		defaultPermissions = &permissions
+	}
+
+	// This is handled AFTER permissions, in case the user accidentally supplies both.
+	if permissionKey != "" {
+		defaultPermissions = nil
+		pkptr = &permissionKey
+	}
+
 	return d.directoryClient.Create(ctx, "None", "now", "now", nil, metadata,
-		&defaultPermissions, nil)
+		defaultPermissions, pkptr)
 }
 
 // Delete removes the specified empty directory. Note that the directory must be empty before it can be deleted..
@@ -74,6 +90,28 @@ func (d DirectoryURL) Delete(ctx context.Context) (*DirectoryDeleteResponse, err
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/get-directory-properties.
 func (d DirectoryURL) GetProperties(ctx context.Context) (*DirectoryGetPropertiesResponse, error) {
 	return d.directoryClient.GetProperties(ctx, nil, nil)
+}
+
+// SetProperties sets the directory's metadata and system properties.
+// Preserves values for SMB properties.
+// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/set-directory-properties.
+func (d DirectoryURL) SetProperties(ctx context.Context, permissions, permissionKey string) (*DirectorySetPropertiesResponse, error) {
+	defaultPermissions := &defaultPreservePermissionString
+	// pkptr (permission key pointer) remains nil unless the user defines a permission key.
+	var pkptr *string
+
+	// If the user is supplying a permission key, permissions will be empty.
+	if permissions != "" {
+		defaultPermissions = &permissions
+	}
+
+	// This is handled AFTER permissions, in case the user accidentally supplies both.
+	if permissionKey != "" {
+		defaultPermissions = nil
+		pkptr = &permissionKey
+	}
+
+	return d.directoryClient.SetProperties(ctx, "preserve", "preserve", "preserve", nil, defaultPermissions, pkptr)
 }
 
 // SetMetadata sets the directory's metadata.
