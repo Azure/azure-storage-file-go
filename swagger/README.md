@@ -9,7 +9,7 @@ autorest README.md --use=@microsoft.azure/autorest.go@v3.0.63
 gofmt -w Go_FileStorage/*
 ```
 
-More modifications have to be made after generation in order to fix issues that the Go generator can't work around right now`. Namely:
+More modifications have to be made after generation in order to fix issues that the Go generator can't work around right now. Namely:
 - Under shareClient.getPermissionResponder and shareClient.createPermissionPreparer, change all xml.Marshal and xml.Unmarshal lines to json.Marshal and json.Unmarshal respectively
     - (Issue opened: https://github.com/Azure/go-autorest/issues/495)
 
