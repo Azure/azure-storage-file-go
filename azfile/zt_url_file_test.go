@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -1403,6 +1405,38 @@ func (s *FileURLSuite) TestFileGetRangeListSnapshot(c *chk.C) {
 	resp2, err := snapshotURL.GetRangeList(ctx, 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)
 	validateBasicGetRangeList(c, resp2, err)
+}
+
+func (s *FileURLSuite) TestUnexpectedEOFRecovery(c *chk.C) {
+	fsu := getFSU()
+	share, _ := createNewShare(c, fsu)
+	defer delShare(c, share, azfile.DeleteSnapshotsOptionInclude)
+
+	fileURL, _ := createNewFileFromShare(c, share, 2048)
+
+	contentR, contentD := getRandomDataAndReader(2048)
+
+	resp, err := fileURL.UploadRange(ctx, 0, contentR, nil)
+	c.Assert(err, chk.IsNil)
+	c.Assert(resp.StatusCode(), chk.Equals, http.StatusCreated)
+	c.Assert(resp.RequestID(), chk.Not(chk.Equals), "")
+
+	dlResp, err := fileURL.Download(ctx, 0, 2048, false)
+	c.Assert(err, chk.IsNil)
+
+	// Verify that we can inject errors first.
+	reader := dlResp.Body(azfile.InjectErrorInRetryReaderOptions(errors.New("unrecoverable error")))
+
+	_, err = ioutil.ReadAll(reader)
+	c.Assert(err, chk.NotNil)
+	c.Assert(err.Error(), chk.Equals, "unrecoverable error")
+
+	// Then inject the retryable error.
+	reader = dlResp.Body(azfile.InjectErrorInRetryReaderOptions(io.ErrUnexpectedEOF))
+
+	buf, err := ioutil.ReadAll(reader)
+	c.Assert(err, chk.IsNil)
+	c.Assert(buf, chk.DeepEquals, contentD)
 }
 
 // Don't check offset by design.
