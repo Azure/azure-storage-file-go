@@ -61,23 +61,14 @@ func (d DirectoryURL) NewDirectoryURL(directoryName string) DirectoryURL {
 // If permissions is empty, the default permission "inherit" is used.
 // For SDDL strings over 9KB, upload using ShareURL.CreatePermission, and supply the permissionKey.
 func (d DirectoryURL) Create(ctx context.Context, metadata Metadata, permissions, permissionKey string) (*DirectoryCreateResponse, error) {
-	defaultPermissions := &defaultPermissionString
-	// pkptr (permission key pointer) remains nil unless the user defines a permission key.
-	var pkptr *string
+	pStrPtr, kStrPtr, err := selectPermissionsPointers(permissions, permissionKey, defaultPermissionString)
 
-	// If the user is supplying a permission key, permissions will be empty.
-	if permissions != "" {
-		defaultPermissions = &permissions
-	}
-
-	// This is handled AFTER permissions, in case the user accidentally supplies both.
-	if permissionKey != "" {
-		defaultPermissions = nil
-		pkptr = &permissionKey
+	if err != nil {
+		return nil, err
 	}
 
 	return d.directoryClient.Create(ctx, "None", "now", "now", nil, metadata,
-		defaultPermissions, pkptr)
+		pStrPtr, kStrPtr)
 }
 
 // Delete removes the specified empty directory. Note that the directory must be empty before it can be deleted..
@@ -95,23 +86,14 @@ func (d DirectoryURL) GetProperties(ctx context.Context) (*DirectoryGetPropertie
 // SetProperties sets the directory's metadata and system properties.
 // Preserves values for SMB properties.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/set-directory-properties.
-func (d DirectoryURL) SetProperties(ctx context.Context, permissions, permissionKey string) (*DirectorySetPropertiesResponse, error) {
-	defaultPermissions := &defaultPreservePermissionString
-	// pkptr (permission key pointer) remains nil unless the user defines a permission key.
-	var pkptr *string
+func (d DirectoryURL) SetProperties(ctx context.Context, permissionString, permissionKey string) (*DirectorySetPropertiesResponse, error) {
+	permissions, pkptr, err := selectPermissionsPointers(permissionString, permissionKey, defaultPreservePermissionString)
 
-	// If the user is supplying a permission key, permissions will be empty.
-	if permissions != "" {
-		defaultPermissions = &permissions
+	if err != nil {
+		return nil, err
 	}
 
-	// This is handled AFTER permissions, in case the user accidentally supplies both.
-	if permissionKey != "" {
-		defaultPermissions = nil
-		pkptr = &permissionKey
-	}
-
-	return d.directoryClient.SetProperties(ctx, "preserve", "preserve", "preserve", nil, defaultPermissions, pkptr)
+	return d.directoryClient.SetProperties(ctx, "preserve", "preserve", "preserve", nil, permissions, pkptr)
 }
 
 // SetMetadata sets the directory's metadata.

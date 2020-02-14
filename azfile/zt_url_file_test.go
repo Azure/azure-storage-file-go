@@ -198,6 +198,67 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 	c.Assert(getResp.IsServerEncrypted(), chk.NotNil)
 }
 
+func (s *FileURLSuite) TestFilePreservePermissions(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	fileURL, _ := createNewFileFromShareWithPermissions(c, shareURL, 0)
+	defer delFile(c, fileURL)
+
+	// Grab the original perm key before we set file headers.
+	getResp, err := fileURL.GetProperties(context.Background())
+	c.Assert(err, chk.IsNil)
+
+	oKey := getResp.FilePermissionKey()
+
+	md5Str := "MDAwMDAwMDA="
+	var testMd5 []byte
+	copy(testMd5[:], md5Str)
+
+	properties := azfile.FileHTTPHeaders{
+		ContentType:        "text/html",
+		ContentEncoding:    "gzip",
+		ContentLanguage:    "tr,en",
+		ContentMD5:         testMd5,
+		CacheControl:       "no-transform",
+		ContentDisposition: "attachment",
+		PermissionString:   "preserve", // We're going to attempt to preserve the data and see if that works.
+	}
+
+	setResp, err := fileURL.SetHTTPHeaders(context.Background(), properties)
+	c.Assert(err, chk.IsNil)
+	c.Assert(setResp.Response().StatusCode, chk.Equals, 200)
+	c.Assert(setResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
+	c.Assert(setResp.LastModified().IsZero(), chk.Equals, false)
+	c.Assert(setResp.RequestID(), chk.Not(chk.Equals), "")
+	c.Assert(setResp.Version(), chk.Not(chk.Equals), "")
+	c.Assert(setResp.Date().IsZero(), chk.Equals, false)
+	c.Assert(setResp.IsServerEncrypted(), chk.NotNil)
+
+	getResp, err = fileURL.GetProperties(context.Background())
+	c.Assert(err, chk.IsNil)
+	c.Assert(getResp.Response().StatusCode, chk.Equals, 200)
+	c.Assert(setResp.LastModified().IsZero(), chk.Equals, false)
+	c.Assert(getResp.FileType(), chk.Equals, "File")
+
+	c.Assert(getResp.ContentType(), chk.Equals, properties.ContentType)
+	c.Assert(getResp.ContentEncoding(), chk.Equals, properties.ContentEncoding)
+	c.Assert(getResp.ContentLanguage(), chk.Equals, properties.ContentLanguage)
+	c.Assert(getResp.ContentMD5(), chk.DeepEquals, properties.ContentMD5)
+	c.Assert(getResp.CacheControl(), chk.Equals, properties.CacheControl)
+	c.Assert(getResp.ContentDisposition(), chk.Equals, properties.ContentDisposition)
+	c.Assert(getResp.ContentLength(), chk.Equals, int64(0))
+	// Ensure that the permission key gets preserved
+	c.Assert(getResp.FilePermissionKey(), chk.Equals, oKey)
+
+	c.Assert(getResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
+	c.Assert(getResp.RequestID(), chk.Not(chk.Equals), "")
+	c.Assert(getResp.Version(), chk.Not(chk.Equals), "")
+	c.Assert(getResp.Date().IsZero(), chk.Equals, false)
+	c.Assert(getResp.IsServerEncrypted(), chk.NotNil)
+}
+
 func (s *FileURLSuite) TestFileGetSetPropertiesSnapshot(c *chk.C) {
 	fsu := getFSU()
 	shareURL, _ := createNewShare(c, fsu)

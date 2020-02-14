@@ -230,6 +230,18 @@ func createNewFileFromShare(c *chk.C, share azfile.ShareURL, fileSize int64) (fi
 	return file, name
 }
 
+func createNewFileFromShareWithPermissions(c *chk.C, share azfile.ShareURL, fileSize int64) (file azfile.FileURL, name string) {
+	dir := share.NewRootDirectoryURL()
+
+	file, name = getFileURLFromDirectory(c, dir)
+
+	cResp, err := file.Create(ctx, fileSize, azfile.FileHTTPHeaders{PermissionString:sampleSDDL}, nil)
+	c.Assert(err, chk.IsNil)
+	c.Assert(cResp.StatusCode(), chk.Equals, 201)
+
+	return file, name
+}
+
 // This is a convenience method, No public API to create file URL from share now. This method uses share's root directory.
 func createNewFileFromShareWithDefaultData(c *chk.C, share azfile.ShareURL) (file azfile.FileURL, name string) {
 	dir := share.NewRootDirectoryURL()

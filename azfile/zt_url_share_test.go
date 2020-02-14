@@ -41,9 +41,8 @@ func (s *ShareURLSuite) TestPutAndGetPermission(c *chk.C) {
 
 	getResp, err := shareURL.GetPermission(ctx, createResp.FilePermissionKey())
 	c.Assert(err, chk.IsNil)
-	// Why check for emptiness instead of against the original?
-	// Fun fact: Azure Files does some processing themselves, apparently!
-	// This is a mitigation for it.
+	// Rather than checking against the original, we check for emptiness, as Azure Files has set a nilness flag on SACLs
+	//        and converted our well-known SID.
 	/*
 	Expected :string = "O:S-1-5-32-548G:S-1-5-21-397955417-626881126-188441444-512D:(A;;RPWPCCDCLCSWRCWDWOGA;;;S-1-0-0)"
 	Actual   :string = "O:AOG:S-1-5-21-397955417-626881126-188441444-512D:(A;;CCDCLCSWRPWPRCWDWOGA;;;S-1-0-0)S:NO_ACCESS_CONTROL"
