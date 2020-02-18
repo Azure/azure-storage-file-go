@@ -20,6 +20,13 @@ const (
 	FileMaxSizeInBytes int64 = 1 * 1024 * 1024 * 1024 * 1024 // 1TB
 )
 
+// For all intents and purposes, this is a constant.
+// But you can't take the address of a constant string, so it's a variable.
+// Inherit inherits permissions from the parent folder (default when creating files/folders)
+var defaultPermissionString = "inherit"
+// Preserves old permissions on the file/folder (default when updating properties)
+var defaultPreservePermissionString = "preserve"
+
 // A FileURL represents a URL to an Azure Storage file.
 type FileURL struct {
 	fileClient fileClient
@@ -60,10 +67,15 @@ func (f FileURL) WithSnapshot(shareSnapshot string) FileURL {
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/create-file.
 // Pass default values for SMB properties (ex: "None" for file attributes).
 func (f FileURL) Create(ctx context.Context, size int64, h FileHTTPHeaders, metadata Metadata) (*FileCreateResponse, error) {
-	defaultPermissions := "inherit"
+	pStrPtr, kStrPtr, err := selectPermissionsPointers(h.PermissionString, h.PermissionKey, defaultPermissionString)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return f.fileClient.Create(ctx, size, "None", "now", "now", nil,
 		&h.ContentType, &h.ContentEncoding, &h.ContentLanguage, &h.CacheControl,
-		h.ContentMD5, &h.ContentDisposition, metadata, &defaultPermissions, nil)
+		h.ContentMD5, &h.ContentDisposition, metadata, pStrPtr, kStrPtr)
 }
 
 // StartCopy copies the data at the source URL to a file.
@@ -142,10 +154,15 @@ func (f FileURL) GetProperties(ctx context.Context) (*FileGetPropertiesResponse,
 // SetHTTPHeaders sets file's system properties.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-file-properties.
 func (f FileURL) SetHTTPHeaders(ctx context.Context, h FileHTTPHeaders) (*FileSetHTTPHeadersResponse, error) {
-	defaultPermissions := "preserve"
+	permissions, pkptr, err := selectPermissionsPointers(h.PermissionString, h.PermissionKey, defaultPreservePermissionString)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return f.fileClient.SetHTTPHeaders(ctx, "preserve", "preserve", "preserve", nil,
 		nil, &h.ContentType, &h.ContentEncoding, &h.ContentLanguage, &h.CacheControl, h.ContentMD5,
-		&h.ContentDisposition, &defaultPermissions, nil)
+		&h.ContentDisposition, permissions, pkptr)
 }
 
 // SetMetadata sets a file's metadata.
@@ -157,10 +174,9 @@ func (f FileURL) SetMetadata(ctx context.Context, metadata Metadata) (*FileSetMe
 // Resize resizes the file to the specified size.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-file-properties.
 func (f FileURL) Resize(ctx context.Context, length int64) (*FileSetHTTPHeadersResponse, error) {
-	defaultPermissions := "preserve"
 	return f.fileClient.SetHTTPHeaders(ctx, "preserve", "preserve", "preserve", nil,
 		&length, nil, nil, nil, nil,
-		nil, nil, &defaultPermissions, nil)
+		nil, nil, &defaultPreservePermissionString, nil)
 }
 
 // UploadRange writes bytes to a file.
