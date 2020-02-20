@@ -156,6 +156,10 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 	var testMd5 []byte
 	copy(testMd5[:], md5Str)
 
+	attribs := azfile.FileAttributeTemporary.Add(azfile.FileAttributeHidden)
+	creationTime := time.Now().Add(-time.Hour)
+	lastWriteTime := time.Now().Add(-time.Minute*15)
+
 	properties := azfile.FileHTTPHeaders{
 		ContentType:        "text/html",
 		ContentEncoding:    "gzip",
@@ -163,7 +167,12 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 		ContentMD5:         testMd5,
 		CacheControl:       "no-transform",
 		ContentDisposition: "attachment",
-		PermissionString:   sampleSDDL, // Because our permission string is less than 9KB, it can be used here.
+		SMBProperties: azfile.SMBProperties{
+			PermissionString:  &sampleSDDL, // Because our permission string is less than 9KB, it can be used here.
+			FileAttributes: &attribs,
+			FileCreationTime: &creationTime,
+			FileLastWriteTime: &lastWriteTime,
+		},
 	}
 	setResp, err := fileURL.SetHTTPHeaders(context.Background(), properties)
 	c.Assert(err, chk.IsNil)
@@ -190,6 +199,13 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 	c.Assert(getResp.ContentLength(), chk.Equals, int64(0))
 	// We'll just ensure a permission exists, no need to test overlapping functionality.
 	c.Assert(getResp.FilePermissionKey(), chk.Not(chk.Equals), "")
+	// Ensure our attributes and other properties (after parsing) are equivalent to our original
+	// There's an overlapping test for this in ntfs_property_bitflags_test.go, but it doesn't hurt to test it alongside other things.
+	c.Assert(azfile.ParseFileAttributeFlagsString(getResp.FileAttributes()), chk.Equals, attribs)
+	// Adapt to time.Time
+	adapter := azfile.SMBPropertyReturnTimeAdapter{PropertySource:getResp}
+	c.Assert(adapter.FileLastWriteTime().Equal(lastWriteTime), chk.Equals, true)
+	c.Assert(adapter.FileCreationTime().Equal(creationTime), chk.Equals, true)
 
 	c.Assert(getResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
 	c.Assert(getResp.RequestID(), chk.Not(chk.Equals), "")
@@ -216,6 +232,8 @@ func (s *FileURLSuite) TestFilePreservePermissions(c *chk.C) {
 	var testMd5 []byte
 	copy(testMd5[:], md5Str)
 
+	preservePermString := "preserve"
+
 	properties := azfile.FileHTTPHeaders{
 		ContentType:        "text/html",
 		ContentEncoding:    "gzip",
@@ -223,7 +241,9 @@ func (s *FileURLSuite) TestFilePreservePermissions(c *chk.C) {
 		ContentMD5:         testMd5,
 		CacheControl:       "no-transform",
 		ContentDisposition: "attachment",
-		PermissionString:   "preserve", // We're going to attempt to preserve the data and see if that works.
+		SMBProperties: azfile.SMBProperties{
+			PermissionString: &preservePermString, // We're going to attempt to preserve the data and see if that works.
+		},
 	}
 
 	setResp, err := fileURL.SetHTTPHeaders(context.Background(), properties)
@@ -803,7 +823,7 @@ func (f *FileURLSuite) TestServiceSASShareSAS(c *chk.C) {
 	_, err = fileURL.Delete(ctx)
 	c.Assert(err, chk.IsNil)
 
-	_, err = dirURL.Create(ctx, azfile.Metadata{}, "", "")
+	_, err = dirURL.Create(ctx, azfile.Metadata{}, azfile.SMBProperties{})
 	c.Assert(err, chk.IsNil)
 
 	_, err = dirURL.ListFilesAndDirectoriesSegment(ctx, azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{})
