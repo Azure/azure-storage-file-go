@@ -203,7 +203,7 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 	// There's an overlapping test for this in ntfs_property_bitflags_test.go, but it doesn't hurt to test it alongside other things.
 	c.Assert(azfile.ParseFileAttributeFlagsString(getResp.FileAttributes()), chk.Equals, attribs)
 	// Adapt to time.Time
-	adapter := azfile.SMBPropertyReturnTimeAdapter{PropertySource:getResp}
+	adapter := azfile.SMBTimeAdapter{PropertySource: getResp}
 	c.Assert(adapter.FileLastWriteTime().Equal(lastWriteTime), chk.Equals, true)
 	c.Assert(adapter.FileCreationTime().Equal(creationTime), chk.Equals, true)
 

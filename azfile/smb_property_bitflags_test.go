@@ -77,6 +77,10 @@ func (s *FileAttributeFlagsSuite) TestOperations(c *chk.C) {
 
 	c.Assert(attribs, chk.Equals, expected)
 
+	// Try removing it again, and make sure it's still not there.
+	attribs = attribs.Remove(azfile.FileAttributeHidden)
+	c.Assert(attribs, chk.Equals, expected)
+
 	// Try checking that we have the system attribute.
 	c.Assert(attribs.Has(azfile.FileAttributeSystem), chk.Equals, true)
 

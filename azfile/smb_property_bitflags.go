@@ -67,7 +67,7 @@ func (f FileAttributeFlags) Add(new FileAttributeFlags) FileAttributeFlags {
 }
 
 func (f FileAttributeFlags) Remove(old FileAttributeFlags) FileAttributeFlags {
-	return f ^ old
+	return f &^ old
 }
 
 func (f FileAttributeFlags) Has(item FileAttributeFlags) bool {
@@ -78,20 +78,24 @@ func (f FileAttributeFlags) Has(item FileAttributeFlags) bool {
 func ParseFileAttributeFlagsString(input string) (out FileAttributeFlags) {
 	// We don't worry about the order here, since the resulting bitflags will automagically be in order.
 	attrStrings := map[string]FileAttributeFlags {
-		"ReadOnly":          FileAttributeReadonly,
-		"Hidden":            FileAttributeHidden,
-		"System":            FileAttributeSystem,
-		"Archive":           FileAttributeArchive,
-		"Temporary":         FileAttributeTemporary,
-		"Offline":           FileAttributeOffline,
-		"NotContentIndexed": FileAttributeNotContentIndexed,
-		"NoScrubData":       FileAttributeNoScrubData,
+		"none":              FileAttributeNone,
+		"readonly":          FileAttributeReadonly,
+		"hidden":            FileAttributeHidden,
+		"system":            FileAttributeSystem,
+		"archive":           FileAttributeArchive,
+		"temporary":         FileAttributeTemporary,
+		"offline":           FileAttributeOffline,
+		"notcontentindexed": FileAttributeNotContentIndexed,
+		"noscrubdata":       FileAttributeNoScrubData,
 	}
 
 	for _,v := range strings.Split(input, "|") {
 		// We trim the space because the service returns the flags back with spaces in between the pipes
-		if val, ok := attrStrings[strings.TrimSpace(v)]; ok {
+		// We also lowercase out of an abundance of caution to ensure we're getting what we think we're getting.
+		if val, ok := attrStrings[strings.ToLower(strings.TrimSpace(v))]; ok {
 			out = out.Add(val)
+		} else {
+			panic("service sided attribute flags should never fail")
 		}
 	}
 
