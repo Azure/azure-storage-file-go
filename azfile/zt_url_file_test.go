@@ -227,12 +227,14 @@ func (s *FileURLSuite) TestFilePreservePermissions(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 
 	oKey := getResp.FilePermissionKey()
+	timeAdapter := azfile.SMBTimeAdapter{PropertySource:getResp}
+	cTime := timeAdapter.FileCreationTime()
+	lwTime := timeAdapter.FileLastWriteTime()
+	attribs := getResp.FileAttributes()
 
 	md5Str := "MDAwMDAwMDA="
 	var testMd5 []byte
 	copy(testMd5[:], md5Str)
-
-	preservePermString := "preserve"
 
 	properties := azfile.FileHTTPHeaders{
 		ContentType:        "text/html",
@@ -242,7 +244,7 @@ func (s *FileURLSuite) TestFilePreservePermissions(c *chk.C) {
 		CacheControl:       "no-transform",
 		ContentDisposition: "attachment",
 		SMBProperties: azfile.SMBProperties{
-			PermissionString: &preservePermString, // We're going to attempt to preserve the data and see if that works.
+			// SMBProperties, when options are left nil, leads to preserving.
 		},
 	}
 
@@ -271,6 +273,10 @@ func (s *FileURLSuite) TestFilePreservePermissions(c *chk.C) {
 	c.Assert(getResp.ContentLength(), chk.Equals, int64(0))
 	// Ensure that the permission key gets preserved
 	c.Assert(getResp.FilePermissionKey(), chk.Equals, oKey)
+	timeAdapter = azfile.SMBTimeAdapter{PropertySource:getResp}
+	c.Assert(timeAdapter.FileLastWriteTime().Equal(lwTime), chk.Equals, true)
+	c.Assert(timeAdapter.FileCreationTime().Equal(cTime), chk.Equals, true)
+	c.Assert(getResp.FileAttributes(), chk.Equals, attribs)
 
 	c.Assert(getResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
 	c.Assert(getResp.RequestID(), chk.Not(chk.Equals), "")
