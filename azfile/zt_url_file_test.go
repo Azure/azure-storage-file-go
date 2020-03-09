@@ -204,7 +204,9 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 	c.Assert(azfile.ParseFileAttributeFlagsString(getResp.FileAttributes()), chk.Equals, attribs)
 	// Adapt to time.Time
 	adapter := azfile.SMBTimeAdapter{PropertySource: getResp}
+	c.Log("Original last write time: ", lastWriteTime, " new time: ", adapter.FileLastWriteTime())
 	c.Assert(adapter.FileLastWriteTime().Equal(lastWriteTime), chk.Equals, true)
+	c.Log("Original creation time: ", creationTime, " new time: ", adapter.FileCreationTime())
 	c.Assert(adapter.FileCreationTime().Equal(creationTime), chk.Equals, true)
 
 	c.Assert(getResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
@@ -274,7 +276,9 @@ func (s *FileURLSuite) TestFilePreservePermissions(c *chk.C) {
 	// Ensure that the permission key gets preserved
 	c.Assert(getResp.FilePermissionKey(), chk.Equals, oKey)
 	timeAdapter = azfile.SMBTimeAdapter{PropertySource:getResp}
+	c.Log("Original last write time: ", lwTime, " new time: ", timeAdapter.FileLastWriteTime())
 	c.Assert(timeAdapter.FileLastWriteTime().Equal(lwTime), chk.Equals, true)
+	c.Log("Original creation time: ", cTime, " new time: ", timeAdapter.FileCreationTime())
 	c.Assert(timeAdapter.FileCreationTime().Equal(cTime), chk.Equals, true)
 	c.Assert(getResp.FileAttributes(), chk.Equals, attribs)
 
