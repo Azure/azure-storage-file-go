@@ -157,10 +157,14 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 	copy(testMd5[:], md5Str)
 
 	attribs := azfile.FileAttributeTemporary.Add(azfile.FileAttributeHidden)
-	// .Round(0) trims the monotonic clock reading, which can cause tests to fail, since the format isn't precise enough.
-	// Ultimately though, the time _is_ the same
-	creationTime := time.Now().Add(-time.Hour).Round(0)
-	lastWriteTime := time.Now().Add(-time.Minute*15).Round(0)
+	creationTime := time.Now().Add(-time.Hour)
+	lastWriteTime := time.Now().Add(-time.Minute*15)
+
+	// Format and re-parse the times so we have the same precision
+	creationTime, err := time.Parse(azfile.ISO8601, creationTime.Format(azfile.ISO8601))
+	c.Assert(err, chk.IsNil)
+	lastWriteTime, err = time.Parse(azfile.ISO8601, lastWriteTime.Format(azfile.ISO8601))
+	c.Assert(err, chk.IsNil)
 
 	properties := azfile.FileHTTPHeaders{
 		ContentType:        "text/html",
