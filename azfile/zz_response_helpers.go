@@ -24,42 +24,46 @@ type FileHTTPHeaders struct {
 // Use this format to parse these fields and format them.
 const ISO8601 = "2006-01-02T15:04:05.9999999Z"
 
-// SMBPropertyHolder is an interface designed for SMBTimeAdapter, to identify valid response types for adapting.
+// SMBPropertyHolder is an interface designed for SMBPropertyAdapter, to identify valid response types for adapting.
 type SMBPropertyHolder interface {
 	FileCreationTime() string
 	FileLastWriteTime() string
 	FileAttributes() string
 }
 
-// SMBTimeAdapter is a wrapper struct that automatically converts the string outputs of FileCreationTime and FileLastWrite time to time.Time.
+// SMBPropertyAdapter is a wrapper struct that automatically converts the string outputs of FileAttributes, FileCreationTime and FileLastWrite time to time.Time.
 // It is _not_ error resistant. It is expected that the response you're inserting into this is a valid response.
 // File and directory calls that return such properties are: GetProperties, SetProperties, Create
 // File Downloads also return such properties. Insert other response types at your peril.
-type SMBTimeAdapter struct {
+type SMBPropertyAdapter struct {
 	PropertySource SMBPropertyHolder
 }
 
-func (s *SMBTimeAdapter) convertISO8601(input string) time.Time {
+func (s *SMBPropertyAdapter) convertISO8601(input string) time.Time {
 	t, err := time.Parse(ISO8601, input)
 
 	if err != nil {
 		// This should literally never happen if this struct is used correctly.
-		panic("SMBTimeAdapter expects a successful response fitting the SMBPropertyHolder interface. Failed to parse time:\n" + err.Error())
+		panic("SMBPropertyAdapter expects a successful response fitting the SMBPropertyHolder interface. Failed to parse time:\n" + err.Error())
 	}
 
 	return t
 }
 
-func (s *SMBTimeAdapter) FileCreationTime() time.Time {
+func (s *SMBPropertyAdapter) FileCreationTime() time.Time {
 	return s.convertISO8601(s.PropertySource.FileCreationTime()).UTC()
 }
 
-func (s *SMBTimeAdapter) FileLastWriteTime() time.Time {
+func (s *SMBPropertyAdapter) FileLastWriteTime() time.Time {
 	return s.convertISO8601(s.PropertySource.FileLastWriteTime()).UTC()
 }
 
+func (s *SMBPropertyAdapter) FileAttributes() FileAttributeFlags {
+	return ParseFileAttributeFlagsString(s.PropertySource.FileAttributes())
+}
+
 // SMBProperties defines a struct that takes in optional parameters regarding SMB/NTFS properties.
-// When you pass this into another function (Either literally or via FileHTTPHeaders), the response will probably fit inside SMBTimeAdapter.
+// When you pass this into another function (Either literally or via FileHTTPHeaders), the response will probably fit inside SMBPropertyAdapter.
 // Nil values of the properties are inferred to be preserved (or when creating, use defaults). Clearing a value can be done by supplying an empty item instead of nil.
 type SMBProperties struct {
 	// NOTE: If pointers are nil, we infer that you wish to preserve these properties. To clear them, point to an empty string.

@@ -209,7 +209,7 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 	// There's an overlapping test for this in ntfs_property_bitflags_test.go, but it doesn't hurt to test it alongside other things.
 	c.Assert(azfile.ParseFileAttributeFlagsString(getResp.FileAttributes()), chk.Equals, attribs)
 	// Adapt to time.Time
-	adapter := azfile.SMBTimeAdapter{PropertySource: getResp}
+	adapter := azfile.SMBPropertyAdapter{PropertySource: getResp}
 	c.Log("Original last write time: ", lastWriteTime, " new time: ", adapter.FileLastWriteTime())
 	c.Assert(adapter.FileLastWriteTime().Equal(lastWriteTime), chk.Equals, true)
 	c.Log("Original creation time: ", creationTime, " new time: ", adapter.FileCreationTime())
@@ -235,7 +235,7 @@ func (s *FileURLSuite) TestFilePreservePermissions(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 
 	oKey := getResp.FilePermissionKey()
-	timeAdapter := azfile.SMBTimeAdapter{PropertySource:getResp}
+	timeAdapter := azfile.SMBPropertyAdapter{PropertySource: getResp}
 	cTime := timeAdapter.FileCreationTime()
 	lwTime := timeAdapter.FileLastWriteTime()
 	attribs := getResp.FileAttributes()
@@ -281,7 +281,7 @@ func (s *FileURLSuite) TestFilePreservePermissions(c *chk.C) {
 	c.Assert(getResp.ContentLength(), chk.Equals, int64(0))
 	// Ensure that the permission key gets preserved
 	c.Assert(getResp.FilePermissionKey(), chk.Equals, oKey)
-	timeAdapter = azfile.SMBTimeAdapter{PropertySource:getResp}
+	timeAdapter = azfile.SMBPropertyAdapter{PropertySource: getResp}
 	c.Log("Original last write time: ", lwTime, " new time: ", timeAdapter.FileLastWriteTime())
 	c.Assert(timeAdapter.FileLastWriteTime().Equal(lwTime), chk.Equals, true)
 	c.Log("Original creation time: ", cTime, " new time: ", timeAdapter.FileCreationTime())
