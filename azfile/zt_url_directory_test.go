@@ -52,7 +52,7 @@ func (s *DirectoryURLSuite) TestDirWithNewPipeline(c *chk.C) {
 	dirURL := fsu.NewShareURL(sharePrefix).NewDirectoryURL(directoryPrefix)
 
 	newDirURL := dirURL.WithPipeline(testPipeline{})
-	_, err := newDirURL.Create(ctx, azfile.Metadata{}, "", "")
+	_, err := newDirURL.Create(ctx, azfile.Metadata{}, azfile.SMBProperties{})
 	c.Assert(err, chk.NotNil)
 	c.Assert(err.Error(), chk.Equals, testPipelineMessage)
 }
@@ -66,7 +66,7 @@ func (s *DirectoryURLSuite) TestDirCreateDeleteDefault(c *chk.C) {
 
 	directory := share.NewDirectoryURL(directoryName)
 
-	cResp, err := directory.Create(context.Background(), azfile.Metadata{}, "", "")
+	cResp, err := directory.Create(context.Background(), azfile.Metadata{}, azfile.SMBProperties{})
 	c.Assert(err, chk.IsNil)
 	c.Assert(cResp.Response().StatusCode, chk.Equals, 201)
 	c.Assert(cResp.Date().IsZero(), chk.Equals, false)
@@ -91,12 +91,12 @@ func (s *DirectoryURLSuite) TestDirSetProperties(c *chk.C) {
 
 	directory := share.NewDirectoryURL(directoryName)
 
-	cResp, err := directory.Create(ctx, azfile.Metadata{}, "", "")
+	cResp, err := directory.Create(ctx, azfile.Metadata{}, azfile.SMBProperties{})
 	c.Assert(err, chk.IsNil)
 	key := cResp.FilePermissionKey()
 
 	// Set the custom permissions
-	sResp, err := directory.SetProperties(ctx, sampleSDDL, "")
+	sResp, err := directory.SetProperties(ctx, azfile.SMBProperties{PermissionString: &sampleSDDL})
 	c.Assert(err, chk.IsNil)
 	c.Assert(sResp.FilePermissionKey(), chk.Not(chk.Equals), key)
 	key = sResp.FilePermissionKey()
@@ -121,7 +121,7 @@ func (s *DirectoryURLSuite) TestDirCreateDeleteNonDefault(c *chk.C) {
 		"bar": "bArvaLue",
 	}
 
-	cResp, err := directory.Create(context.Background(), md, sampleSDDL, "")
+	cResp, err := directory.Create(context.Background(), md, azfile.SMBProperties{ PermissionString: &sampleSDDL })
 	c.Assert(err, chk.IsNil)
 	// Ensure that the file key isn't empty, but don't worry about checking the permission. We just need to know it exists.
 	c.Assert(cResp.FilePermissionKey(), chk.Not(chk.Equals), "")
@@ -137,7 +137,7 @@ func (s *DirectoryURLSuite) TestDirCreateDeleteNonDefault(c *chk.C) {
 	c.Assert(gResp.StatusCode(), chk.Equals, 200)
 
 	// Creating again will result in 409 and ResourceAlreadyExists.
-	cResp, err = directory.Create(context.Background(), md, "", "")
+	cResp, err = directory.Create(context.Background(), md, azfile.SMBProperties{})
 	c.Assert(err, chk.Not(chk.IsNil))
 	serr := err.(azfile.StorageError)
 	c.Assert(serr.Response().StatusCode, chk.Equals, 409)
@@ -169,17 +169,17 @@ func (s *DirectoryURLSuite) TestDirCreateDeleteNegativeMultiLevelDir(c *chk.C) {
 	subDirURL := parentDirURL.NewDirectoryURL(subDirName)
 
 	// Directory create with subDirURL
-	cResp, err := subDirURL.Create(context.Background(), nil, "", "")
+	cResp, err := subDirURL.Create(context.Background(), nil, azfile.SMBProperties{})
 	c.Assert(err, chk.NotNil)
 	serr := err.(azfile.StorageError)
 	c.Assert(serr.Response().StatusCode, chk.Equals, 404)
 	c.Assert(serr.ServiceCode(), chk.Equals, azfile.ServiceCodeParentNotFound)
 
-	cResp, err = parentDirURL.Create(context.Background(), nil, "", "")
+	cResp, err = parentDirURL.Create(context.Background(), nil, azfile.SMBProperties{})
 	c.Assert(err, chk.IsNil)
 	c.Assert(cResp.Response().StatusCode, chk.Equals, 201)
 
-	cResp, err = subDirURL.Create(context.Background(), nil, "", "")
+	cResp, err = subDirURL.Create(context.Background(), nil, azfile.SMBProperties{})
 	c.Assert(err, chk.IsNil)
 	c.Assert(cResp.Response().StatusCode, chk.Equals, 201)
 
@@ -214,7 +214,7 @@ func (s *DirectoryURLSuite) TestDirCreateEndWithSlash(c *chk.C) {
 
 	defer delDirectory(c, directory)
 
-	cResp, err := directory.Create(context.Background(), nil, "", "")
+	cResp, err := directory.Create(context.Background(), nil, azfile.SMBProperties{})
 	c.Assert(err, chk.IsNil)
 	c.Assert(cResp.Response().StatusCode, chk.Equals, 201)
 	c.Assert(cResp.Date().IsZero(), chk.Equals, false)

@@ -350,7 +350,7 @@ func (s *StorageAccountSuite) TestAccountSAS(c *chk.C) {
 	testDirURL := dParts.URL()
 	dirURLWithSAS := azfile.NewDirectoryURL(testDirURL, azfile.NewPipeline(azfile.NewAnonymousCredential(), azfile.PipelineOptions{}))
 	// Create
-	_, err = dirURLWithSAS.Create(ctx, azfile.Metadata{}, "", "")
+	_, err = dirURLWithSAS.Create(ctx, azfile.Metadata{}, azfile.SMBProperties{})
 	c.Assert(err, chk.IsNil)
 	// Write
 	_, err = dirURLWithSAS.SetMetadata(ctx, metadata)

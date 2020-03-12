@@ -99,7 +99,7 @@ func Example() {
 
 	// New a reference to a directory with name DemoDir in share, and create the directory.
 	directoryDemoURL := shareURL.NewDirectoryURL("DemoDir")
-	_, err = directoryDemoURL.Create(ctx, azfile.Metadata{}, "", "")
+	_, err = directoryDemoURL.Create(ctx, azfile.Metadata{}, azfile.SMBProperties{})
 	if err != nil && err.(azfile.StorageError) != nil && err.(azfile.StorageError).ServiceCode() != azfile.ServiceCodeResourceAlreadyExists {
 		log.Fatal(err)
 	}
