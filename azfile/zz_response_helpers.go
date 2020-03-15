@@ -22,7 +22,7 @@ type FileHTTPHeaders struct {
 
 // FileCreationTime and FileLastWriteTime are handled by the Azure Files service with high-precision ISO-8601 timestamps.
 // Use this format to parse these fields and format them.
-const ISO8601 = "2006-01-02T15:04:05.9999999Z"
+const ISO8601 = "2006-01-02T15:04:05.0000000Z"   // must have 0's for fractional seconds, because Files Service requires fixed width
 
 // SMBPropertyHolder is an interface designed for SMBPropertyAdapter, to identify valid response types for adapting.
 type SMBPropertyHolder interface {
