@@ -61,7 +61,7 @@ func (d DirectoryURL) NewDirectoryURL(directoryName string) DirectoryURL {
 // If permissions is empty, the default permission "inherit" is used.
 // For SDDL strings over 9KB, upload using ShareURL.CreatePermission, and supply the permissionKey.
 func (d DirectoryURL) Create(ctx context.Context, metadata Metadata, properties SMBProperties) (*DirectoryCreateResponse, error) {
-	permStr, permKey, fileAttr, fileCreateTime, FileLastWriteTime, err := properties.selectSMBPropertyValues(defaultPermissionString, defaultFileAttributes, defaultCurrentTimeString)
+	permStr, permKey, fileAttr, fileCreateTime, FileLastWriteTime, err := properties.selectSMBPropertyValues(true, defaultPermissionString, defaultFileAttributes, defaultCurrentTimeString)
 
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (d DirectoryURL) GetProperties(ctx context.Context) (*DirectoryGetPropertie
 // Preserves values for SMB properties.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/set-directory-properties.
 func (d DirectoryURL) SetProperties(ctx context.Context, properties SMBProperties) (*DirectorySetPropertiesResponse, error) {
-	permStr, permKey, fileAttr, fileCreateTime, FileLastWriteTime, err := properties.selectSMBPropertyValues(defaultPreserveString, defaultPreserveString, defaultPreserveString)
+	permStr, permKey, fileAttr, fileCreateTime, FileLastWriteTime, err := properties.selectSMBPropertyValues(true, defaultPreserveString, defaultPreserveString, defaultPreserveString)
 
 	if err != nil {
 		return nil, err

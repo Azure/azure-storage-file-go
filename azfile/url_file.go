@@ -71,7 +71,7 @@ func (f FileURL) WithSnapshot(shareSnapshot string) FileURL {
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/create-file.
 // Pass default values for SMB properties (ex: "None" for file attributes).
 func (f FileURL) Create(ctx context.Context, size int64, h FileHTTPHeaders, metadata Metadata) (*FileCreateResponse, error) {
-	permStr, permKey, fileAttr, fileCreateTime, FileLastWriteTime, err := h.selectSMBPropertyValues(defaultPermissionString, defaultFileAttributes, defaultCurrentTimeString)
+	permStr, permKey, fileAttr, fileCreateTime, FileLastWriteTime, err := h.selectSMBPropertyValues(false, defaultPermissionString, defaultFileAttributes, defaultCurrentTimeString)
 
 	if err != nil {
 		return nil, err
@@ -158,7 +158,7 @@ func (f FileURL) GetProperties(ctx context.Context) (*FileGetPropertiesResponse,
 // SetHTTPHeaders sets file's system properties.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-file-properties.
 func (f FileURL) SetHTTPHeaders(ctx context.Context, h FileHTTPHeaders) (*FileSetHTTPHeadersResponse, error) {
-	permStr, permKey, fileAttr, fileCreateTime, FileLastWriteTime, err := h.selectSMBPropertyValues(defaultPreserveString, defaultPreserveString, defaultPreserveString)
+	permStr, permKey, fileAttr, fileCreateTime, FileLastWriteTime, err := h.selectSMBPropertyValues(false, defaultPreserveString, defaultPreserveString, defaultPreserveString)
 
 	if err != nil {
 		return nil, err

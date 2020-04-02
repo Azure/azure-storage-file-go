@@ -92,8 +92,11 @@ func ParseFileAttributeFlagsString(input string) (out FileAttributeFlags) {
 	for _,v := range strings.Split(input, "|") {
 		// We trim the space because the service returns the flags back with spaces in between the pipes
 		// We also lowercase out of an abundance of caution to ensure we're getting what we think we're getting.
-		if val, ok := attrStrings[strings.ToLower(strings.TrimSpace(v))]; ok {
+		key := strings.ToLower(strings.TrimSpace(v))
+		if val, ok := attrStrings[key]; ok {
 			out = out.Add(val)
+		} else if key == "directory" {
+			// just skip it. Users this SDK will already know whether it's a directory or a file, and will have made a getProperties call on the appropriate object type
 		} else {
 			panic("service sided attribute flags should never fail")
 		}
