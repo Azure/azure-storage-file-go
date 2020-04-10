@@ -17,10 +17,37 @@ type ShareURLSuite struct{}
 
 var _ = chk.Suite(&ShareURLSuite{})
 
+// a sample SDDL string at https://docs.microsoft.com/en-us/windows/win32/secauthz/security-descriptor-string-format
+var sampleSDDL = `O:S-1-5-32-548G:S-1-5-21-397955417-626881126-188441444-512D:(A;;RPWPCCDCLCSWRCWDWOGA;;;S-1-0-0)`
+
 func delShare(c *chk.C, share azfile.ShareURL, option azfile.DeleteSnapshotsOptionType) {
 	resp, err := share.Delete(context.Background(), option)
 	c.Assert(err, chk.IsNil)
 	c.Assert(resp.Response().StatusCode, chk.Equals, 202)
+}
+
+func (s *ShareURLSuite) TestPutAndGetPermission(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := getShareURL(c, fsu)
+
+	// Create the share.
+	_, err := shareURL.Create(ctx, azfile.Metadata{}, 0)
+	c.Assert(err, chk.IsNil)
+
+	// Create a permission and check that it's not empty.
+	createResp, err := shareURL.CreatePermission(ctx, sampleSDDL)
+	c.Assert(err, chk.IsNil)
+	c.Assert(createResp.FilePermissionKey(), chk.Not(chk.Equals), "")
+
+	getResp, err := shareURL.GetPermission(ctx, createResp.FilePermissionKey())
+	c.Assert(err, chk.IsNil)
+	// Rather than checking against the original, we check for emptiness, as Azure Files has set a nilness flag on SACLs
+	//        and converted our well-known SID.
+	/*
+	Expected :string = "O:S-1-5-32-548G:S-1-5-21-397955417-626881126-188441444-512D:(A;;RPWPCCDCLCSWRCWDWOGA;;;S-1-0-0)"
+	Actual   :string = "O:AOG:S-1-5-21-397955417-626881126-188441444-512D:(A;;CCDCLCSWRPWPRCWDWOGA;;;S-1-0-0)S:NO_ACCESS_CONTROL"
+	 */
+	c.Assert(getResp.Permission, chk.Not(chk.Equals), "")
 }
 
 func (s *ShareURLSuite) TestShareCreateRootDirectoryURL(c *chk.C) {
