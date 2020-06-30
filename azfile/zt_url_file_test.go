@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -156,6 +158,16 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 	var testMd5 []byte
 	copy(testMd5[:], md5Str)
 
+	attribs := azfile.FileAttributeTemporary.Add(azfile.FileAttributeHidden)
+	creationTime := time.Now().Add(-time.Hour)
+	lastWriteTime := time.Now().Add(-time.Minute*15)
+
+	// Format and re-parse the times so we have the same precision
+	creationTime, err := time.Parse(azfile.ISO8601, creationTime.Format(azfile.ISO8601))
+	c.Assert(err, chk.IsNil)
+	lastWriteTime, err = time.Parse(azfile.ISO8601, lastWriteTime.Format(azfile.ISO8601))
+	c.Assert(err, chk.IsNil)
+
 	properties := azfile.FileHTTPHeaders{
 		ContentType:        "text/html",
 		ContentEncoding:    "gzip",
@@ -163,6 +175,12 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 		ContentMD5:         testMd5,
 		CacheControl:       "no-transform",
 		ContentDisposition: "attachment",
+		SMBProperties: azfile.SMBProperties{
+			PermissionString:  &sampleSDDL, // Because our permission string is less than 9KB, it can be used here.
+			FileAttributes: &attribs,
+			FileCreationTime: &creationTime,
+			FileLastWriteTime: &lastWriteTime,
+		},
 	}
 	setResp, err := fileURL.SetHTTPHeaders(context.Background(), properties)
 	c.Assert(err, chk.IsNil)
@@ -187,6 +205,90 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 	c.Assert(getResp.CacheControl(), chk.Equals, properties.CacheControl)
 	c.Assert(getResp.ContentDisposition(), chk.Equals, properties.ContentDisposition)
 	c.Assert(getResp.ContentLength(), chk.Equals, int64(0))
+	// We'll just ensure a permission exists, no need to test overlapping functionality.
+	c.Assert(getResp.FilePermissionKey(), chk.Not(chk.Equals), "")
+	// Ensure our attributes and other properties (after parsing) are equivalent to our original
+	// There's an overlapping test for this in ntfs_property_bitflags_test.go, but it doesn't hurt to test it alongside other things.
+	c.Assert(azfile.ParseFileAttributeFlagsString(getResp.FileAttributes()), chk.Equals, attribs)
+	// Adapt to time.Time
+	adapter := azfile.SMBPropertyAdapter{PropertySource: getResp}
+	c.Log("Original last write time: ", lastWriteTime, " new time: ", adapter.FileLastWriteTime())
+	c.Assert(adapter.FileLastWriteTime().Equal(lastWriteTime), chk.Equals, true)
+	c.Log("Original creation time: ", creationTime, " new time: ", adapter.FileCreationTime())
+	c.Assert(adapter.FileCreationTime().Equal(creationTime), chk.Equals, true)
+
+	c.Assert(getResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
+	c.Assert(getResp.RequestID(), chk.Not(chk.Equals), "")
+	c.Assert(getResp.Version(), chk.Not(chk.Equals), "")
+	c.Assert(getResp.Date().IsZero(), chk.Equals, false)
+	c.Assert(getResp.IsServerEncrypted(), chk.NotNil)
+}
+
+func (s *FileURLSuite) TestFilePreservePermissions(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	fileURL, _ := createNewFileFromShareWithPermissions(c, shareURL, 0)
+	defer delFile(c, fileURL)
+
+	// Grab the original perm key before we set file headers.
+	getResp, err := fileURL.GetProperties(context.Background())
+	c.Assert(err, chk.IsNil)
+
+	oKey := getResp.FilePermissionKey()
+	timeAdapter := azfile.SMBPropertyAdapter{PropertySource: getResp}
+	cTime := timeAdapter.FileCreationTime()
+	lwTime := timeAdapter.FileLastWriteTime()
+	attribs := getResp.FileAttributes()
+
+	md5Str := "MDAwMDAwMDA="
+	var testMd5 []byte
+	copy(testMd5[:], md5Str)
+
+	properties := azfile.FileHTTPHeaders{
+		ContentType:        "text/html",
+		ContentEncoding:    "gzip",
+		ContentLanguage:    "tr,en",
+		ContentMD5:         testMd5,
+		CacheControl:       "no-transform",
+		ContentDisposition: "attachment",
+		SMBProperties: azfile.SMBProperties{
+			// SMBProperties, when options are left nil, leads to preserving.
+		},
+	}
+
+	setResp, err := fileURL.SetHTTPHeaders(context.Background(), properties)
+	c.Assert(err, chk.IsNil)
+	c.Assert(setResp.Response().StatusCode, chk.Equals, 200)
+	c.Assert(setResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
+	c.Assert(setResp.LastModified().IsZero(), chk.Equals, false)
+	c.Assert(setResp.RequestID(), chk.Not(chk.Equals), "")
+	c.Assert(setResp.Version(), chk.Not(chk.Equals), "")
+	c.Assert(setResp.Date().IsZero(), chk.Equals, false)
+	c.Assert(setResp.IsServerEncrypted(), chk.NotNil)
+
+	getResp, err = fileURL.GetProperties(context.Background())
+	c.Assert(err, chk.IsNil)
+	c.Assert(getResp.Response().StatusCode, chk.Equals, 200)
+	c.Assert(setResp.LastModified().IsZero(), chk.Equals, false)
+	c.Assert(getResp.FileType(), chk.Equals, "File")
+
+	c.Assert(getResp.ContentType(), chk.Equals, properties.ContentType)
+	c.Assert(getResp.ContentEncoding(), chk.Equals, properties.ContentEncoding)
+	c.Assert(getResp.ContentLanguage(), chk.Equals, properties.ContentLanguage)
+	c.Assert(getResp.ContentMD5(), chk.DeepEquals, properties.ContentMD5)
+	c.Assert(getResp.CacheControl(), chk.Equals, properties.CacheControl)
+	c.Assert(getResp.ContentDisposition(), chk.Equals, properties.ContentDisposition)
+	c.Assert(getResp.ContentLength(), chk.Equals, int64(0))
+	// Ensure that the permission key gets preserved
+	c.Assert(getResp.FilePermissionKey(), chk.Equals, oKey)
+	timeAdapter = azfile.SMBPropertyAdapter{PropertySource: getResp}
+	c.Log("Original last write time: ", lwTime, " new time: ", timeAdapter.FileLastWriteTime())
+	c.Assert(timeAdapter.FileLastWriteTime().Equal(lwTime), chk.Equals, true)
+	c.Log("Original creation time: ", cTime, " new time: ", timeAdapter.FileCreationTime())
+	c.Assert(timeAdapter.FileCreationTime().Equal(cTime), chk.Equals, true)
+	c.Assert(getResp.FileAttributes(), chk.Equals, attribs)
 
 	c.Assert(getResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
 	c.Assert(getResp.RequestID(), chk.Not(chk.Equals), "")
@@ -739,7 +841,7 @@ func (f *FileURLSuite) TestServiceSASShareSAS(c *chk.C) {
 	_, err = fileURL.Delete(ctx)
 	c.Assert(err, chk.IsNil)
 
-	_, err = dirURL.Create(ctx, azfile.Metadata{})
+	_, err = dirURL.Create(ctx, azfile.Metadata{}, azfile.SMBProperties{})
 	c.Assert(err, chk.IsNil)
 
 	_, err = dirURL.ListFilesAndDirectoriesSegment(ctx, azfile.Marker{}, azfile.ListFilesAndDirectoriesOptions{})
@@ -1403,6 +1505,38 @@ func (s *FileURLSuite) TestFileGetRangeListSnapshot(c *chk.C) {
 	resp2, err := snapshotURL.GetRangeList(ctx, 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)
 	validateBasicGetRangeList(c, resp2, err)
+}
+
+func (s *FileURLSuite) TestUnexpectedEOFRecovery(c *chk.C) {
+	fsu := getFSU()
+	share, _ := createNewShare(c, fsu)
+	defer delShare(c, share, azfile.DeleteSnapshotsOptionInclude)
+
+	fileURL, _ := createNewFileFromShare(c, share, 2048)
+
+	contentR, contentD := getRandomDataAndReader(2048)
+
+	resp, err := fileURL.UploadRange(ctx, 0, contentR, nil)
+	c.Assert(err, chk.IsNil)
+	c.Assert(resp.StatusCode(), chk.Equals, http.StatusCreated)
+	c.Assert(resp.RequestID(), chk.Not(chk.Equals), "")
+
+	dlResp, err := fileURL.Download(ctx, 0, 2048, false)
+	c.Assert(err, chk.IsNil)
+
+	// Verify that we can inject errors first.
+	reader := dlResp.Body(azfile.InjectErrorInRetryReaderOptions(errors.New("unrecoverable error")))
+
+	_, err = ioutil.ReadAll(reader)
+	c.Assert(err, chk.NotNil)
+	c.Assert(err.Error(), chk.Equals, "unrecoverable error")
+
+	// Then inject the retryable error.
+	reader = dlResp.Body(azfile.InjectErrorInRetryReaderOptions(io.ErrUnexpectedEOF))
+
+	buf, err := ioutil.ReadAll(reader)
+	c.Assert(err, chk.IsNil)
+	c.Assert(buf, chk.DeepEquals, contentD)
 }
 
 // Don't check offset by design.

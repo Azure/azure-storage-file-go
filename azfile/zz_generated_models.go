@@ -2688,7 +2688,7 @@ type ShareItem struct {
 type SharePermission struct {
 	rawResponse *http.Response
 	// Permission - The permission in the Security Descriptor Definition Language (SDDL).
-	Permission string `xml:"permission"`
+	Permission string
 }
 
 // Response returns the raw HTTP response object.
