@@ -292,3 +292,56 @@ func (s *ParsingURLSuite) TestFileURLPartsStSe(c *chk.C) {
 	uResult = parts.URL()
 	c.Assert(uResult.String(), chk.Equals, "https://myaccount.file.core.windows.net/myshare/mydirectory/ReadMe.txt?sharesnapshot=2018-03-08T02:29:11.0000000Z&se=2222-03-09&si=myIdentifier&sig=92836758923659283652983562%3D%3D&sip=168.1.5.60-168.1.5.70&sp=rw&spr=https%2Chttp&sr=b&srt=s&ss=bf&st=2111-01-09T01%3A42Z&sv=2015-02-21")
 }
+
+func (s *ParsingURLSuite) TestFileURLPartsSASQueryTimes(c *chk.C) {
+	StartTimesInputs := []string{
+		"2020-04-20",
+		"2020-04-20T07:00Z",
+		"2020-04-20T07:15:00Z",
+		"2020-04-20T07:30:00.1234567Z",
+	}
+	StartTimesExpected := []time.Time{
+		time.Date(2020, time.April, 20, 0, 0, 0, 0, time.UTC),
+		time.Date(2020, time.April, 20, 7, 0, 0, 0, time.UTC),
+		time.Date(2020, time.April, 20, 7, 15, 0, 0, time.UTC),
+		time.Date(2020, time.April, 20, 7, 30, 0, 123456700, time.UTC),
+	}
+	ExpiryTimesInputs := []string{
+		"2020-04-21",
+		"2020-04-20T08:00Z",
+		"2020-04-20T08:15:00Z",
+		"2020-04-20T08:30:00.2345678Z",
+	}
+	ExpiryTimesExpected := []time.Time{
+		time.Date(2020, time.April, 21, 0, 0, 0, 0, time.UTC),
+		time.Date(2020, time.April, 20, 8, 0, 0, 0, time.UTC),
+		time.Date(2020, time.April, 20, 8, 15, 0, 0, time.UTC),
+		time.Date(2020, time.April, 20, 8, 30, 0, 234567800, time.UTC),
+	}
+
+	for i := 0; i < len(StartTimesInputs); i++ {
+		urlString :=
+			"https://myaccount.dfs.core.windows.net/myshare/mydirectory/myfile.txt?" +
+				"se=" + url.QueryEscape(ExpiryTimesInputs[i]) + "&" +
+				"sig=NotASignature&" +
+				"sp=r&" +
+				"spr=https&" +
+				"sr=b&" +
+				"st=" + url.QueryEscape(StartTimesInputs[i]) + "&" +
+				"sv=2019-10-10"
+		url, _ := url.Parse(urlString)
+
+		parts := azfile.NewFileURLParts(*url)
+		c.Assert(parts.Scheme, chk.Equals, "https")
+		c.Assert(parts.Host, chk.Equals, "myaccount.dfs.core.windows.net")
+		c.Assert(parts.ShareName, chk.Equals, "myshare")
+		c.Assert(parts.DirectoryOrFilePath, chk.Equals, "mydirectory/myfile.txt")
+
+		sas := parts.SAS
+		c.Assert(sas.StartTime(), chk.Equals, StartTimesExpected[i])
+		c.Assert(sas.ExpiryTime(), chk.Equals, ExpiryTimesExpected[i])
+
+		uResult := parts.URL()
+		c.Assert(uResult.String(), chk.Equals, urlString)
+	}
+}

@@ -2,6 +2,17 @@
 
 > See [BreakingChanges](BreakingChanges.md) for a detailed list of API breaks.
 
+## Version 0.8.0:
+- Allow more time formats for SAS
+- Enable recovering from an unexpectedEOF error
+
+## Version 0.7.0:
+- Add support for permissions
+- Add support for SMB properties
+
+## Version 0.6.0:
+- Added support for UploadRangeFromURL
+
 ## Version 0.5.0:
 - Align jitter calculations exactly to blob SDK
 - General secondary host improvements
