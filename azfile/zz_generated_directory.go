@@ -149,7 +149,7 @@ func (client directoryClient) deleteResponder(resp pipeline.Response) (pipeline.
 
 // ForceCloseHandles closes all handles open for given directory.
 //
-// handleID is specifies handle ID opened on the file or directory to be closed. Asterisk (‘*’) is a wildcard that
+// handleID is specifies handle ID opened on the file or directory to be closed. Asterix (‘*’) is a wildcard that
 // specifies all handles. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> marker is a string value that identifies the portion of the list to be
