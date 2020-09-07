@@ -24,6 +24,15 @@ enable-xml: true
 file-prefix: zz_generated_
 ```
 
+### ShareUsageBytes should be uint64
+``` yaml
+directive:
+- from: swagger-document
+  where: $.definitions.ShareStats.properties.ShareUsageBytes
+  transform: >
+    $.format = "uint64"
+```
+
 ### Note: the following directives were copied over from Python
 ### The dates should be string instead
 ``` yaml

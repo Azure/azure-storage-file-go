@@ -687,11 +687,11 @@ func (dgpr DirectoryGetPropertiesResponse) Version() string {
 }
 
 // DirectoryItem - A listed directory item.
-//type DirectoryItem struct {
-//	// XMLName is used for marshalling and is subject to removal in a future release.
-//	XMLName xml.Name `xml:"Directory"`
-//	Name    string   `xml:"Name"`
-//}
+// type DirectoryItem struct {
+// 	// XMLName is used for marshalling and is subject to removal in a future release.
+// 	XMLName xml.Name `xml:"Directory"`
+// 	Name    string   `xml:"Name"`
+// }
 
 // DirectorySetMetadataResponse ...
 type DirectorySetMetadataResponse struct {
@@ -1575,12 +1575,12 @@ func (fgpr FileGetPropertiesResponse) Version() string {
 }
 
 // FileItem - A listed file item.
-//type FileItem struct {
-//	// XMLName is used for marshalling and is subject to removal in a future release.
-//	XMLName    xml.Name     `xml:"File"`
-//	Name       string       `xml:"Name"`
-//	Properties FileProperty `xml:"Properties"`
-//}
+// type FileItem struct {
+// 	// XMLName is used for marshalling and is subject to removal in a future release.
+// 	XMLName    xml.Name     `xml:"File"`
+// 	Name       string       `xml:"Name"`
+// 	Properties FileProperty `xml:"Properties"`
+// }
 
 // FileProperty - File properties.
 type FileProperty struct {
@@ -2038,69 +2038,69 @@ func (hi *HandleItem) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error
 	return d.DecodeElement(hi2, &start)
 }
 
-//// ListFilesAndDirectoriesSegmentResponse - An enumeration of directories and files.
-//type ListFilesAndDirectoriesSegmentResponse struct {
-//	rawResponse *http.Response
-//	// XMLName is used for marshalling and is subject to removal in a future release.
-//	XMLName         xml.Name                       `xml:"EnumerationResults"`
-//	ServiceEndpoint string                         `xml:"ServiceEndpoint,attr"`
-//	ShareName       string                         `xml:"ShareName,attr"`
-//	ShareSnapshot   *string                        `xml:"ShareSnapshot,attr"`
-//	DirectoryPath   string                         `xml:"DirectoryPath,attr"`
-//	Prefix          string                         `xml:"Prefix"`
-//	Marker          *string                        `xml:"Marker"`
-//	MaxResults      *int32                         `xml:"MaxResults"`
-//	Segment         FilesAndDirectoriesListSegment `xml:"Entries"`
-//	NextMarker      Marker                         `xml:"NextMarker"`
-//}
+// // ListFilesAndDirectoriesSegmentResponse - An enumeration of directories and files.
+// type ListFilesAndDirectoriesSegmentResponse struct {
+// 	rawResponse *http.Response
+// 	// XMLName is used for marshalling and is subject to removal in a future release.
+// 	XMLName         xml.Name                       `xml:"EnumerationResults"`
+// 	ServiceEndpoint string                         `xml:"ServiceEndpoint,attr"`
+// 	ShareName       string                         `xml:"ShareName,attr"`
+// 	ShareSnapshot   *string                        `xml:"ShareSnapshot,attr"`
+// 	DirectoryPath   string                         `xml:"DirectoryPath,attr"`
+// 	Prefix          string                         `xml:"Prefix"`
+// 	Marker          *string                        `xml:"Marker"`
+// 	MaxResults      *int32                         `xml:"MaxResults"`
+// 	Segment         FilesAndDirectoriesListSegment `xml:"Entries"`
+// 	NextMarker      Marker                         `xml:"NextMarker"`
+// }
 //
-//// Response returns the raw HTTP response object.
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) Response() *http.Response {
-//	return lfadsr.rawResponse
-//}
+// // Response returns the raw HTTP response object.
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) Response() *http.Response {
+// 	return lfadsr.rawResponse
+// }
 //
-//// StatusCode returns the HTTP status code of the response, e.g. 200.
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) StatusCode() int {
-//	return lfadsr.rawResponse.StatusCode
-//}
+// // StatusCode returns the HTTP status code of the response, e.g. 200.
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) StatusCode() int {
+// 	return lfadsr.rawResponse.StatusCode
+// }
 //
-//// Status returns the HTTP status message of the response, e.g. "200 OK".
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) Status() string {
-//	return lfadsr.rawResponse.Status
-//}
+// // Status returns the HTTP status message of the response, e.g. "200 OK".
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) Status() string {
+// 	return lfadsr.rawResponse.Status
+// }
 //
-//// ContentType returns the value for header Content-Type.
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) ContentType() string {
-//	return lfadsr.rawResponse.Header.Get("Content-Type")
-//}
+// // ContentType returns the value for header Content-Type.
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) ContentType() string {
+// 	return lfadsr.rawResponse.Header.Get("Content-Type")
+// }
 //
-//// Date returns the value for header Date.
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) Date() time.Time {
-//	s := lfadsr.rawResponse.Header.Get("Date")
-//	if s == "" {
-//		return time.Time{}
-//	}
-//	t, err := time.Parse(time.RFC1123, s)
-//	if err != nil {
-//		t = time.Time{}
-//	}
-//	return t
-//}
+// // Date returns the value for header Date.
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) Date() time.Time {
+// 	s := lfadsr.rawResponse.Header.Get("Date")
+// 	if s == "" {
+// 		return time.Time{}
+// 	}
+// 	t, err := time.Parse(time.RFC1123, s)
+// 	if err != nil {
+// 		t = time.Time{}
+// 	}
+// 	return t
+// }
 //
-//// ErrorCode returns the value for header x-ms-error-code.
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) ErrorCode() string {
-//	return lfadsr.rawResponse.Header.Get("x-ms-error-code")
-//}
+// // ErrorCode returns the value for header x-ms-error-code.
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) ErrorCode() string {
+// 	return lfadsr.rawResponse.Header.Get("x-ms-error-code")
+// }
 //
-//// RequestID returns the value for header x-ms-request-id.
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) RequestID() string {
-//	return lfadsr.rawResponse.Header.Get("x-ms-request-id")
-//}
+// // RequestID returns the value for header x-ms-request-id.
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) RequestID() string {
+// 	return lfadsr.rawResponse.Header.Get("x-ms-request-id")
+// }
 //
-//// Version returns the value for header x-ms-version.
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) Version() string {
-//	return lfadsr.rawResponse.Header.Get("x-ms-version")
-//}
+// // Version returns the value for header x-ms-version.
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) Version() string {
+// 	return lfadsr.rawResponse.Header.Get("x-ms-version")
+// }
 
 // ListHandlesResponse - An enumeration of handles.
 type ListHandlesResponse struct {
@@ -2688,7 +2688,7 @@ type ShareItem struct {
 type SharePermission struct {
 	rawResponse *http.Response
 	// Permission - The permission in the Security Descriptor Definition Language (SDDL).
-	Permission string
+	Permission string `xml:"permission"`
 }
 
 // Response returns the raw HTTP response object.
