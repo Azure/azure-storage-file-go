@@ -181,6 +181,9 @@ func downloadAzureFileToBuffer(ctx context.Context, fileURL FileURL, azfilePrope
 		parallelism:  parallelism,
 		operation: func(offset int64, curRangeSize int64) error {
 			dr, err := fileURL.Download(ctx, offset, curRangeSize, false)
+			if err != nil {
+				return err
+			}
 			body := dr.Body(RetryReaderOptions{MaxRetryRequests: o.MaxRetryRequestsPerRange})
 
 			if o.Progress != nil {
