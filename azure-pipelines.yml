@@ -1,0 +1,21 @@
+trigger:
+- master
+- dev
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- task: GoTool@0
+  inputs:
+    version: '1.15'
+- script: |
+    go build ./azfile
+  displayName: 'Compile the SDK'
+- script: |
+    go test -race -short -cover -v ./azfile
+  env:
+    ACCOUNT_NAME: $(ACCOUNT_NAME)
+    ACCOUNT_KEY: $(ACCOUNT_KEY)
+    SECONDARY_ACCOUNT_NAME: $(SECONDARY_ACCOUNT_NAME)
+    SECONDARY_ACCOUNT_KEY: $(SECONDARY_ACCOUNT_KEY)
