@@ -6,6 +6,7 @@ package azfile
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"encoding/xml"
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"io"
@@ -130,7 +131,7 @@ func (client shareClient) createPermissionPreparer(sharePermission SharePermissi
 	params.Set("comp", "filepermission")
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
-	b, err := xml.Marshal(sharePermission)
+	b, err := json.Marshal(sharePermission)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to marshal request body")
 	}
@@ -392,7 +393,7 @@ func (client shareClient) getPermissionResponder(resp pipeline.Response) (pipeli
 	}
 	if len(b) > 0 {
 		b = removeBOM(b)
-		err = xml.Unmarshal(b, result)
+		err = json.Unmarshal(b, result)
 		if err != nil {
 			return result, NewResponseError(err, resp.Response(), "failed to unmarshal response body")
 		}
