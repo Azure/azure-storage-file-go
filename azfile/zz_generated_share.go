@@ -6,7 +6,6 @@ package azfile
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"encoding/xml"
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"io"
@@ -32,8 +31,9 @@ func newShareClient(url url.URL, p pipeline.Pipeline) shareClient {
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-// quota is specifies the maximum size of the share, in gigabytes.
-func (client shareClient) Create(ctx context.Context, timeout *int32, metadata map[string]string, quota *int32) (*ShareCreateResponse, error) {
+// quota is specifies the maximum size of the share, in gigabytes. accessTier is specifies the access tier of the
+// share.
+func (client shareClient) Create(ctx context.Context, timeout *int32, metadata map[string]string, quota *int32, accessTier ShareAccessTierType) (*ShareCreateResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
@@ -43,7 +43,7 @@ func (client shareClient) Create(ctx context.Context, timeout *int32, metadata m
 				chain: []constraint{{target: "quota", name: inclusiveMinimum, rule: 1, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.createPreparer(timeout, metadata, quota)
+	req, err := client.createPreparer(timeout, metadata, quota, accessTier)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (client shareClient) Create(ctx context.Context, timeout *int32, metadata m
 }
 
 // createPreparer prepares the Create request.
-func (client shareClient) createPreparer(timeout *int32, metadata map[string]string, quota *int32) (pipeline.Request, error) {
+func (client shareClient) createPreparer(timeout *int32, metadata map[string]string, quota *int32, accessTier ShareAccessTierType) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -73,6 +73,9 @@ func (client shareClient) createPreparer(timeout *int32, metadata map[string]str
 	}
 	if quota != nil {
 		req.Header.Set("x-ms-share-quota", strconv.FormatInt(int64(*quota), 10))
+	}
+	if accessTier != ShareAccessTierNone {
+		req.Header.Set("x-ms-access-tier", string(accessTier))
 	}
 	req.Header.Set("x-ms-version", ServiceVersion)
 	return req, nil
@@ -127,7 +130,7 @@ func (client shareClient) createPermissionPreparer(sharePermission SharePermissi
 	params.Set("comp", "filepermission")
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
-	b, err := json.Marshal(sharePermission)
+	b, err := xml.Marshal(sharePermission)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to marshal request body")
 	}
@@ -389,7 +392,7 @@ func (client shareClient) getPermissionResponder(resp pipeline.Response) (pipeli
 	}
 	if len(b) > 0 {
 		b = removeBOM(b)
-		err = json.Unmarshal(b, result)
+		err = xml.Unmarshal(b, result)
 		if err != nil {
 			return result, NewResponseError(err, resp.Response(), "failed to unmarshal response body")
 		}
@@ -517,6 +520,69 @@ func (client shareClient) getStatisticsResponder(resp pipeline.Response) (pipeli
 	return result, nil
 }
 
+// Restore restores a previously deleted Share.
+//
+// timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
+// Timeouts for File Service Operations.</a> requestID is provides a client-generated, opaque value with a 1 KB
+// character limit that is recorded in the analytics logs when storage analytics logging is enabled. deletedShareName
+// is specifies the name of the preivously-deleted share. deletedShareVersion is specifies the version of the
+// preivously-deleted share.
+func (client shareClient) Restore(ctx context.Context, timeout *int32, requestID *string, deletedShareName *string, deletedShareVersion *string) (*ShareRestoreResponse, error) {
+	if err := validate([]validation{
+		{targetValue: timeout,
+			constraints: []constraint{{target: "timeout", name: null, rule: false,
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+		return nil, err
+	}
+	req, err := client.restorePreparer(timeout, requestID, deletedShareName, deletedShareVersion)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.restoreResponder}, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*ShareRestoreResponse), err
+}
+
+// restorePreparer prepares the Restore request.
+func (client shareClient) restorePreparer(timeout *int32, requestID *string, deletedShareName *string, deletedShareVersion *string) (pipeline.Request, error) {
+	req, err := pipeline.NewRequest("PUT", client.url, nil)
+	if err != nil {
+		return req, pipeline.NewError(err, "failed to create request")
+	}
+	params := req.URL.Query()
+	if timeout != nil {
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
+	}
+	params.Set("restype", "share")
+	params.Set("comp", "undelete")
+	req.URL.RawQuery = params.Encode()
+	req.Header.Set("x-ms-version", ServiceVersion)
+	if requestID != nil {
+		req.Header.Set("x-ms-client-request-id", *requestID)
+	}
+	if deletedShareName != nil {
+		req.Header.Set("x-ms-deleted-share-name", *deletedShareName)
+	}
+	if deletedShareVersion != nil {
+		req.Header.Set("x-ms-deleted-share-version", *deletedShareVersion)
+	}
+	return req, nil
+}
+
+// restoreResponder handles the response to the Restore request.
+func (client shareClient) restoreResponder(resp pipeline.Response) (pipeline.Response, error) {
+	err := validateResponse(resp, http.StatusOK, http.StatusCreated)
+	if resp == nil {
+		return nil, err
+	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
+	return &ShareRestoreResponse{rawResponse: resp.Response()}, err
+}
+
 // SetAccessPolicy sets a stored access policy for use with shared access signatures.
 //
 // shareACL is the ACL for the share. timeout is the timeout parameter is expressed in seconds. For more information,
@@ -634,12 +700,13 @@ func (client shareClient) setMetadataResponder(resp pipeline.Response) (pipeline
 	return &ShareSetMetadataResponse{rawResponse: resp.Response()}, err
 }
 
-// SetQuota sets quota for the specified share.
+// SetProperties sets properties for the specified share.
 //
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
-// Timeouts for File Service Operations.</a> quota is specifies the maximum size of the share, in gigabytes.
-func (client shareClient) SetQuota(ctx context.Context, timeout *int32, quota *int32) (*ShareSetQuotaResponse, error) {
+// Timeouts for File Service Operations.</a> quota is specifies the maximum size of the share, in gigabytes. accessTier
+// is specifies the access tier of the share.
+func (client shareClient) SetProperties(ctx context.Context, timeout *int32, quota *int32, accessTier ShareAccessTierType) (*ShareSetPropertiesResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
@@ -649,19 +716,19 @@ func (client shareClient) SetQuota(ctx context.Context, timeout *int32, quota *i
 				chain: []constraint{{target: "quota", name: inclusiveMinimum, rule: 1, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.setQuotaPreparer(timeout, quota)
+	req, err := client.setPropertiesPreparer(timeout, quota, accessTier)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.setQuotaResponder}, req)
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.setPropertiesResponder}, req)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(*ShareSetQuotaResponse), err
+	return resp.(*ShareSetPropertiesResponse), err
 }
 
-// setQuotaPreparer prepares the SetQuota request.
-func (client shareClient) setQuotaPreparer(timeout *int32, quota *int32) (pipeline.Request, error) {
+// setPropertiesPreparer prepares the SetProperties request.
+func (client shareClient) setPropertiesPreparer(timeout *int32, quota *int32, accessTier ShareAccessTierType) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -677,16 +744,19 @@ func (client shareClient) setQuotaPreparer(timeout *int32, quota *int32) (pipeli
 	if quota != nil {
 		req.Header.Set("x-ms-share-quota", strconv.FormatInt(int64(*quota), 10))
 	}
+	if accessTier != ShareAccessTierNone {
+		req.Header.Set("x-ms-access-tier", string(accessTier))
+	}
 	return req, nil
 }
 
-// setQuotaResponder handles the response to the SetQuota request.
-func (client shareClient) setQuotaResponder(resp pipeline.Response) (pipeline.Response, error) {
+// setPropertiesResponder handles the response to the SetProperties request.
+func (client shareClient) setPropertiesResponder(resp pipeline.Response) (pipeline.Response, error) {
 	err := validateResponse(resp, http.StatusOK)
 	if resp == nil {
 		return nil, err
 	}
 	io.Copy(ioutil.Discard, resp.Response().Body)
 	resp.Response().Body.Close()
-	return &ShareSetQuotaResponse{rawResponse: resp.Response()}, err
+	return &ShareSetPropertiesResponse{rawResponse: resp.Response()}, err
 }

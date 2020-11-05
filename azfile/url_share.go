@@ -71,7 +71,7 @@ func (s ShareURL) Create(ctx context.Context, metadata Metadata, quotaInGB int32
 	if quotaInGB != 0 {
 		quota = &quotaInGB
 	}
-	return s.shareClient.Create(ctx, nil, metadata, quota)
+	return s.shareClient.Create(ctx, nil, metadata, quota, ShareAccessTierNone)
 }
 
 // CreateSnapshot creates a read-only snapshot of a share.
@@ -93,15 +93,15 @@ func (s ShareURL) GetProperties(ctx context.Context) (*ShareGetPropertiesRespons
 	return s.shareClient.GetProperties(ctx, nil, nil)
 }
 
-// SetQuota sets service-defined properties for the specified share.
+// ShareSetProperties sets service-defined properties for the specified share.
 // quotaInGB specifies the maximum size of the share in gigabytes, 0 means no quote and uses service's default value.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/set-share-properties.
-func (s ShareURL) SetQuota(ctx context.Context, quotaInGB int32) (*ShareSetQuotaResponse, error) {
+func (s ShareURL) ShareSetProperties(ctx context.Context, quotaInGB int32) (*ShareSetPropertiesResponse, error) {
 	var quota *int32
 	if quotaInGB != 0 {
 		quota = &quotaInGB
 	}
-	return s.shareClient.SetQuota(ctx, nil, quota)
+	return s.shareClient.SetProperties(ctx, nil, quota, ShareAccessTierNone)
 }
 
 // SetMetadata sets the share's metadata.
