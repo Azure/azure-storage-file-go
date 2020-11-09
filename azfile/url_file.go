@@ -224,7 +224,7 @@ func (f FileURL) UploadRangeFromURL(ctx context.Context, sourceURL url.URL, sour
 
 // ClearRange clears the specified range and releases the space used in storage for that range.
 // offset means the start offset of the range to clear.
-// count means count of bytes to clean, it cannot be CountToEnd (0), and must be explictly specified.
+// count means count of bytes to clean, it cannot be CountToEnd (0), and must be explicitly specified.
 // If the range specified is not 512-byte aligned, the operation will write zeros to
 // the start or end of the range that is not 512-byte aligned and free the rest of the range inside that is 512-byte aligned.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/put-range.
