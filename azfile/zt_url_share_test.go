@@ -41,12 +41,12 @@ func (s *ShareURLSuite) TestPutAndGetPermission(c *chk.C) {
 
 	getResp, err := shareURL.GetPermission(ctx, createResp.FilePermissionKey())
 	c.Assert(err, chk.IsNil)
-	// Rather than checking against the original, we check for emptiness, as Azure Files has set a nilness flag on SACLs
+	// Rather than checking against the original, we check for emptiness, as Azure Files has set a nil-ness flag on SACLs
 	//        and converted our well-known SID.
 	/*
-	Expected :string = "O:S-1-5-32-548G:S-1-5-21-397955417-626881126-188441444-512D:(A;;RPWPCCDCLCSWRCWDWOGA;;;S-1-0-0)"
-	Actual   :string = "O:AOG:S-1-5-21-397955417-626881126-188441444-512D:(A;;CCDCLCSWRPWPRCWDWOGA;;;S-1-0-0)S:NO_ACCESS_CONTROL"
-	 */
+		Expected :string = "O:S-1-5-32-548G:S-1-5-21-397955417-626881126-188441444-512D:(A;;RPWPCCDCLCSWRCWDWOGA;;;S-1-0-0)"
+		Actual   :string = "O:AOG:S-1-5-21-397955417-626881126-188441444-512D:(A;;CCDCLCSWRPWPRCWDWOGA;;;S-1-0-0)S:NO_ACCESS_CONTROL"
+	*/
 	c.Assert(getResp.Permission, chk.Not(chk.Equals), "")
 }
 
@@ -153,7 +153,7 @@ func (s *ShareURLSuite) TestShareCreateNegativeInvalidMetadata(c *chk.C) {
 	c.Assert(err, chk.NotNil)
 }
 
-func (s *ShareURLSuite) TestShareDeleteNegativeNonExistant(c *chk.C) {
+func (s *ShareURLSuite) TestShareDeleteNegativeNonExistent(c *chk.C) {
 	fsu := getFSU()
 	shareURL, _ := getShareURL(c, fsu)
 
@@ -168,7 +168,7 @@ func (s *ShareURLSuite) TestShareGetSetPropertiesNonDefault(c *chk.C) {
 
 	newQuota := int32(1234)
 
-	sResp, err := share.SetQuota(ctx, newQuota)
+	sResp, err := share.SetProperties(ctx, newQuota)
 	c.Assert(err, chk.IsNil)
 	c.Assert(sResp.Response().StatusCode, chk.Equals, 200)
 	c.Assert(sResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
@@ -193,7 +193,7 @@ func (s *ShareURLSuite) TestShareGetSetPropertiesDefault(c *chk.C) {
 	share, _ := createNewShare(c, fsu)
 	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
 
-	sResp, err := share.SetQuota(ctx, 0)
+	sResp, err := share.SetProperties(ctx, 0)
 	c.Assert(err, chk.IsNil)
 	c.Assert(sResp.Response().StatusCode, chk.Equals, 200)
 	c.Assert(sResp.ETag(), chk.Not(chk.Equals), azfile.ETagNone)
@@ -218,7 +218,7 @@ func (s *ShareURLSuite) TestShareSetQuotaNegative(c *chk.C) {
 	share, _ := createNewShare(c, fsu)
 	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
 
-	_, err := share.SetQuota(ctx, -1)
+	_, err := share.SetProperties(ctx, -1)
 	c.Assert(err, chk.NotNil)
 	c.Assert(strings.Contains(err.Error(), validationErrorSubstring), chk.Equals, true)
 }
@@ -440,7 +440,7 @@ func (s *ShareURLSuite) TestShareSetPermissionsDeleteAllPolicies(c *chk.C) {
 	c.Assert(resp.Items, chk.HasLen, 0)
 }
 
-// Note: No error happend
+// Note: No error happened
 func (s *ShareURLSuite) TestShareSetPermissionsNegativeInvalidPolicyTimes(c *chk.C) {
 	fsu := getFSU()
 	shareURL, _ := createNewShare(c, fsu)
@@ -582,7 +582,7 @@ func (s *ShareURLSuite) TestShareGetStats(c *chk.C) {
 	newQuota := int32(300)
 
 	// In order to test and get LastModified property.
-	sResp, err := share.SetQuota(context.Background(), newQuota)
+	sResp, err := share.SetProperties(context.Background(), newQuota)
 	c.Assert(err, chk.IsNil)
 	c.Assert(sResp.Response().StatusCode, chk.Equals, 200)
 

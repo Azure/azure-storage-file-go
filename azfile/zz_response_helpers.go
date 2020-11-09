@@ -23,7 +23,7 @@ type FileHTTPHeaders struct {
 
 // FileCreationTime and FileLastWriteTime are handled by the Azure Files service with high-precision ISO-8601 timestamps.
 // Use this format to parse these fields and format them.
-const ISO8601 = "2006-01-02T15:04:05.0000000Z"   // must have 0's for fractional seconds, because Files Service requires fixed width
+const ISO8601 = "2006-01-02T15:04:05.0000000Z" // must have 0's for fractional seconds, because Files Service requires fixed width
 
 // SMBPropertyHolder is an interface designed for SMBPropertyAdapter, to identify valid response types for adapting.
 type SMBPropertyHolder interface {
@@ -70,11 +70,11 @@ type SMBProperties struct {
 	// NOTE: If pointers are nil, we infer that you wish to preserve these properties. To clear them, point to an empty string.
 	// NOTE: Permission strings are required to be sub-9KB. Please upload the permission to the share, and submit a key instead if yours exceeds this limit.
 	PermissionString *string
-	PermissionKey *string
+	PermissionKey    *string
 	// In Windows, a 32 bit file attributes integer exists. This is that.
 	FileAttributes *FileAttributeFlags
 	// A UTC time-date string is specified below. A value of 'now' defaults to now. 'preserve' defaults to preserving the old case.
-	FileCreationTime *time.Time
+	FileCreationTime  *time.Time
 	FileLastWriteTime *time.Time
 }
 
@@ -122,7 +122,7 @@ func (sp *SMBProperties) selectSMBPropertyValues(isDir bool, defaultPerm, defaul
 	attribs = defaultAttribs
 	if sp.FileAttributes != nil {
 		attribs = sp.FileAttributes.String()
-		if isDir && strings.ToLower(attribs) != "none"  {   // must test string, not sp.FileAttributes, since it may contain set bits that we don't convert
+		if isDir && strings.ToLower(attribs) != "none" { // must test string, not sp.FileAttributes, since it may contain set bits that we don't convert
 			// Directories need to have this attribute included, if setting any attributes.
 			// We don't expose it in FileAttributes because it doesn't do anything useful to consumers of
 			// this SDK. And because it always needs to be set for directories and not for non-directories,

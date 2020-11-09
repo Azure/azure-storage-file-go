@@ -93,10 +93,10 @@ func (s ShareURL) GetProperties(ctx context.Context) (*ShareGetPropertiesRespons
 	return s.shareClient.GetProperties(ctx, nil, nil, nil)
 }
 
-// SetQuota sets service-defined properties for the specified share.
+// SetProperties sets service-defined properties for the specified share.
 // quotaInGB specifies the maximum size of the share in gigabytes, 0 means no quote and uses service's default value.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/set-share-properties.
-func (s ShareURL) SetQuota(ctx context.Context, quotaInGB int32) (*ShareSetPropertiesResponse, error) {
+func (s ShareURL) SetProperties(ctx context.Context, quotaInGB int32) (*ShareSetPropertiesResponse, error) {
 	var quota *int32
 	if quotaInGB != 0 {
 		quota = &quotaInGB

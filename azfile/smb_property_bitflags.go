@@ -47,7 +47,7 @@ func (f FileAttributeFlags) String() (out string) {
 		"NoScrubData",
 	}
 
-	for idx,flag := range attrFlags {
+	for idx, flag := range attrFlags {
 		if f.Has(flag) {
 			out += attrStrings[idx] + "|"
 		}
@@ -71,13 +71,13 @@ func (f FileAttributeFlags) Remove(old FileAttributeFlags) FileAttributeFlags {
 }
 
 func (f FileAttributeFlags) Has(item FileAttributeFlags) bool {
-	return f & item == item
+	return f&item == item
 }
 
 // ParseFileAttributeFlagsString parses the service-side file attribute strings that the above enum strongly types.
 func ParseFileAttributeFlagsString(input string) (out FileAttributeFlags) {
 	// We don't worry about the order here, since the resulting bitflags will automagically be in order.
-	attrStrings := map[string]FileAttributeFlags {
+	attrStrings := map[string]FileAttributeFlags{
 		"none":              FileAttributeNone,
 		"readonly":          FileAttributeReadonly,
 		"hidden":            FileAttributeHidden,
@@ -89,7 +89,7 @@ func ParseFileAttributeFlagsString(input string) (out FileAttributeFlags) {
 		"noscrubdata":       FileAttributeNoScrubData,
 	}
 
-	for _,v := range strings.Split(input, "|") {
+	for _, v := range strings.Split(input, "|") {
 		// We trim the space because the service returns the flags back with spaces in between the pipes
 		// We also lowercase out of an abundance of caution to ensure we're getting what we think we're getting.
 		key := strings.ToLower(strings.TrimSpace(v))

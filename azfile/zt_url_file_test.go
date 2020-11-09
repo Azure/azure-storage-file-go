@@ -23,7 +23,9 @@ type FileURLSuite struct{}
 var _ = chk.Suite(&FileURLSuite{})
 
 const (
-	testFileRangeSize = 512 // Use this number considering clear range's function
+	testFileRangeSize         = 512           // Use this number considering clear range's function
+	fileShareMaxQuota         = 5120          // Size is in GB (Service Version 2020-02-10)
+	fileMaxAllowedSizeInBytes = 4398046511104 // 4 TiB (Service Version 2020-02-10)
 )
 
 func delFile(c *chk.C, file azfile.FileURL) {
@@ -798,7 +800,7 @@ func (s *FileURLSuite) TestFileResizeInvalidSizeNegative(c *chk.C) {
 
 	_, err := fileURL.Resize(ctx, -4)
 	c.Assert(err, chk.NotNil)
-	sErr := (err.(azfile.StorageError))
+	sErr := err.(azfile.StorageError)
 	c.Assert(sErr.Response().StatusCode, chk.Equals, http.StatusBadRequest)
 }
 
@@ -1540,24 +1542,18 @@ func (s *FileURLSuite) TestUnexpectedEOFRecovery(c *chk.C) {
 	c.Assert(buf, chk.DeepEquals, contentD)
 }
 
-// Don't check offset by design.
-// func (s *FileURLSuite) TestFileGetRangeListNegativeInvalidOffset(c *chk.C) {
-// 	fsu := getFSU()
-// 	shareURL, _ := getShareURL(c, fsu)
-// 	fileURL, _ := getFileURLFromShare(c, shareURL)
+func (s *FileURLSuite) TestCreateMaximumSizeFileShare(c *chk.C) {
+	fsu := getFSU()
+	share, _ := getShareURL(c, fsu)
+	cResp, err := share.Create(ctx, nil, fileShareMaxQuota)
+	c.Assert(err, chk.IsNil)
+	c.Assert(cResp.StatusCode(), chk.Equals, 201)
+	defer delShare(c, share, azfile.DeleteSnapshotsOptionInclude)
+	dir := share.NewRootDirectoryURL()
 
-// 	_, err := fileURL.GetRangeList(ctx, -2, 500)
-// 	c.Assert(err, chk.NotNil)
-// 	c.Assert(strings.Contains(err.Error(), "offset must be >= 0"), chk.Equals, true)
-// }
+	file, _ := getFileURLFromDirectory(c, dir)
 
-// Don't check count by design.
-// func (s *FileURLSuite) TestFileGetRangeListNegativeInvalidCount(c *chk.C) {
-// 	fsu := getFSU()
-// 	shareURL, _ := getShareURL(c, fsu)
-// 	fileURL, _ := getFileURLFromShare(c, shareURL)
-
-// 	_, err := fileURL.GetRangeList(ctx, 0, -3)
-// 	c.Assert(err, chk.NotNil)
-// 	c.Assert(strings.Contains(err.Error(), "count must be >= 0"), chk.Equals, true)
-// }
+	_, err = file.Create(ctx, fileMaxAllowedSizeInBytes, azfile.FileHTTPHeaders{}, nil)
+	c.Assert(err, chk.IsNil)
+	c.Assert(cResp.StatusCode(), chk.Equals, 201)
+}

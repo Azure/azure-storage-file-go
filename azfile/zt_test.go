@@ -236,7 +236,7 @@ func createNewFileFromShareWithPermissions(c *chk.C, share azfile.ShareURL, file
 
 	file, name = getFileURLFromDirectory(c, dir)
 
-	cResp, err := file.Create(ctx, fileSize, azfile.FileHTTPHeaders{SMBProperties:azfile.SMBProperties{
+	cResp, err := file.Create(ctx, fileSize, azfile.FileHTTPHeaders{SMBProperties: azfile.SMBProperties{
 		PermissionString: &sampleSDDL,
 	}}, nil)
 	c.Assert(err, chk.IsNil)

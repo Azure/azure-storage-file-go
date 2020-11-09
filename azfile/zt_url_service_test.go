@@ -92,7 +92,7 @@ func (s *StorageAccountSuite) TestAccountGetSetPropertiesNonDefaultWithEnable(c 
 			RetentionDays:          2,
 		},
 		Cors: []azfile.CorsRule{
-			azfile.CorsRule{
+			{
 				AllowedOrigins:  "*",
 				AllowedMethods:  "PUT",
 				AllowedHeaders:  "x-ms-client-request-id",
@@ -127,7 +127,7 @@ func (s *StorageAccountSuite) TestAccountGetSetPropertiesNonDefaultWithEnable(c 
 		RetentionDays:          2,
 	})
 	c.Assert(props.Cors, chk.DeepEquals, []azfile.CorsRule{
-		azfile.CorsRule{
+		{
 			AllowedOrigins:  "*",
 			AllowedMethods:  "PUT",
 			AllowedHeaders:  "x-ms-client-request-id",
