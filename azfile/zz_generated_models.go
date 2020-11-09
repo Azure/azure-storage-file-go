@@ -120,13 +120,15 @@ type DeleteSnapshotsOptionType string
 const (
 	// DeleteSnapshotsOptionInclude ...
 	DeleteSnapshotsOptionInclude DeleteSnapshotsOptionType = "include"
+	// DeleteSnapshotsOptionIncludeLeased ...
+	DeleteSnapshotsOptionIncludeLeased DeleteSnapshotsOptionType = "include-leased"
 	// DeleteSnapshotsOptionNone represents an empty DeleteSnapshotsOptionType.
 	DeleteSnapshotsOptionNone DeleteSnapshotsOptionType = ""
 )
 
 // PossibleDeleteSnapshotsOptionTypeValues returns an array of possible values for the DeleteSnapshotsOptionType const type.
 func PossibleDeleteSnapshotsOptionTypeValues() []DeleteSnapshotsOptionType {
-	return []DeleteSnapshotsOptionType{DeleteSnapshotsOptionInclude, DeleteSnapshotsOptionNone}
+	return []DeleteSnapshotsOptionType{DeleteSnapshotsOptionInclude, DeleteSnapshotsOptionIncludeLeased, DeleteSnapshotsOptionNone}
 }
 
 // FileRangeWriteType enumerates the values for file range write type.
@@ -146,10 +148,69 @@ func PossibleFileRangeWriteTypeValues() []FileRangeWriteType {
 	return []FileRangeWriteType{FileRangeWriteClear, FileRangeWriteNone, FileRangeWriteUpdate}
 }
 
+// LeaseDurationType enumerates the values for lease duration type.
+type LeaseDurationType string
+
+const (
+	// LeaseDurationFixed ...
+	LeaseDurationFixed LeaseDurationType = "fixed"
+	// LeaseDurationInfinite ...
+	LeaseDurationInfinite LeaseDurationType = "infinite"
+	// LeaseDurationNone represents an empty LeaseDurationType.
+	LeaseDurationNone LeaseDurationType = ""
+)
+
+// PossibleLeaseDurationTypeValues returns an array of possible values for the LeaseDurationType const type.
+func PossibleLeaseDurationTypeValues() []LeaseDurationType {
+	return []LeaseDurationType{LeaseDurationFixed, LeaseDurationInfinite, LeaseDurationNone}
+}
+
+// LeaseStateType enumerates the values for lease state type.
+type LeaseStateType string
+
+const (
+	// LeaseStateAvailable ...
+	LeaseStateAvailable LeaseStateType = "available"
+	// LeaseStateBreaking ...
+	LeaseStateBreaking LeaseStateType = "breaking"
+	// LeaseStateBroken ...
+	LeaseStateBroken LeaseStateType = "broken"
+	// LeaseStateExpired ...
+	LeaseStateExpired LeaseStateType = "expired"
+	// LeaseStateLeased ...
+	LeaseStateLeased LeaseStateType = "leased"
+	// LeaseStateNone represents an empty LeaseStateType.
+	LeaseStateNone LeaseStateType = ""
+)
+
+// PossibleLeaseStateTypeValues returns an array of possible values for the LeaseStateType const type.
+func PossibleLeaseStateTypeValues() []LeaseStateType {
+	return []LeaseStateType{LeaseStateAvailable, LeaseStateBreaking, LeaseStateBroken, LeaseStateExpired, LeaseStateLeased, LeaseStateNone}
+}
+
+// LeaseStatusType enumerates the values for lease status type.
+type LeaseStatusType string
+
+const (
+	// LeaseStatusLocked ...
+	LeaseStatusLocked LeaseStatusType = "locked"
+	// LeaseStatusNone represents an empty LeaseStatusType.
+	LeaseStatusNone LeaseStatusType = ""
+	// LeaseStatusUnlocked ...
+	LeaseStatusUnlocked LeaseStatusType = "unlocked"
+)
+
+// PossibleLeaseStatusTypeValues returns an array of possible values for the LeaseStatusType const type.
+func PossibleLeaseStatusTypeValues() []LeaseStatusType {
+	return []LeaseStatusType{LeaseStatusLocked, LeaseStatusNone, LeaseStatusUnlocked}
+}
+
 // ListSharesIncludeType enumerates the values for list shares include type.
 type ListSharesIncludeType string
 
 const (
+	// ListSharesIncludeDeleted ...
+	ListSharesIncludeDeleted ListSharesIncludeType = "deleted"
 	// ListSharesIncludeMetadata ...
 	ListSharesIncludeMetadata ListSharesIncludeType = "metadata"
 	// ListSharesIncludeNone represents an empty ListSharesIncludeType.
@@ -160,7 +221,43 @@ const (
 
 // PossibleListSharesIncludeTypeValues returns an array of possible values for the ListSharesIncludeType const type.
 func PossibleListSharesIncludeTypeValues() []ListSharesIncludeType {
-	return []ListSharesIncludeType{ListSharesIncludeMetadata, ListSharesIncludeNone, ListSharesIncludeSnapshots}
+	return []ListSharesIncludeType{ListSharesIncludeDeleted, ListSharesIncludeMetadata, ListSharesIncludeNone, ListSharesIncludeSnapshots}
+}
+
+// PermissionCopyModeType enumerates the values for permission copy mode type.
+type PermissionCopyModeType string
+
+const (
+	// PermissionCopyModeNone represents an empty PermissionCopyModeType.
+	PermissionCopyModeNone PermissionCopyModeType = ""
+	// PermissionCopyModeOverride ...
+	PermissionCopyModeOverride PermissionCopyModeType = "override"
+	// PermissionCopyModeSource ...
+	PermissionCopyModeSource PermissionCopyModeType = "source"
+)
+
+// PossiblePermissionCopyModeTypeValues returns an array of possible values for the PermissionCopyModeType const type.
+func PossiblePermissionCopyModeTypeValues() []PermissionCopyModeType {
+	return []PermissionCopyModeType{PermissionCopyModeNone, PermissionCopyModeOverride, PermissionCopyModeSource}
+}
+
+// ShareAccessTierType enumerates the values for share access tier type.
+type ShareAccessTierType string
+
+const (
+	// ShareAccessTierCool ...
+	ShareAccessTierCool ShareAccessTierType = "Cool"
+	// ShareAccessTierHot ...
+	ShareAccessTierHot ShareAccessTierType = "Hot"
+	// ShareAccessTierNone represents an empty ShareAccessTierType.
+	ShareAccessTierNone ShareAccessTierType = ""
+	// ShareAccessTierTransactionOptimized ...
+	ShareAccessTierTransactionOptimized ShareAccessTierType = "TransactionOptimized"
+)
+
+// PossibleShareAccessTierTypeValues returns an array of possible values for the ShareAccessTierType const type.
+func PossibleShareAccessTierTypeValues() []ShareAccessTierType {
+	return []ShareAccessTierType{ShareAccessTierCool, ShareAccessTierHot, ShareAccessTierNone, ShareAccessTierTransactionOptimized}
 }
 
 // StorageErrorCodeType enumerates the values for storage error code type.
@@ -328,6 +425,12 @@ func (ap AccessPolicy) MarshalXML(e *xml.Encoder, start xml.StartElement) error 
 func (ap *AccessPolicy) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	ap2 := (*accessPolicy)(unsafe.Pointer(ap))
 	return d.DecodeElement(ap2, &start)
+}
+
+// ClearRange ...
+type ClearRange struct {
+	Start int64 `xml:"Start"`
+	End   int64 `xml:"End"`
 }
 
 // CorsRule - CORS is an HTTP feature that enables a web application running under one domain to access
@@ -547,6 +650,19 @@ func (dfchr DirectoryForceCloseHandlesResponse) Marker() string {
 // NumberOfHandlesClosed returns the value for header x-ms-number-of-handles-closed.
 func (dfchr DirectoryForceCloseHandlesResponse) NumberOfHandlesClosed() int32 {
 	s := dfchr.rawResponse.Header.Get("x-ms-number-of-handles-closed")
+	if s == "" {
+		return -1
+	}
+	i, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		i = 0
+	}
+	return int32(i)
+}
+
+// NumberOfHandlesFailedToClose returns the value for header x-ms-number-of-handles-failed.
+func (dfchr DirectoryForceCloseHandlesResponse) NumberOfHandlesFailedToClose() int32 {
+	s := dfchr.rawResponse.Header.Get("x-ms-number-of-handles-failed")
 	if s == "" {
 		return -1
 	}
@@ -1083,6 +1199,21 @@ func (dr DownloadResponse) LastModified() time.Time {
 	return t
 }
 
+// LeaseDuration returns the value for header x-ms-lease-duration.
+func (dr DownloadResponse) LeaseDuration() LeaseDurationType {
+	return LeaseDurationType(dr.rawResponse.Header.Get("x-ms-lease-duration"))
+}
+
+// LeaseState returns the value for header x-ms-lease-state.
+func (dr DownloadResponse) LeaseState() LeaseStateType {
+	return LeaseStateType(dr.rawResponse.Header.Get("x-ms-lease-state"))
+}
+
+// LeaseStatus returns the value for header x-ms-lease-status.
+func (dr DownloadResponse) LeaseStatus() LeaseStatusType {
+	return LeaseStatusType(dr.rawResponse.Header.Get("x-ms-lease-status"))
+}
+
 // RequestID returns the value for header x-ms-request-id.
 func (dr DownloadResponse) RequestID() string {
 	return dr.rawResponse.Header.Get("x-ms-request-id")
@@ -1139,6 +1270,234 @@ func (facr FileAbortCopyResponse) RequestID() string {
 // Version returns the value for header x-ms-version.
 func (facr FileAbortCopyResponse) Version() string {
 	return facr.rawResponse.Header.Get("x-ms-version")
+}
+
+// FileAcquireLeaseResponse ...
+type FileAcquireLeaseResponse struct {
+	rawResponse *http.Response
+}
+
+// Response returns the raw HTTP response object.
+func (falr FileAcquireLeaseResponse) Response() *http.Response {
+	return falr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (falr FileAcquireLeaseResponse) StatusCode() int {
+	return falr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (falr FileAcquireLeaseResponse) Status() string {
+	return falr.rawResponse.Status
+}
+
+// ClientRequestID returns the value for header x-ms-client-request-id.
+func (falr FileAcquireLeaseResponse) ClientRequestID() string {
+	return falr.rawResponse.Header.Get("x-ms-client-request-id")
+}
+
+// Date returns the value for header Date.
+func (falr FileAcquireLeaseResponse) Date() time.Time {
+	s := falr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (falr FileAcquireLeaseResponse) ErrorCode() string {
+	return falr.rawResponse.Header.Get("x-ms-error-code")
+}
+
+// ETag returns the value for header ETag.
+func (falr FileAcquireLeaseResponse) ETag() ETag {
+	return ETag(falr.rawResponse.Header.Get("ETag"))
+}
+
+// LastModified returns the value for header Last-Modified.
+func (falr FileAcquireLeaseResponse) LastModified() time.Time {
+	s := falr.rawResponse.Header.Get("Last-Modified")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// LeaseID returns the value for header x-ms-lease-id.
+func (falr FileAcquireLeaseResponse) LeaseID() string {
+	return falr.rawResponse.Header.Get("x-ms-lease-id")
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (falr FileAcquireLeaseResponse) RequestID() string {
+	return falr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (falr FileAcquireLeaseResponse) Version() string {
+	return falr.rawResponse.Header.Get("x-ms-version")
+}
+
+// FileBreakLeaseResponse ...
+type FileBreakLeaseResponse struct {
+	rawResponse *http.Response
+}
+
+// Response returns the raw HTTP response object.
+func (fblr FileBreakLeaseResponse) Response() *http.Response {
+	return fblr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (fblr FileBreakLeaseResponse) StatusCode() int {
+	return fblr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (fblr FileBreakLeaseResponse) Status() string {
+	return fblr.rawResponse.Status
+}
+
+// ClientRequestID returns the value for header x-ms-client-request-id.
+func (fblr FileBreakLeaseResponse) ClientRequestID() string {
+	return fblr.rawResponse.Header.Get("x-ms-client-request-id")
+}
+
+// Date returns the value for header Date.
+func (fblr FileBreakLeaseResponse) Date() time.Time {
+	s := fblr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (fblr FileBreakLeaseResponse) ErrorCode() string {
+	return fblr.rawResponse.Header.Get("x-ms-error-code")
+}
+
+// ETag returns the value for header ETag.
+func (fblr FileBreakLeaseResponse) ETag() ETag {
+	return ETag(fblr.rawResponse.Header.Get("ETag"))
+}
+
+// LastModified returns the value for header Last-Modified.
+func (fblr FileBreakLeaseResponse) LastModified() time.Time {
+	s := fblr.rawResponse.Header.Get("Last-Modified")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// LeaseID returns the value for header x-ms-lease-id.
+func (fblr FileBreakLeaseResponse) LeaseID() string {
+	return fblr.rawResponse.Header.Get("x-ms-lease-id")
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (fblr FileBreakLeaseResponse) RequestID() string {
+	return fblr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (fblr FileBreakLeaseResponse) Version() string {
+	return fblr.rawResponse.Header.Get("x-ms-version")
+}
+
+// FileChangeLeaseResponse ...
+type FileChangeLeaseResponse struct {
+	rawResponse *http.Response
+}
+
+// Response returns the raw HTTP response object.
+func (fclr FileChangeLeaseResponse) Response() *http.Response {
+	return fclr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (fclr FileChangeLeaseResponse) StatusCode() int {
+	return fclr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (fclr FileChangeLeaseResponse) Status() string {
+	return fclr.rawResponse.Status
+}
+
+// ClientRequestID returns the value for header x-ms-client-request-id.
+func (fclr FileChangeLeaseResponse) ClientRequestID() string {
+	return fclr.rawResponse.Header.Get("x-ms-client-request-id")
+}
+
+// Date returns the value for header Date.
+func (fclr FileChangeLeaseResponse) Date() time.Time {
+	s := fclr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (fclr FileChangeLeaseResponse) ErrorCode() string {
+	return fclr.rawResponse.Header.Get("x-ms-error-code")
+}
+
+// ETag returns the value for header ETag.
+func (fclr FileChangeLeaseResponse) ETag() ETag {
+	return ETag(fclr.rawResponse.Header.Get("ETag"))
+}
+
+// LastModified returns the value for header Last-Modified.
+func (fclr FileChangeLeaseResponse) LastModified() time.Time {
+	s := fclr.rawResponse.Header.Get("Last-Modified")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// LeaseID returns the value for header x-ms-lease-id.
+func (fclr FileChangeLeaseResponse) LeaseID() string {
+	return fclr.rawResponse.Header.Get("x-ms-lease-id")
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (fclr FileChangeLeaseResponse) RequestID() string {
+	return fclr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (fclr FileChangeLeaseResponse) Version() string {
+	return fclr.rawResponse.Header.Get("x-ms-version")
 }
 
 // FileCreateResponse ...
@@ -1341,6 +1700,19 @@ func (ffchr FileForceCloseHandlesResponse) Marker() string {
 // NumberOfHandlesClosed returns the value for header x-ms-number-of-handles-closed.
 func (ffchr FileForceCloseHandlesResponse) NumberOfHandlesClosed() int32 {
 	s := ffchr.rawResponse.Header.Get("x-ms-number-of-handles-closed")
+	if s == "" {
+		return -1
+	}
+	i, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		i = 0
+	}
+	return int32(i)
+}
+
+// NumberOfHandlesFailedToClose returns the value for header x-ms-number-of-handles-failed.
+func (ffchr FileForceCloseHandlesResponse) NumberOfHandlesFailedToClose() int32 {
+	s := ffchr.rawResponse.Header.Get("x-ms-number-of-handles-failed")
 	if s == "" {
 		return -1
 	}
@@ -1564,6 +1936,21 @@ func (fgpr FileGetPropertiesResponse) LastModified() time.Time {
 	return t
 }
 
+// LeaseDuration returns the value for header x-ms-lease-duration.
+func (fgpr FileGetPropertiesResponse) LeaseDuration() LeaseDurationType {
+	return LeaseDurationType(fgpr.rawResponse.Header.Get("x-ms-lease-duration"))
+}
+
+// LeaseState returns the value for header x-ms-lease-state.
+func (fgpr FileGetPropertiesResponse) LeaseState() LeaseStateType {
+	return LeaseStateType(fgpr.rawResponse.Header.Get("x-ms-lease-state"))
+}
+
+// LeaseStatus returns the value for header x-ms-lease-status.
+func (fgpr FileGetPropertiesResponse) LeaseStatus() LeaseStatusType {
+	return LeaseStatusType(fgpr.rawResponse.Header.Get("x-ms-lease-status"))
+}
+
 // RequestID returns the value for header x-ms-request-id.
 func (fgpr FileGetPropertiesResponse) RequestID() string {
 	return fgpr.rawResponse.Header.Get("x-ms-request-id")
@@ -1586,6 +1973,87 @@ func (fgpr FileGetPropertiesResponse) Version() string {
 type FileProperty struct {
 	// ContentLength - Content length of the file. This value may not be up-to-date since an SMB client may have modified the file locally. The value of Content-Length may not reflect that fact until the handle is closed or the op-lock is broken. To retrieve current property values, call Get File Properties.
 	ContentLength int64 `xml:"Content-Length"`
+}
+
+// FileRange - An Azure Storage file range.
+type FileRange struct {
+	// XMLName is used for marshalling and is subject to removal in a future release.
+	XMLName xml.Name `xml:"Range"`
+	// Start - Start of the range.
+	Start int64 `xml:"Start"`
+	// End - End of the range.
+	End int64 `xml:"End"`
+}
+
+// FileReleaseLeaseResponse ...
+type FileReleaseLeaseResponse struct {
+	rawResponse *http.Response
+}
+
+// Response returns the raw HTTP response object.
+func (frlr FileReleaseLeaseResponse) Response() *http.Response {
+	return frlr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (frlr FileReleaseLeaseResponse) StatusCode() int {
+	return frlr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (frlr FileReleaseLeaseResponse) Status() string {
+	return frlr.rawResponse.Status
+}
+
+// ClientRequestID returns the value for header x-ms-client-request-id.
+func (frlr FileReleaseLeaseResponse) ClientRequestID() string {
+	return frlr.rawResponse.Header.Get("x-ms-client-request-id")
+}
+
+// Date returns the value for header Date.
+func (frlr FileReleaseLeaseResponse) Date() time.Time {
+	s := frlr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (frlr FileReleaseLeaseResponse) ErrorCode() string {
+	return frlr.rawResponse.Header.Get("x-ms-error-code")
+}
+
+// ETag returns the value for header ETag.
+func (frlr FileReleaseLeaseResponse) ETag() ETag {
+	return ETag(frlr.rawResponse.Header.Get("ETag"))
+}
+
+// LastModified returns the value for header Last-Modified.
+func (frlr FileReleaseLeaseResponse) LastModified() time.Time {
+	s := frlr.rawResponse.Header.Get("Last-Modified")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (frlr FileReleaseLeaseResponse) RequestID() string {
+	return frlr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (frlr FileReleaseLeaseResponse) Version() string {
+	return frlr.rawResponse.Header.Get("x-ms-version")
 }
 
 // FilesAndDirectoriesListSegment - Abstract for entries that can be listed from Directory.
@@ -2213,94 +2681,6 @@ type Metrics struct {
 	RetentionPolicy *RetentionPolicy `xml:"RetentionPolicy"`
 }
 
-// Range - An Azure Storage file range.
-type Range struct {
-	// Start - Start of the range.
-	Start int64 `xml:"Start"`
-	// End - End of the range.
-	End int64 `xml:"End"`
-}
-
-// Ranges - Wraps the response from the fileClient.GetRangeList method.
-type Ranges struct {
-	rawResponse *http.Response
-	Items       []Range `xml:"Range"`
-}
-
-// Response returns the raw HTTP response object.
-func (r Ranges) Response() *http.Response {
-	return r.rawResponse
-}
-
-// StatusCode returns the HTTP status code of the response, e.g. 200.
-func (r Ranges) StatusCode() int {
-	return r.rawResponse.StatusCode
-}
-
-// Status returns the HTTP status message of the response, e.g. "200 OK".
-func (r Ranges) Status() string {
-	return r.rawResponse.Status
-}
-
-// Date returns the value for header Date.
-func (r Ranges) Date() time.Time {
-	s := r.rawResponse.Header.Get("Date")
-	if s == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		t = time.Time{}
-	}
-	return t
-}
-
-// ErrorCode returns the value for header x-ms-error-code.
-func (r Ranges) ErrorCode() string {
-	return r.rawResponse.Header.Get("x-ms-error-code")
-}
-
-// ETag returns the value for header ETag.
-func (r Ranges) ETag() ETag {
-	return ETag(r.rawResponse.Header.Get("ETag"))
-}
-
-// FileContentLength returns the value for header x-ms-content-length.
-func (r Ranges) FileContentLength() int64 {
-	s := r.rawResponse.Header.Get("x-ms-content-length")
-	if s == "" {
-		return -1
-	}
-	i, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		i = 0
-	}
-	return i
-}
-
-// LastModified returns the value for header Last-Modified.
-func (r Ranges) LastModified() time.Time {
-	s := r.rawResponse.Header.Get("Last-Modified")
-	if s == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC1123, s)
-	if err != nil {
-		t = time.Time{}
-	}
-	return t
-}
-
-// RequestID returns the value for header x-ms-request-id.
-func (r Ranges) RequestID() string {
-	return r.rawResponse.Header.Get("x-ms-request-id")
-}
-
-// Version returns the value for header x-ms-version.
-func (r Ranges) Version() string {
-	return r.rawResponse.Header.Get("x-ms-version")
-}
-
 // RetentionPolicy - The retention policy.
 type RetentionPolicy struct {
 	// Enabled - Indicates whether a retention policy is enabled for the File service. If false, metrics data is retained, and the user is responsible for deleting it.
@@ -2342,6 +2722,247 @@ func (sspr ServiceSetPropertiesResponse) RequestID() string {
 // Version returns the value for header x-ms-version.
 func (sspr ServiceSetPropertiesResponse) Version() string {
 	return sspr.rawResponse.Header.Get("x-ms-version")
+}
+
+// ShareAcquireLeaseResponse ...
+type ShareAcquireLeaseResponse struct {
+	rawResponse *http.Response
+}
+
+// Response returns the raw HTTP response object.
+func (salr ShareAcquireLeaseResponse) Response() *http.Response {
+	return salr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (salr ShareAcquireLeaseResponse) StatusCode() int {
+	return salr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (salr ShareAcquireLeaseResponse) Status() string {
+	return salr.rawResponse.Status
+}
+
+// ClientRequestID returns the value for header x-ms-client-request-id.
+func (salr ShareAcquireLeaseResponse) ClientRequestID() string {
+	return salr.rawResponse.Header.Get("x-ms-client-request-id")
+}
+
+// Date returns the value for header Date.
+func (salr ShareAcquireLeaseResponse) Date() time.Time {
+	s := salr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (salr ShareAcquireLeaseResponse) ErrorCode() string {
+	return salr.rawResponse.Header.Get("x-ms-error-code")
+}
+
+// ETag returns the value for header ETag.
+func (salr ShareAcquireLeaseResponse) ETag() ETag {
+	return ETag(salr.rawResponse.Header.Get("ETag"))
+}
+
+// LastModified returns the value for header Last-Modified.
+func (salr ShareAcquireLeaseResponse) LastModified() time.Time {
+	s := salr.rawResponse.Header.Get("Last-Modified")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// LeaseID returns the value for header x-ms-lease-id.
+func (salr ShareAcquireLeaseResponse) LeaseID() string {
+	return salr.rawResponse.Header.Get("x-ms-lease-id")
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (salr ShareAcquireLeaseResponse) RequestID() string {
+	return salr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (salr ShareAcquireLeaseResponse) Version() string {
+	return salr.rawResponse.Header.Get("x-ms-version")
+}
+
+// ShareBreakLeaseResponse ...
+type ShareBreakLeaseResponse struct {
+	rawResponse *http.Response
+}
+
+// Response returns the raw HTTP response object.
+func (sblr ShareBreakLeaseResponse) Response() *http.Response {
+	return sblr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (sblr ShareBreakLeaseResponse) StatusCode() int {
+	return sblr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (sblr ShareBreakLeaseResponse) Status() string {
+	return sblr.rawResponse.Status
+}
+
+// ClientRequestID returns the value for header x-ms-client-request-id.
+func (sblr ShareBreakLeaseResponse) ClientRequestID() string {
+	return sblr.rawResponse.Header.Get("x-ms-client-request-id")
+}
+
+// Date returns the value for header Date.
+func (sblr ShareBreakLeaseResponse) Date() time.Time {
+	s := sblr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (sblr ShareBreakLeaseResponse) ErrorCode() string {
+	return sblr.rawResponse.Header.Get("x-ms-error-code")
+}
+
+// ETag returns the value for header ETag.
+func (sblr ShareBreakLeaseResponse) ETag() ETag {
+	return ETag(sblr.rawResponse.Header.Get("ETag"))
+}
+
+// LastModified returns the value for header Last-Modified.
+func (sblr ShareBreakLeaseResponse) LastModified() time.Time {
+	s := sblr.rawResponse.Header.Get("Last-Modified")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// LeaseID returns the value for header x-ms-lease-id.
+func (sblr ShareBreakLeaseResponse) LeaseID() string {
+	return sblr.rawResponse.Header.Get("x-ms-lease-id")
+}
+
+// LeaseTime returns the value for header x-ms-lease-time.
+func (sblr ShareBreakLeaseResponse) LeaseTime() int32 {
+	s := sblr.rawResponse.Header.Get("x-ms-lease-time")
+	if s == "" {
+		return -1
+	}
+	i, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		i = 0
+	}
+	return int32(i)
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (sblr ShareBreakLeaseResponse) RequestID() string {
+	return sblr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (sblr ShareBreakLeaseResponse) Version() string {
+	return sblr.rawResponse.Header.Get("x-ms-version")
+}
+
+// ShareChangeLeaseResponse ...
+type ShareChangeLeaseResponse struct {
+	rawResponse *http.Response
+}
+
+// Response returns the raw HTTP response object.
+func (sclr ShareChangeLeaseResponse) Response() *http.Response {
+	return sclr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (sclr ShareChangeLeaseResponse) StatusCode() int {
+	return sclr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (sclr ShareChangeLeaseResponse) Status() string {
+	return sclr.rawResponse.Status
+}
+
+// ClientRequestID returns the value for header x-ms-client-request-id.
+func (sclr ShareChangeLeaseResponse) ClientRequestID() string {
+	return sclr.rawResponse.Header.Get("x-ms-client-request-id")
+}
+
+// Date returns the value for header Date.
+func (sclr ShareChangeLeaseResponse) Date() time.Time {
+	s := sclr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (sclr ShareChangeLeaseResponse) ErrorCode() string {
+	return sclr.rawResponse.Header.Get("x-ms-error-code")
+}
+
+// ETag returns the value for header ETag.
+func (sclr ShareChangeLeaseResponse) ETag() ETag {
+	return ETag(sclr.rawResponse.Header.Get("ETag"))
+}
+
+// LastModified returns the value for header Last-Modified.
+func (sclr ShareChangeLeaseResponse) LastModified() time.Time {
+	s := sclr.rawResponse.Header.Get("Last-Modified")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// LeaseID returns the value for header x-ms-lease-id.
+func (sclr ShareChangeLeaseResponse) LeaseID() string {
+	return sclr.rawResponse.Header.Get("x-ms-lease-id")
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (sclr ShareChangeLeaseResponse) RequestID() string {
+	return sclr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (sclr ShareChangeLeaseResponse) Version() string {
+	return sclr.rawResponse.Header.Get("x-ms-version")
 }
 
 // ShareCreatePermissionResponse ...
@@ -2582,6 +3203,87 @@ func (sdr ShareDeleteResponse) Version() string {
 	return sdr.rawResponse.Header.Get("x-ms-version")
 }
 
+// ShareFileRangeList - The list of file ranges
+type ShareFileRangeList struct {
+	rawResponse *http.Response
+	Ranges      []FileRange  `xml:"Range"`
+	ClearRanges []ClearRange `xml:"ClearRange"`
+}
+
+// Response returns the raw HTTP response object.
+func (sfrl ShareFileRangeList) Response() *http.Response {
+	return sfrl.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (sfrl ShareFileRangeList) StatusCode() int {
+	return sfrl.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (sfrl ShareFileRangeList) Status() string {
+	return sfrl.rawResponse.Status
+}
+
+// Date returns the value for header Date.
+func (sfrl ShareFileRangeList) Date() time.Time {
+	s := sfrl.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (sfrl ShareFileRangeList) ErrorCode() string {
+	return sfrl.rawResponse.Header.Get("x-ms-error-code")
+}
+
+// ETag returns the value for header ETag.
+func (sfrl ShareFileRangeList) ETag() ETag {
+	return ETag(sfrl.rawResponse.Header.Get("ETag"))
+}
+
+// FileContentLength returns the value for header x-ms-content-length.
+func (sfrl ShareFileRangeList) FileContentLength() int64 {
+	s := sfrl.rawResponse.Header.Get("x-ms-content-length")
+	if s == "" {
+		return -1
+	}
+	i, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		i = 0
+	}
+	return i
+}
+
+// LastModified returns the value for header Last-Modified.
+func (sfrl ShareFileRangeList) LastModified() time.Time {
+	s := sfrl.rawResponse.Header.Get("Last-Modified")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (sfrl ShareFileRangeList) RequestID() string {
+	return sfrl.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (sfrl ShareFileRangeList) Version() string {
+	return sfrl.rawResponse.Header.Get("x-ms-version")
+}
+
 // ShareGetPropertiesResponse ...
 type ShareGetPropertiesResponse struct {
 	rawResponse *http.Response
@@ -2613,6 +3315,29 @@ func (sgpr ShareGetPropertiesResponse) StatusCode() int {
 // Status returns the HTTP status message of the response, e.g. "200 OK".
 func (sgpr ShareGetPropertiesResponse) Status() string {
 	return sgpr.rawResponse.Status
+}
+
+// AccessTier returns the value for header x-ms-access-tier.
+func (sgpr ShareGetPropertiesResponse) AccessTier() string {
+	return sgpr.rawResponse.Header.Get("x-ms-access-tier")
+}
+
+// AccessTierChangeTime returns the value for header x-ms-access-tier-change-time.
+func (sgpr ShareGetPropertiesResponse) AccessTierChangeTime() time.Time {
+	s := sgpr.rawResponse.Header.Get("x-ms-access-tier-change-time")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// AccessTierTransitionState returns the value for header x-ms-access-tier-transition-state.
+func (sgpr ShareGetPropertiesResponse) AccessTierTransitionState() string {
+	return sgpr.rawResponse.Header.Get("x-ms-access-tier-transition-state")
 }
 
 // Date returns the value for header Date.
@@ -2651,6 +3376,73 @@ func (sgpr ShareGetPropertiesResponse) LastModified() time.Time {
 	return t
 }
 
+// LeaseDuration returns the value for header x-ms-lease-duration.
+func (sgpr ShareGetPropertiesResponse) LeaseDuration() LeaseDurationType {
+	return LeaseDurationType(sgpr.rawResponse.Header.Get("x-ms-lease-duration"))
+}
+
+// LeaseState returns the value for header x-ms-lease-state.
+func (sgpr ShareGetPropertiesResponse) LeaseState() LeaseStateType {
+	return LeaseStateType(sgpr.rawResponse.Header.Get("x-ms-lease-state"))
+}
+
+// LeaseStatus returns the value for header x-ms-lease-status.
+func (sgpr ShareGetPropertiesResponse) LeaseStatus() LeaseStatusType {
+	return LeaseStatusType(sgpr.rawResponse.Header.Get("x-ms-lease-status"))
+}
+
+// NextAllowedQuotaDowngradeTime returns the value for header x-ms-share-next-allowed-quota-downgrade-time.
+func (sgpr ShareGetPropertiesResponse) NextAllowedQuotaDowngradeTime() time.Time {
+	s := sgpr.rawResponse.Header.Get("x-ms-share-next-allowed-quota-downgrade-time")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// ProvisionedEgressMBps returns the value for header x-ms-share-provisioned-egress-mbps.
+func (sgpr ShareGetPropertiesResponse) ProvisionedEgressMBps() int32 {
+	s := sgpr.rawResponse.Header.Get("x-ms-share-provisioned-egress-mbps")
+	if s == "" {
+		return -1
+	}
+	i, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		i = 0
+	}
+	return int32(i)
+}
+
+// ProvisionedIngressMBps returns the value for header x-ms-share-provisioned-ingress-mbps.
+func (sgpr ShareGetPropertiesResponse) ProvisionedIngressMBps() int32 {
+	s := sgpr.rawResponse.Header.Get("x-ms-share-provisioned-ingress-mbps")
+	if s == "" {
+		return -1
+	}
+	i, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		i = 0
+	}
+	return int32(i)
+}
+
+// ProvisionedIops returns the value for header x-ms-share-provisioned-iops.
+func (sgpr ShareGetPropertiesResponse) ProvisionedIops() int32 {
+	s := sgpr.rawResponse.Header.Get("x-ms-share-provisioned-iops")
+	if s == "" {
+		return -1
+	}
+	i, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		i = 0
+	}
+	return int32(i)
+}
+
 // Quota returns the value for header x-ms-share-quota.
 func (sgpr ShareGetPropertiesResponse) Quota() int32 {
 	s := sgpr.rawResponse.Header.Get("x-ms-share-quota")
@@ -2680,6 +3472,8 @@ type ShareItem struct {
 	XMLName    xml.Name        `xml:"Share"`
 	Name       string          `xml:"Name"`
 	Snapshot   *string         `xml:"Snapshot"`
+	Deleted    *bool           `xml:"Deleted"`
+	Version    *string         `xml:"Version"`
 	Properties ShareProperties `xml:"Properties"`
 	Metadata   Metadata        `xml:"Metadata"`
 }
@@ -2688,7 +3482,7 @@ type ShareItem struct {
 type SharePermission struct {
 	rawResponse *http.Response
 	// Permission - The permission in the Security Descriptor Definition Language (SDDL).
-	Permission string
+	Permission string `xml:"permission"`
 }
 
 // Response returns the raw HTTP response object.
@@ -2736,9 +3530,24 @@ func (sp SharePermission) Version() string {
 
 // ShareProperties - Properties of a share.
 type ShareProperties struct {
-	LastModified time.Time `xml:"Last-Modified"`
-	Etag         ETag      `xml:"Etag"`
-	Quota        int32     `xml:"Quota"`
+	LastModified                  time.Time  `xml:"Last-Modified"`
+	Etag                          ETag       `xml:"Etag"`
+	Quota                         int32      `xml:"Quota"`
+	ProvisionedIops               *int32     `xml:"ProvisionedIops"`
+	ProvisionedIngressMBps        *int32     `xml:"ProvisionedIngressMBps"`
+	ProvisionedEgressMBps         *int32     `xml:"ProvisionedEgressMBps"`
+	NextAllowedQuotaDowngradeTime *time.Time `xml:"NextAllowedQuotaDowngradeTime"`
+	DeletedTime                   *time.Time `xml:"DeletedTime"`
+	RemainingRetentionDays        *int32     `xml:"RemainingRetentionDays"`
+	AccessTier                    *string    `xml:"AccessTier"`
+	AccessTierChangeTime          *time.Time `xml:"AccessTierChangeTime"`
+	AccessTierTransitionState     *string    `xml:"AccessTierTransitionState"`
+	// LeaseStatus - Possible values include: 'LeaseStatusLocked', 'LeaseStatusUnlocked', 'LeaseStatusNone'
+	LeaseStatus LeaseStatusType `xml:"LeaseStatus"`
+	// LeaseState - Possible values include: 'LeaseStateAvailable', 'LeaseStateLeased', 'LeaseStateExpired', 'LeaseStateBreaking', 'LeaseStateBroken', 'LeaseStateNone'
+	LeaseState LeaseStateType `xml:"LeaseState"`
+	// LeaseDuration - Possible values include: 'LeaseDurationInfinite', 'LeaseDurationFixed', 'LeaseDurationNone'
+	LeaseDuration LeaseDurationType `xml:"LeaseDuration"`
 }
 
 // MarshalXML implements the xml.Marshaler interface for ShareProperties.
@@ -2751,6 +3560,230 @@ func (sp ShareProperties) MarshalXML(e *xml.Encoder, start xml.StartElement) err
 func (sp *ShareProperties) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	sp2 := (*shareProperties)(unsafe.Pointer(sp))
 	return d.DecodeElement(sp2, &start)
+}
+
+// ShareProtocolSettings - Protocol settings
+type ShareProtocolSettings struct {
+	// Smb - Settings for SMB protocol.
+	Smb *ShareSmbSettings `xml:"SMB"`
+}
+
+// ShareReleaseLeaseResponse ...
+type ShareReleaseLeaseResponse struct {
+	rawResponse *http.Response
+}
+
+// Response returns the raw HTTP response object.
+func (srlr ShareReleaseLeaseResponse) Response() *http.Response {
+	return srlr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (srlr ShareReleaseLeaseResponse) StatusCode() int {
+	return srlr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (srlr ShareReleaseLeaseResponse) Status() string {
+	return srlr.rawResponse.Status
+}
+
+// ClientRequestID returns the value for header x-ms-client-request-id.
+func (srlr ShareReleaseLeaseResponse) ClientRequestID() string {
+	return srlr.rawResponse.Header.Get("x-ms-client-request-id")
+}
+
+// Date returns the value for header Date.
+func (srlr ShareReleaseLeaseResponse) Date() time.Time {
+	s := srlr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (srlr ShareReleaseLeaseResponse) ErrorCode() string {
+	return srlr.rawResponse.Header.Get("x-ms-error-code")
+}
+
+// ETag returns the value for header ETag.
+func (srlr ShareReleaseLeaseResponse) ETag() ETag {
+	return ETag(srlr.rawResponse.Header.Get("ETag"))
+}
+
+// LastModified returns the value for header Last-Modified.
+func (srlr ShareReleaseLeaseResponse) LastModified() time.Time {
+	s := srlr.rawResponse.Header.Get("Last-Modified")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (srlr ShareReleaseLeaseResponse) RequestID() string {
+	return srlr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (srlr ShareReleaseLeaseResponse) Version() string {
+	return srlr.rawResponse.Header.Get("x-ms-version")
+}
+
+// ShareRenewLeaseResponse ...
+type ShareRenewLeaseResponse struct {
+	rawResponse *http.Response
+}
+
+// Response returns the raw HTTP response object.
+func (srlr ShareRenewLeaseResponse) Response() *http.Response {
+	return srlr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (srlr ShareRenewLeaseResponse) StatusCode() int {
+	return srlr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (srlr ShareRenewLeaseResponse) Status() string {
+	return srlr.rawResponse.Status
+}
+
+// ClientRequestID returns the value for header x-ms-client-request-id.
+func (srlr ShareRenewLeaseResponse) ClientRequestID() string {
+	return srlr.rawResponse.Header.Get("x-ms-client-request-id")
+}
+
+// Date returns the value for header Date.
+func (srlr ShareRenewLeaseResponse) Date() time.Time {
+	s := srlr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (srlr ShareRenewLeaseResponse) ErrorCode() string {
+	return srlr.rawResponse.Header.Get("x-ms-error-code")
+}
+
+// ETag returns the value for header ETag.
+func (srlr ShareRenewLeaseResponse) ETag() ETag {
+	return ETag(srlr.rawResponse.Header.Get("ETag"))
+}
+
+// LastModified returns the value for header Last-Modified.
+func (srlr ShareRenewLeaseResponse) LastModified() time.Time {
+	s := srlr.rawResponse.Header.Get("Last-Modified")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// LeaseID returns the value for header x-ms-lease-id.
+func (srlr ShareRenewLeaseResponse) LeaseID() string {
+	return srlr.rawResponse.Header.Get("x-ms-lease-id")
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (srlr ShareRenewLeaseResponse) RequestID() string {
+	return srlr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (srlr ShareRenewLeaseResponse) Version() string {
+	return srlr.rawResponse.Header.Get("x-ms-version")
+}
+
+// ShareRestoreResponse ...
+type ShareRestoreResponse struct {
+	rawResponse *http.Response
+}
+
+// Response returns the raw HTTP response object.
+func (srr ShareRestoreResponse) Response() *http.Response {
+	return srr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (srr ShareRestoreResponse) StatusCode() int {
+	return srr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (srr ShareRestoreResponse) Status() string {
+	return srr.rawResponse.Status
+}
+
+// ClientRequestID returns the value for header x-ms-client-request-id.
+func (srr ShareRestoreResponse) ClientRequestID() string {
+	return srr.rawResponse.Header.Get("x-ms-client-request-id")
+}
+
+// Date returns the value for header Date.
+func (srr ShareRestoreResponse) Date() time.Time {
+	s := srr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (srr ShareRestoreResponse) ErrorCode() string {
+	return srr.rawResponse.Header.Get("x-ms-error-code")
+}
+
+// ETag returns the value for header ETag.
+func (srr ShareRestoreResponse) ETag() ETag {
+	return ETag(srr.rawResponse.Header.Get("ETag"))
+}
+
+// LastModified returns the value for header Last-Modified.
+func (srr ShareRestoreResponse) LastModified() time.Time {
+	s := srr.rawResponse.Header.Get("Last-Modified")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (srr ShareRestoreResponse) RequestID() string {
+	return srr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (srr ShareRestoreResponse) Version() string {
+	return srr.rawResponse.Header.Get("x-ms-version")
 }
 
 // ShareSetAccessPolicyResponse ...
@@ -2885,29 +3918,29 @@ func (ssmr ShareSetMetadataResponse) Version() string {
 	return ssmr.rawResponse.Header.Get("x-ms-version")
 }
 
-// ShareSetQuotaResponse ...
-type ShareSetQuotaResponse struct {
+// ShareSetPropertiesResponse ...
+type ShareSetPropertiesResponse struct {
 	rawResponse *http.Response
 }
 
 // Response returns the raw HTTP response object.
-func (ssqr ShareSetQuotaResponse) Response() *http.Response {
-	return ssqr.rawResponse
+func (sspr ShareSetPropertiesResponse) Response() *http.Response {
+	return sspr.rawResponse
 }
 
 // StatusCode returns the HTTP status code of the response, e.g. 200.
-func (ssqr ShareSetQuotaResponse) StatusCode() int {
-	return ssqr.rawResponse.StatusCode
+func (sspr ShareSetPropertiesResponse) StatusCode() int {
+	return sspr.rawResponse.StatusCode
 }
 
 // Status returns the HTTP status message of the response, e.g. "200 OK".
-func (ssqr ShareSetQuotaResponse) Status() string {
-	return ssqr.rawResponse.Status
+func (sspr ShareSetPropertiesResponse) Status() string {
+	return sspr.rawResponse.Status
 }
 
 // Date returns the value for header Date.
-func (ssqr ShareSetQuotaResponse) Date() time.Time {
-	s := ssqr.rawResponse.Header.Get("Date")
+func (sspr ShareSetPropertiesResponse) Date() time.Time {
+	s := sspr.rawResponse.Header.Get("Date")
 	if s == "" {
 		return time.Time{}
 	}
@@ -2919,18 +3952,18 @@ func (ssqr ShareSetQuotaResponse) Date() time.Time {
 }
 
 // ErrorCode returns the value for header x-ms-error-code.
-func (ssqr ShareSetQuotaResponse) ErrorCode() string {
-	return ssqr.rawResponse.Header.Get("x-ms-error-code")
+func (sspr ShareSetPropertiesResponse) ErrorCode() string {
+	return sspr.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // ETag returns the value for header ETag.
-func (ssqr ShareSetQuotaResponse) ETag() ETag {
-	return ETag(ssqr.rawResponse.Header.Get("ETag"))
+func (sspr ShareSetPropertiesResponse) ETag() ETag {
+	return ETag(sspr.rawResponse.Header.Get("ETag"))
 }
 
 // LastModified returns the value for header Last-Modified.
-func (ssqr ShareSetQuotaResponse) LastModified() time.Time {
-	s := ssqr.rawResponse.Header.Get("Last-Modified")
+func (sspr ShareSetPropertiesResponse) LastModified() time.Time {
+	s := sspr.rawResponse.Header.Get("Last-Modified")
 	if s == "" {
 		return time.Time{}
 	}
@@ -2942,13 +3975,19 @@ func (ssqr ShareSetQuotaResponse) LastModified() time.Time {
 }
 
 // RequestID returns the value for header x-ms-request-id.
-func (ssqr ShareSetQuotaResponse) RequestID() string {
-	return ssqr.rawResponse.Header.Get("x-ms-request-id")
+func (sspr ShareSetPropertiesResponse) RequestID() string {
+	return sspr.rawResponse.Header.Get("x-ms-request-id")
 }
 
 // Version returns the value for header x-ms-version.
-func (ssqr ShareSetQuotaResponse) Version() string {
-	return ssqr.rawResponse.Header.Get("x-ms-version")
+func (sspr ShareSetPropertiesResponse) Version() string {
+	return sspr.rawResponse.Header.Get("x-ms-version")
+}
+
+// ShareSmbSettings - Settings for SMB protocol.
+type ShareSmbSettings struct {
+	// Multichannel - Settings for SMB Multichannel.
+	Multichannel *SmbMultichannel `xml:"Multichannel"`
 }
 
 // ShareStats - Stats for the share.
@@ -3094,6 +4133,14 @@ func (si SignedIdentifiers) Version() string {
 	return si.rawResponse.Header.Get("x-ms-version")
 }
 
+// SmbMultichannel - Settings for SMB multichannel
+type SmbMultichannel struct {
+	// XMLName is used for marshalling and is subject to removal in a future release.
+	XMLName xml.Name `xml:"Multichannel"`
+	// Enabled - If SMB multichannel is enabled.
+	Enabled *bool `xml:"Enabled"`
+}
+
 // StorageError ...
 // type StorageError struct {
 // 	Message *string `xml:"Message"`
@@ -3108,6 +4155,8 @@ type StorageServiceProperties struct {
 	MinuteMetrics *Metrics `xml:"MinuteMetrics"`
 	// Cors - The set of CORS rules.
 	Cors []CorsRule `xml:"Cors>CorsRule"`
+	// Protocol - Protocol settings
+	Protocol *ShareProtocolSettings `xml:"ProtocolSettings"`
 }
 
 // Response returns the raw HTTP response object.
@@ -3214,7 +4263,19 @@ type handleItem struct {
 
 // internal type used for marshalling
 type shareProperties struct {
-	LastModified timeRFC1123 `xml:"Last-Modified"`
-	Etag         ETag        `xml:"Etag"`
-	Quota        int32       `xml:"Quota"`
+	LastModified                  timeRFC1123       `xml:"Last-Modified"`
+	Etag                          ETag              `xml:"Etag"`
+	Quota                         int32             `xml:"Quota"`
+	ProvisionedIops               *int32            `xml:"ProvisionedIops"`
+	ProvisionedIngressMBps        *int32            `xml:"ProvisionedIngressMBps"`
+	ProvisionedEgressMBps         *int32            `xml:"ProvisionedEgressMBps"`
+	NextAllowedQuotaDowngradeTime *timeRFC1123      `xml:"NextAllowedQuotaDowngradeTime"`
+	DeletedTime                   *timeRFC1123      `xml:"DeletedTime"`
+	RemainingRetentionDays        *int32            `xml:"RemainingRetentionDays"`
+	AccessTier                    *string           `xml:"AccessTier"`
+	AccessTierChangeTime          *timeRFC1123      `xml:"AccessTierChangeTime"`
+	AccessTierTransitionState     *string           `xml:"AccessTierTransitionState"`
+	LeaseStatus                   LeaseStatusType   `xml:"LeaseStatus"`
+	LeaseState                    LeaseStateType    `xml:"LeaseState"`
+	LeaseDuration                 LeaseDurationType `xml:"LeaseDuration"`
 }
