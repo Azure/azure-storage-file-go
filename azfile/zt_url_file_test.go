@@ -160,7 +160,7 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 
 	attribs := azfile.FileAttributeTemporary.Add(azfile.FileAttributeHidden)
 	creationTime := time.Now().Add(-time.Hour)
-	lastWriteTime := time.Now().Add(-time.Minute*15)
+	lastWriteTime := time.Now().Add(-time.Minute * 15)
 
 	// Format and re-parse the times so we have the same precision
 	creationTime, err := time.Parse(azfile.ISO8601, creationTime.Format(azfile.ISO8601))
@@ -177,8 +177,8 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 		ContentDisposition: "attachment",
 		SMBProperties: azfile.SMBProperties{
 			PermissionString:  &sampleSDDL, // Because our permission string is less than 9KB, it can be used here.
-			FileAttributes: &attribs,
-			FileCreationTime: &creationTime,
+			FileAttributes:    &attribs,
+			FileCreationTime:  &creationTime,
 			FileLastWriteTime: &lastWriteTime,
 		},
 	}
@@ -253,7 +253,7 @@ func (s *FileURLSuite) TestFilePreservePermissions(c *chk.C) {
 		ContentMD5:         testMd5,
 		CacheControl:       "no-transform",
 		ContentDisposition: "attachment",
-		SMBProperties: azfile.SMBProperties{
+		SMBProperties:      azfile.SMBProperties{
 			// SMBProperties, when options are left nil, leads to preserving.
 		},
 	}
@@ -1309,8 +1309,8 @@ func (s *FileURLSuite) TestGetRangeListNonDefaultExact(c *chk.C) {
 	c.Assert(rangeList.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(rangeList.Version(), chk.Not(chk.Equals), "")
 	c.Assert(rangeList.Date().IsZero(), chk.Equals, false)
-	c.Assert(rangeList.Items, chk.HasLen, 1)
-	c.Assert(rangeList.Items[0], chk.DeepEquals, azfile.Range{Start: 0, End: 1022})
+	c.Assert(rangeList.Ranges, chk.HasLen, 1)
+	c.Assert(rangeList.Ranges[0], chk.DeepEquals, azfile.FileRange{Start: 0, End: 1022})
 }
 
 // Default means clear the entire file's range
@@ -1331,7 +1331,7 @@ func (s *FileURLSuite) TestClearRangeDefault(c *chk.C) {
 
 	rangeList, err := fileURL.GetRangeList(context.Background(), 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)
-	c.Assert(rangeList.Items, chk.HasLen, 0)
+	c.Assert(rangeList.Ranges, chk.HasLen, 0)
 }
 
 func (s *FileURLSuite) TestClearRangeNonDefault(c *chk.C) {
@@ -1351,7 +1351,7 @@ func (s *FileURLSuite) TestClearRangeNonDefault(c *chk.C) {
 
 	rangeList, err := fileURL.GetRangeList(context.Background(), 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)
-	c.Assert(rangeList.Items, chk.HasLen, 0)
+	c.Assert(rangeList.Ranges, chk.HasLen, 0)
 }
 
 func (s *FileURLSuite) TestClearRangeMultipleRanges(c *chk.C) {
@@ -1371,8 +1371,8 @@ func (s *FileURLSuite) TestClearRangeMultipleRanges(c *chk.C) {
 
 	rangeList, err := fileURL.GetRangeList(context.Background(), 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)
-	c.Assert(rangeList.Items, chk.HasLen, 1)
-	c.Assert(rangeList.Items[0], chk.DeepEquals, azfile.Range{Start: 0, End: 1023})
+	c.Assert(rangeList.Ranges, chk.HasLen, 1)
+	c.Assert(rangeList.Ranges[0], chk.DeepEquals, azfile.FileRange{Start: 0, End: 1023})
 }
 
 // When not 512 aligned, clear range will set 0 the non-512 aligned range, and will not eliminate the range.
@@ -1394,8 +1394,8 @@ func (s *FileURLSuite) TestClearRangeNonDefault1Count(c *chk.C) {
 
 	rangeList, err := fileURL.GetRangeList(context.Background(), 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)
-	c.Assert(rangeList.Items, chk.HasLen, 1)
-	c.Assert(rangeList.Items[0], chk.DeepEquals, azfile.Range{Start: 0, End: 0})
+	c.Assert(rangeList.Ranges, chk.HasLen, 1)
+	c.Assert(rangeList.Ranges[0], chk.DeepEquals, azfile.FileRange{Start: 0, End: 0})
 
 	dResp, err := fileURL.Download(ctx, 0, azfile.CountToEnd, false)
 	c.Assert(err, chk.IsNil)
@@ -1436,10 +1436,10 @@ func setupGetRangeListTest(c *chk.C) (shareURL azfile.ShareURL, fileURL azfile.F
 	return
 }
 
-func validateBasicGetRangeList(c *chk.C, resp *azfile.Ranges, err error) {
+func validateBasicGetRangeList(c *chk.C, resp *azfile.ShareFileRangeList, err error) {
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Items, chk.HasLen, 1)
-	c.Assert(resp.Items[0], chk.Equals, azfile.Range{Start: 0, End: testFileRangeSize - 1})
+	c.Assert(resp.Ranges, chk.HasLen, 1)
+	c.Assert(resp.Ranges[0], chk.Equals, azfile.FileRange{Start: 0, End: testFileRangeSize - 1})
 }
 
 func (s *FileURLSuite) TestFileGetRangeListDefaultEmptyFile(c *chk.C) {
@@ -1450,7 +1450,7 @@ func (s *FileURLSuite) TestFileGetRangeListDefaultEmptyFile(c *chk.C) {
 
 	resp, err := fileURL.GetRangeList(ctx, 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Items, chk.HasLen, 0)
+	c.Assert(resp.Ranges, chk.HasLen, 0)
 }
 
 func (s *FileURLSuite) TestFileGetRangeListDefault1Range(c *chk.C) {
@@ -1472,9 +1472,9 @@ func (s *FileURLSuite) TestFileGetRangeListNonContiguousRanges(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	resp, err := fileURL.GetRangeList(ctx, 0, azfile.CountToEnd)
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Items, chk.HasLen, 2)
-	c.Assert(resp.Items[0], chk.Equals, azfile.Range{Start: 0, End: testFileRangeSize - 1})
-	c.Assert(resp.Items[1], chk.Equals, azfile.Range{Start: testFileRangeSize * 2, End: (testFileRangeSize * 3) - 1})
+	c.Assert(resp.Ranges, chk.HasLen, 2)
+	c.Assert(resp.Ranges[0], chk.Equals, azfile.FileRange{Start: 0, End: testFileRangeSize - 1})
+	c.Assert(resp.Ranges[1], chk.Equals, azfile.FileRange{Start: testFileRangeSize * 2, End: (testFileRangeSize * 3) - 1})
 }
 
 func (s *FileURLSuite) TestFileGetRangeListNonContiguousRangesCountLess(c *chk.C) {
@@ -1483,8 +1483,8 @@ func (s *FileURLSuite) TestFileGetRangeListNonContiguousRangesCountLess(c *chk.C
 
 	resp, err := fileURL.GetRangeList(ctx, 0, testFileRangeSize-1)
 	c.Assert(err, chk.IsNil)
-	c.Assert(resp.Items, chk.HasLen, 1)
-	c.Assert(resp.Items[0], chk.Equals, azfile.Range{Start: 0, End: testFileRangeSize - 2})
+	c.Assert(resp.Ranges, chk.HasLen, 1)
+	c.Assert(resp.Ranges[0], chk.Equals, azfile.FileRange{Start: 0, End: testFileRangeSize - 2})
 }
 
 func (s *FileURLSuite) TestFileGetRangeListNonContiguousRangesCountExceed(c *chk.C) {
