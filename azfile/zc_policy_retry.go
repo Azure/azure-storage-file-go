@@ -137,7 +137,7 @@ func NewRetryPolicyFactory(o RetryOptions) pipeline.Factory {
 			//    Even tries go against primary; odd tries go against the secondary
 			//    For a primary wait ((2 ^ primaryTries - 1) * delay * random(0.8, 1.2)
 			//    If secondary gets a 404, don't fail, retry but future retries are only against the primary
-			//    When retrying against a secondary, ignore the retry count and wait (.1 second * random(0.8, 1.2))
+			//    When retrying against a secondary, ignore the retry Count and wait (.1 second * random(0.8, 1.2))
 			for try := int32(1); try <= o.MaxTries; try++ {
 				logf("\n=====> Try=%d\n", try)
 
@@ -160,7 +160,7 @@ func NewRetryPolicyFactory(o RetryOptions) pipeline.Factory {
 				requestCopy := request.Copy()
 
 				// For each try, seek to the beginning of the Body stream. We do this even for the 1st try because
-				// the stream may not be at offset 0 when we first get it and we want the same behavior for the
+				// the stream may not be at Offset 0 when we first get it and we want the same behavior for the
 				// 1st try as for additional tries.
 				if err = requestCopy.RewindBody(); err != nil {
 					sanityCheckFailed(err.Error())
@@ -367,10 +367,10 @@ func (r *deadlineExceededReadCloser) Read(p []byte) (int, error) {
 	}
 	return n, improveDeadlineExceeded(err)
 }
-func (r *deadlineExceededReadCloser) Seek(offset int64, whence int) (int64, error) {
+func (r *deadlineExceededReadCloser) Seek(Offset int64, whence int) (int64, error) {
 	// For an HTTP request, the ReadCloser MUST also implement seek
 	// For an HTTP response, Seek MUST not be called (or this will panic)
-	o, err := r.r.(io.Seeker).Seek(offset, whence)
+	o, err := r.r.(io.Seeker).Seek(Offset, whence)
 	return o, improveDeadlineExceeded(err)
 }
 func (r *deadlineExceededReadCloser) Close() error {
