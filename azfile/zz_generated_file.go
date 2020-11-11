@@ -30,15 +30,16 @@ func newFileClient(url url.URL, p pipeline.Pipeline) fileClient {
 // copyID is the copy identifier provided in the x-ms-copy-id header of the original Copy File operation. timeout is
 // the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
-// Timeouts for File Service Operations.</a>
-func (client fileClient) AbortCopy(ctx context.Context, copyID string, timeout *int32) (*FileAbortCopyResponse, error) {
+// Timeouts for File Service Operations.</a> leaseID is if specified, the operation only succeeds if the resource's
+// lease is active and matches this ID.
+func (client fileClient) AbortCopy(ctx context.Context, copyID string, timeout *int32, leaseID *string) (*FileAbortCopyResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.abortCopyPreparer(copyID, timeout)
+	req, err := client.abortCopyPreparer(copyID, timeout, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +51,7 @@ func (client fileClient) AbortCopy(ctx context.Context, copyID string, timeout *
 }
 
 // abortCopyPreparer prepares the AbortCopy request.
-func (client fileClient) abortCopyPreparer(copyID string, timeout *int32) (pipeline.Request, error) {
+func (client fileClient) abortCopyPreparer(copyID string, timeout *int32, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -64,6 +65,9 @@ func (client fileClient) abortCopyPreparer(copyID string, timeout *int32) (pipel
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-copy-action", "abort")
 	req.Header.Set("x-ms-version", ServiceVersion)
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
 	return req, nil
 }
 
@@ -78,9 +82,198 @@ func (client fileClient) abortCopyResponder(resp pipeline.Response) (pipeline.Re
 	return &FileAbortCopyResponse{rawResponse: resp.Response()}, err
 }
 
+// AcquireLease [Update] The Lease File operation establishes and manages a lock on a file for write and delete
+// operations
+//
+// timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
+// Timeouts for File Service Operations.</a> duration is specifies the duration of the lease, in seconds, or negative
+// one (-1) for a lease that never expires. A non-infinite lease can be between 15 and 60 seconds. A lease duration
+// cannot be changed using renew or change. proposedLeaseID is proposed lease ID, in a GUID string format. The File
+// service returns 400 (Invalid request) if the proposed lease ID is not in the correct format. See Guid Constructor
+// (String) for a list of valid GUID string formats. requestID is provides a client-generated, opaque value with a 1 KB
+// character limit that is recorded in the analytics logs when storage analytics logging is enabled.
+func (client fileClient) AcquireLease(ctx context.Context, timeout *int32, duration *int32, proposedLeaseID *string, requestID *string) (*FileAcquireLeaseResponse, error) {
+	if err := validate([]validation{
+		{targetValue: timeout,
+			constraints: []constraint{{target: "timeout", name: null, rule: false,
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+		return nil, err
+	}
+	req, err := client.acquireLeasePreparer(timeout, duration, proposedLeaseID, requestID)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.acquireLeaseResponder}, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*FileAcquireLeaseResponse), err
+}
+
+// acquireLeasePreparer prepares the AcquireLease request.
+func (client fileClient) acquireLeasePreparer(timeout *int32, duration *int32, proposedLeaseID *string, requestID *string) (pipeline.Request, error) {
+	req, err := pipeline.NewRequest("PUT", client.url, nil)
+	if err != nil {
+		return req, pipeline.NewError(err, "failed to create request")
+	}
+	params := req.URL.Query()
+	if timeout != nil {
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
+	}
+	params.Set("comp", "lease")
+	req.URL.RawQuery = params.Encode()
+	if duration != nil {
+		req.Header.Set("x-ms-lease-duration", strconv.FormatInt(int64(*duration), 10))
+	}
+	if proposedLeaseID != nil {
+		req.Header.Set("x-ms-proposed-lease-id", *proposedLeaseID)
+	}
+	req.Header.Set("x-ms-version", ServiceVersion)
+	if requestID != nil {
+		req.Header.Set("x-ms-client-request-id", *requestID)
+	}
+	req.Header.Set("x-ms-lease-action", "acquire")
+	return req, nil
+}
+
+// acquireLeaseResponder handles the response to the AcquireLease request.
+func (client fileClient) acquireLeaseResponder(resp pipeline.Response) (pipeline.Response, error) {
+	err := validateResponse(resp, http.StatusOK, http.StatusCreated)
+	if resp == nil {
+		return nil, err
+	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
+	return &FileAcquireLeaseResponse{rawResponse: resp.Response()}, err
+}
+
+// BreakLease [Update] The Lease File operation establishes and manages a lock on a file for write and delete
+// operations
+//
+// timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
+// Timeouts for File Service Operations.</a> leaseID is if specified, the operation only succeeds if the resource's
+// lease is active and matches this ID. requestID is provides a client-generated, opaque value with a 1 KB character
+// limit that is recorded in the analytics logs when storage analytics logging is enabled.
+func (client fileClient) BreakLease(ctx context.Context, timeout *int32, leaseID *string, requestID *string) (*FileBreakLeaseResponse, error) {
+	if err := validate([]validation{
+		{targetValue: timeout,
+			constraints: []constraint{{target: "timeout", name: null, rule: false,
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+		return nil, err
+	}
+	req, err := client.breakLeasePreparer(timeout, leaseID, requestID)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.breakLeaseResponder}, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*FileBreakLeaseResponse), err
+}
+
+// breakLeasePreparer prepares the BreakLease request.
+func (client fileClient) breakLeasePreparer(timeout *int32, leaseID *string, requestID *string) (pipeline.Request, error) {
+	req, err := pipeline.NewRequest("PUT", client.url, nil)
+	if err != nil {
+		return req, pipeline.NewError(err, "failed to create request")
+	}
+	params := req.URL.Query()
+	if timeout != nil {
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
+	}
+	params.Set("comp", "lease")
+	req.URL.RawQuery = params.Encode()
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
+	req.Header.Set("x-ms-version", ServiceVersion)
+	if requestID != nil {
+		req.Header.Set("x-ms-client-request-id", *requestID)
+	}
+	req.Header.Set("x-ms-lease-action", "break")
+	return req, nil
+}
+
+// breakLeaseResponder handles the response to the BreakLease request.
+func (client fileClient) breakLeaseResponder(resp pipeline.Response) (pipeline.Response, error) {
+	err := validateResponse(resp, http.StatusOK, http.StatusAccepted)
+	if resp == nil {
+		return nil, err
+	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
+	return &FileBreakLeaseResponse{rawResponse: resp.Response()}, err
+}
+
+// ChangeLease [Update] The Lease File operation establishes and manages a lock on a file for write and delete
+// operations
+//
+// leaseID is specifies the current lease ID on the resource. timeout is the timeout parameter is expressed in seconds.
+// For more information, see <a
+// href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
+// Timeouts for File Service Operations.</a> proposedLeaseID is proposed lease ID, in a GUID string format. The File
+// service returns 400 (Invalid request) if the proposed lease ID is not in the correct format. See Guid Constructor
+// (String) for a list of valid GUID string formats. requestID is provides a client-generated, opaque value with a 1 KB
+// character limit that is recorded in the analytics logs when storage analytics logging is enabled.
+func (client fileClient) ChangeLease(ctx context.Context, leaseID string, timeout *int32, proposedLeaseID *string, requestID *string) (*FileChangeLeaseResponse, error) {
+	if err := validate([]validation{
+		{targetValue: timeout,
+			constraints: []constraint{{target: "timeout", name: null, rule: false,
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+		return nil, err
+	}
+	req, err := client.changeLeasePreparer(leaseID, timeout, proposedLeaseID, requestID)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.changeLeaseResponder}, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*FileChangeLeaseResponse), err
+}
+
+// changeLeasePreparer prepares the ChangeLease request.
+func (client fileClient) changeLeasePreparer(leaseID string, timeout *int32, proposedLeaseID *string, requestID *string) (pipeline.Request, error) {
+	req, err := pipeline.NewRequest("PUT", client.url, nil)
+	if err != nil {
+		return req, pipeline.NewError(err, "failed to create request")
+	}
+	params := req.URL.Query()
+	if timeout != nil {
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
+	}
+	params.Set("comp", "lease")
+	req.URL.RawQuery = params.Encode()
+	req.Header.Set("x-ms-lease-id", leaseID)
+	if proposedLeaseID != nil {
+		req.Header.Set("x-ms-proposed-lease-id", *proposedLeaseID)
+	}
+	req.Header.Set("x-ms-version", ServiceVersion)
+	if requestID != nil {
+		req.Header.Set("x-ms-client-request-id", *requestID)
+	}
+	req.Header.Set("x-ms-lease-action", "change")
+	return req, nil
+}
+
+// changeLeaseResponder handles the response to the ChangeLease request.
+func (client fileClient) changeLeaseResponder(resp pipeline.Response) (pipeline.Response, error) {
+	err := validateResponse(resp, http.StatusOK)
+	if resp == nil {
+		return nil, err
+	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
+	return &FileChangeLeaseResponse{rawResponse: resp.Response()}, err
+}
+
 // Create creates a new file or replaces a file. Note it only initializes the file with no content.
 //
-// fileContentLength is specifies the maximum size for the file, up to 1 TB. fileAttributes is if specified, the
+// fileContentLength is specifies the maximum size for the file, up to 4 TB. fileAttributes is if specified, the
 // provided file attributes shall be set. Default value: ‘Archive’ for file and ‘Directory’ for directory. ‘None’ can
 // also be specified as default. fileCreationTime is creation time for the file/directory. Default value: Now.
 // fileLastWriteTime is last write time for the file/directory. Default value: Now. timeout is the timeout parameter is
@@ -96,15 +289,16 @@ func (client fileClient) abortCopyResponder(resp pipeline.Response) (pipeline.Re
 // header shall be used. Default value: Inherit. If SDDL is specified as input, it must have owner, group and dacl.
 // Note: Only one of the x-ms-file-permission or x-ms-file-permission-key should be specified. filePermissionKey is key
 // of the permission to be set for the directory/file. Note: Only one of the x-ms-file-permission or
-// x-ms-file-permission-key should be specified.
-func (client fileClient) Create(ctx context.Context, fileContentLength int64, fileAttributes string, fileCreationTime string, fileLastWriteTime string, timeout *int32, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 []byte, fileContentDisposition *string, metadata map[string]string, filePermission *string, filePermissionKey *string) (*FileCreateResponse, error) {
+// x-ms-file-permission-key should be specified. leaseID is if specified, the operation only succeeds if the resource's
+// lease is active and matches this ID.
+func (client fileClient) Create(ctx context.Context, fileContentLength int64, fileAttributes string, fileCreationTime string, fileLastWriteTime string, timeout *int32, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 []byte, fileContentDisposition *string, metadata map[string]string, filePermission *string, filePermissionKey *string, leaseID *string) (*FileCreateResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.createPreparer(fileContentLength, fileAttributes, fileCreationTime, fileLastWriteTime, timeout, fileContentType, fileContentEncoding, fileContentLanguage, fileCacheControl, fileContentMD5, fileContentDisposition, metadata, filePermission, filePermissionKey)
+	req, err := client.createPreparer(fileContentLength, fileAttributes, fileCreationTime, fileLastWriteTime, timeout, fileContentType, fileContentEncoding, fileContentLanguage, fileCacheControl, fileContentMD5, fileContentDisposition, metadata, filePermission, filePermissionKey, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +310,7 @@ func (client fileClient) Create(ctx context.Context, fileContentLength int64, fi
 }
 
 // createPreparer prepares the Create request.
-func (client fileClient) createPreparer(fileContentLength int64, fileAttributes string, fileCreationTime string, fileLastWriteTime string, timeout *int32, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 []byte, fileContentDisposition *string, metadata map[string]string, filePermission *string, filePermissionKey *string) (pipeline.Request, error) {
+func (client fileClient) createPreparer(fileContentLength int64, fileAttributes string, fileCreationTime string, fileLastWriteTime string, timeout *int32, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 []byte, fileContentDisposition *string, metadata map[string]string, filePermission *string, filePermissionKey *string, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -161,6 +355,9 @@ func (client fileClient) createPreparer(fileContentLength int64, fileAttributes 
 	req.Header.Set("x-ms-file-attributes", fileAttributes)
 	req.Header.Set("x-ms-file-creation-time", fileCreationTime)
 	req.Header.Set("x-ms-file-last-write-time", fileLastWriteTime)
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
 	return req, nil
 }
 
@@ -179,15 +376,16 @@ func (client fileClient) createResponder(resp pipeline.Response) (pipeline.Respo
 //
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
-// Timeouts for File Service Operations.</a>
-func (client fileClient) Delete(ctx context.Context, timeout *int32) (*FileDeleteResponse, error) {
+// Timeouts for File Service Operations.</a> leaseID is if specified, the operation only succeeds if the resource's
+// lease is active and matches this ID.
+func (client fileClient) Delete(ctx context.Context, timeout *int32, leaseID *string) (*FileDeleteResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.deletePreparer(timeout)
+	req, err := client.deletePreparer(timeout, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +397,7 @@ func (client fileClient) Delete(ctx context.Context, timeout *int32) (*FileDelet
 }
 
 // deletePreparer prepares the Delete request.
-func (client fileClient) deletePreparer(timeout *int32) (pipeline.Request, error) {
+func (client fileClient) deletePreparer(timeout *int32, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("DELETE", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -210,6 +408,9 @@ func (client fileClient) deletePreparer(timeout *int32) (pipeline.Request, error
 	}
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
 	return req, nil
 }
 
@@ -230,15 +431,16 @@ func (client fileClient) deleteResponder(resp pipeline.Response) (pipeline.Respo
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> rangeParameter is return file data only from the specified byte range.
 // rangeGetContentMD5 is when this header is set to true and specified together with the Range header, the service
-// returns the MD5 hash for the range, as long as the range is less than or equal to 4 MB in size.
-func (client fileClient) Download(ctx context.Context, timeout *int32, rangeParameter *string, rangeGetContentMD5 *bool) (*DownloadResponse, error) {
+// returns the MD5 hash for the range, as long as the range is less than or equal to 4 MB in size. leaseID is if
+// specified, the operation only succeeds if the resource's lease is active and matches this ID.
+func (client fileClient) Download(ctx context.Context, timeout *int32, rangeParameter *string, rangeGetContentMD5 *bool, leaseID *string) (*DownloadResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.downloadPreparer(timeout, rangeParameter, rangeGetContentMD5)
+	req, err := client.downloadPreparer(timeout, rangeParameter, rangeGetContentMD5, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +452,7 @@ func (client fileClient) Download(ctx context.Context, timeout *int32, rangePara
 }
 
 // downloadPreparer prepares the Download request.
-func (client fileClient) downloadPreparer(timeout *int32, rangeParameter *string, rangeGetContentMD5 *bool) (pipeline.Request, error) {
+func (client fileClient) downloadPreparer(timeout *int32, rangeParameter *string, rangeGetContentMD5 *bool, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("GET", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -267,6 +469,9 @@ func (client fileClient) downloadPreparer(timeout *int32, rangeParameter *string
 	if rangeGetContentMD5 != nil {
 		req.Header.Set("x-ms-range-get-content-md5", strconv.FormatBool(*rangeGetContentMD5))
 	}
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
 	return req, nil
 }
 
@@ -281,7 +486,7 @@ func (client fileClient) downloadResponder(resp pipeline.Response) (pipeline.Res
 
 // ForceCloseHandles closes all handles open for given file
 //
-// handleID is specifies handle ID opened on the file or directory to be closed. Asterix (‘*’) is a wildcard that
+// handleID is specifies handle ID opened on the file or directory to be closed. Asterisk (‘*’) is a wildcard that
 // specifies all handles. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> marker is a string value that identifies the portion of the list to be
@@ -347,15 +552,16 @@ func (client fileClient) forceCloseHandlesResponder(resp pipeline.Response) (pip
 // sharesnapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot
 // to query. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
-// Timeouts for File Service Operations.</a>
-func (client fileClient) GetProperties(ctx context.Context, sharesnapshot *string, timeout *int32) (*FileGetPropertiesResponse, error) {
+// Timeouts for File Service Operations.</a> leaseID is if specified, the operation only succeeds if the resource's
+// lease is active and matches this ID.
+func (client fileClient) GetProperties(ctx context.Context, sharesnapshot *string, timeout *int32, leaseID *string) (*FileGetPropertiesResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.getPropertiesPreparer(sharesnapshot, timeout)
+	req, err := client.getPropertiesPreparer(sharesnapshot, timeout, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +573,7 @@ func (client fileClient) GetProperties(ctx context.Context, sharesnapshot *strin
 }
 
 // getPropertiesPreparer prepares the GetProperties request.
-func (client fileClient) getPropertiesPreparer(sharesnapshot *string, timeout *int32) (pipeline.Request, error) {
+func (client fileClient) getPropertiesPreparer(sharesnapshot *string, timeout *int32, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("HEAD", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -381,6 +587,9 @@ func (client fileClient) getPropertiesPreparer(sharesnapshot *string, timeout *i
 	}
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
 	return req, nil
 }
 
@@ -398,18 +607,21 @@ func (client fileClient) getPropertiesResponder(resp pipeline.Response) (pipelin
 // GetRangeList returns the list of valid ranges for a file.
 //
 // sharesnapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot
-// to query. timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// to query. prevsharesnapshot is the previous snapshot parameter is an opaque DateTime value that, when present,
+// specifies the previous snapshot. timeout is the timeout parameter is expressed in seconds. For more information, see
+// <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> rangeParameter is specifies the range of bytes over which to list ranges,
-// inclusively.
-func (client fileClient) GetRangeList(ctx context.Context, sharesnapshot *string, timeout *int32, rangeParameter *string) (*Ranges, error) {
+// inclusively. leaseID is if specified, the operation only succeeds if the resource's lease is active and matches this
+// ID.
+func (client fileClient) GetRangeList(ctx context.Context, sharesnapshot *string, prevsharesnapshot *string, timeout *int32, rangeParameter *string, leaseID *string) (*ShareFileRangeList, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.getRangeListPreparer(sharesnapshot, timeout, rangeParameter)
+	req, err := client.getRangeListPreparer(sharesnapshot, prevsharesnapshot, timeout, rangeParameter, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -417,11 +629,11 @@ func (client fileClient) GetRangeList(ctx context.Context, sharesnapshot *string
 	if err != nil {
 		return nil, err
 	}
-	return resp.(*Ranges), err
+	return resp.(*ShareFileRangeList), err
 }
 
 // getRangeListPreparer prepares the GetRangeList request.
-func (client fileClient) getRangeListPreparer(sharesnapshot *string, timeout *int32, rangeParameter *string) (pipeline.Request, error) {
+func (client fileClient) getRangeListPreparer(sharesnapshot *string, prevsharesnapshot *string, timeout *int32, rangeParameter *string, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("GET", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -429,6 +641,9 @@ func (client fileClient) getRangeListPreparer(sharesnapshot *string, timeout *in
 	params := req.URL.Query()
 	if sharesnapshot != nil && len(*sharesnapshot) > 0 {
 		params.Set("sharesnapshot", *sharesnapshot)
+	}
+	if prevsharesnapshot != nil && len(*prevsharesnapshot) > 0 {
+		params.Set("prevsharesnapshot", *prevsharesnapshot)
 	}
 	if timeout != nil {
 		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
@@ -439,6 +654,9 @@ func (client fileClient) getRangeListPreparer(sharesnapshot *string, timeout *in
 	if rangeParameter != nil {
 		req.Header.Set("x-ms-range", *rangeParameter)
 	}
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
 	return req, nil
 }
 
@@ -448,7 +666,7 @@ func (client fileClient) getRangeListResponder(resp pipeline.Response) (pipeline
 	if resp == nil {
 		return nil, err
 	}
-	result := &Ranges{rawResponse: resp.Response()}
+	result := &ShareFileRangeList{rawResponse: resp.Response()}
 	if err != nil {
 		return result, err
 	}
@@ -549,6 +767,64 @@ func (client fileClient) listHandlesResponder(resp pipeline.Response) (pipeline.
 	return result, nil
 }
 
+// ReleaseLease [Update] The Lease File operation establishes and manages a lock on a file for write and delete
+// operations
+//
+// leaseID is specifies the current lease ID on the resource. timeout is the timeout parameter is expressed in seconds.
+// For more information, see <a
+// href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
+// Timeouts for File Service Operations.</a> requestID is provides a client-generated, opaque value with a 1 KB
+// character limit that is recorded in the analytics logs when storage analytics logging is enabled.
+func (client fileClient) ReleaseLease(ctx context.Context, leaseID string, timeout *int32, requestID *string) (*FileReleaseLeaseResponse, error) {
+	if err := validate([]validation{
+		{targetValue: timeout,
+			constraints: []constraint{{target: "timeout", name: null, rule: false,
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+		return nil, err
+	}
+	req, err := client.releaseLeasePreparer(leaseID, timeout, requestID)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.releaseLeaseResponder}, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*FileReleaseLeaseResponse), err
+}
+
+// releaseLeasePreparer prepares the ReleaseLease request.
+func (client fileClient) releaseLeasePreparer(leaseID string, timeout *int32, requestID *string) (pipeline.Request, error) {
+	req, err := pipeline.NewRequest("PUT", client.url, nil)
+	if err != nil {
+		return req, pipeline.NewError(err, "failed to create request")
+	}
+	params := req.URL.Query()
+	if timeout != nil {
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
+	}
+	params.Set("comp", "lease")
+	req.URL.RawQuery = params.Encode()
+	req.Header.Set("x-ms-lease-id", leaseID)
+	req.Header.Set("x-ms-version", ServiceVersion)
+	if requestID != nil {
+		req.Header.Set("x-ms-client-request-id", *requestID)
+	}
+	req.Header.Set("x-ms-lease-action", "release")
+	return req, nil
+}
+
+// releaseLeaseResponder handles the response to the ReleaseLease request.
+func (client fileClient) releaseLeaseResponder(resp pipeline.Response) (pipeline.Response, error) {
+	err := validateResponse(resp, http.StatusOK)
+	if resp == nil {
+		return nil, err
+	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
+	return &FileReleaseLeaseResponse{rawResponse: resp.Response()}, err
+}
+
 // SetHTTPHeaders sets HTTP headers on the file.
 //
 // fileAttributes is if specified, the provided file attributes shall be set. Default value: ‘Archive’ for file and
@@ -567,15 +843,16 @@ func (client fileClient) listHandlesResponder(resp pipeline.Response) (pipeline.
 // else x-ms-file-permission-key header shall be used. Default value: Inherit. If SDDL is specified as input, it must
 // have owner, group and dacl. Note: Only one of the x-ms-file-permission or x-ms-file-permission-key should be
 // specified. filePermissionKey is key of the permission to be set for the directory/file. Note: Only one of the
-// x-ms-file-permission or x-ms-file-permission-key should be specified.
-func (client fileClient) SetHTTPHeaders(ctx context.Context, fileAttributes string, fileCreationTime string, fileLastWriteTime string, timeout *int32, fileContentLength *int64, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 []byte, fileContentDisposition *string, filePermission *string, filePermissionKey *string) (*FileSetHTTPHeadersResponse, error) {
+// x-ms-file-permission or x-ms-file-permission-key should be specified. leaseID is if specified, the operation only
+// succeeds if the resource's lease is active and matches this ID.
+func (client fileClient) SetHTTPHeaders(ctx context.Context, fileAttributes string, fileCreationTime string, fileLastWriteTime string, timeout *int32, fileContentLength *int64, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 []byte, fileContentDisposition *string, filePermission *string, filePermissionKey *string, leaseID *string) (*FileSetHTTPHeadersResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.setHTTPHeadersPreparer(fileAttributes, fileCreationTime, fileLastWriteTime, timeout, fileContentLength, fileContentType, fileContentEncoding, fileContentLanguage, fileCacheControl, fileContentMD5, fileContentDisposition, filePermission, filePermissionKey)
+	req, err := client.setHTTPHeadersPreparer(fileAttributes, fileCreationTime, fileLastWriteTime, timeout, fileContentLength, fileContentType, fileContentEncoding, fileContentLanguage, fileCacheControl, fileContentMD5, fileContentDisposition, filePermission, filePermissionKey, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -587,7 +864,7 @@ func (client fileClient) SetHTTPHeaders(ctx context.Context, fileAttributes stri
 }
 
 // setHTTPHeadersPreparer prepares the SetHTTPHeaders request.
-func (client fileClient) setHTTPHeadersPreparer(fileAttributes string, fileCreationTime string, fileLastWriteTime string, timeout *int32, fileContentLength *int64, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 []byte, fileContentDisposition *string, filePermission *string, filePermissionKey *string) (pipeline.Request, error) {
+func (client fileClient) setHTTPHeadersPreparer(fileAttributes string, fileCreationTime string, fileLastWriteTime string, timeout *int32, fileContentLength *int64, fileContentType *string, fileContentEncoding *string, fileContentLanguage *string, fileCacheControl *string, fileContentMD5 []byte, fileContentDisposition *string, filePermission *string, filePermissionKey *string, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -629,6 +906,9 @@ func (client fileClient) setHTTPHeadersPreparer(fileAttributes string, fileCreat
 	req.Header.Set("x-ms-file-attributes", fileAttributes)
 	req.Header.Set("x-ms-file-creation-time", fileCreationTime)
 	req.Header.Set("x-ms-file-last-write-time", fileLastWriteTime)
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
 	return req, nil
 }
 
@@ -648,14 +928,15 @@ func (client fileClient) setHTTPHeadersResponder(resp pipeline.Response) (pipeli
 // timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-func (client fileClient) SetMetadata(ctx context.Context, timeout *int32, metadata map[string]string) (*FileSetMetadataResponse, error) {
+// leaseID is if specified, the operation only succeeds if the resource's lease is active and matches this ID.
+func (client fileClient) SetMetadata(ctx context.Context, timeout *int32, metadata map[string]string, leaseID *string) (*FileSetMetadataResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.setMetadataPreparer(timeout, metadata)
+	req, err := client.setMetadataPreparer(timeout, metadata, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -667,7 +948,7 @@ func (client fileClient) SetMetadata(ctx context.Context, timeout *int32, metada
 }
 
 // setMetadataPreparer prepares the SetMetadata request.
-func (client fileClient) setMetadataPreparer(timeout *int32, metadata map[string]string) (pipeline.Request, error) {
+func (client fileClient) setMetadataPreparer(timeout *int32, metadata map[string]string, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -684,6 +965,9 @@ func (client fileClient) setMetadataPreparer(timeout *int32, metadata map[string
 		}
 	}
 	req.Header.Set("x-ms-version", ServiceVersion)
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
 	return req, nil
 }
 
@@ -708,14 +992,30 @@ func (client fileClient) setMetadataResponder(resp pipeline.Response) (pipeline.
 // copy source. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-func (client fileClient) StartCopy(ctx context.Context, copySource string, timeout *int32, metadata map[string]string) (*FileStartCopyResponse, error) {
+// filePermission is if specified the permission (security descriptor) shall be set for the directory/file. This header
+// can be used if Permission size is <= 8KB, else x-ms-file-permission-key header shall be used. Default value:
+// Inherit. If SDDL is specified as input, it must have owner, group and dacl. Note: Only one of the
+// x-ms-file-permission or x-ms-file-permission-key should be specified. filePermissionKey is key of the permission to
+// be set for the directory/file. Note: Only one of the x-ms-file-permission or x-ms-file-permission-key should be
+// specified. filePermissionCopyMode is specifies the option to copy file security descriptor from source file or to
+// set it using the value which is defined by the header value of x-ms-file-permission or x-ms-file-permission-key.
+// ignoreReadOnly is specifies the option to overwrite the target file if it already exists and has read-only attribute
+// set. fileAttributes is specifies either the option to copy file attributes from a source file(source) to a target
+// file or a list of attributes to set on a target file. fileCreationTime is specifies either the option to copy file
+// creation time from a source file(source) to a target file or a time value in ISO 8601 format to set as creation time
+// on a target file. fileLastWriteTime is specifies either the option to copy file last write time from a source
+// file(source) to a target file or a time value in ISO 8601 format to set as last write time on a target file.
+// setArchiveAttribute is specifies the option to set archive attribute on a target file. True means archive attribute
+// will be set on a target file despite attribute overrides or a source file state. leaseID is if specified, the
+// operation only succeeds if the resource's lease is active and matches this ID.
+func (client fileClient) StartCopy(ctx context.Context, copySource string, timeout *int32, metadata map[string]string, filePermission *string, filePermissionKey *string, filePermissionCopyMode PermissionCopyModeType, ignoreReadOnly *bool, fileAttributes *string, fileCreationTime *string, fileLastWriteTime *string, setArchiveAttribute *bool, leaseID *string) (*FileStartCopyResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.startCopyPreparer(copySource, timeout, metadata)
+	req, err := client.startCopyPreparer(copySource, timeout, metadata, filePermission, filePermissionKey, filePermissionCopyMode, ignoreReadOnly, fileAttributes, fileCreationTime, fileLastWriteTime, setArchiveAttribute, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -727,7 +1027,7 @@ func (client fileClient) StartCopy(ctx context.Context, copySource string, timeo
 }
 
 // startCopyPreparer prepares the StartCopy request.
-func (client fileClient) startCopyPreparer(copySource string, timeout *int32, metadata map[string]string) (pipeline.Request, error) {
+func (client fileClient) startCopyPreparer(copySource string, timeout *int32, metadata map[string]string, filePermission *string, filePermissionKey *string, filePermissionCopyMode PermissionCopyModeType, ignoreReadOnly *bool, fileAttributes *string, fileCreationTime *string, fileLastWriteTime *string, setArchiveAttribute *bool, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -744,6 +1044,33 @@ func (client fileClient) startCopyPreparer(copySource string, timeout *int32, me
 		}
 	}
 	req.Header.Set("x-ms-copy-source", copySource)
+	if filePermission != nil {
+		req.Header.Set("x-ms-file-permission", *filePermission)
+	}
+	if filePermissionKey != nil {
+		req.Header.Set("x-ms-file-permission-key", *filePermissionKey)
+	}
+	if filePermissionCopyMode != PermissionCopyModeNone {
+		req.Header.Set("x-ms-file-permission-copy-mode", string(filePermissionCopyMode))
+	}
+	if ignoreReadOnly != nil {
+		req.Header.Set("x-ms-file-copy-ignore-read-only", strconv.FormatBool(*ignoreReadOnly))
+	}
+	if fileAttributes != nil {
+		req.Header.Set("x-ms-file-attributes", *fileAttributes)
+	}
+	if fileCreationTime != nil {
+		req.Header.Set("x-ms-file-creation-time", *fileCreationTime)
+	}
+	if fileLastWriteTime != nil {
+		req.Header.Set("x-ms-file-last-write-time", *fileLastWriteTime)
+	}
+	if setArchiveAttribute != nil {
+		req.Header.Set("x-ms-file-copy-set-archive", strconv.FormatBool(*setArchiveAttribute))
+	}
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
 	return req, nil
 }
 
@@ -776,15 +1103,16 @@ func (client fileClient) startCopyResponder(resp pipeline.Response) (pipeline.Re
 // Timeouts for File Service Operations.</a> contentMD5 is an MD5 hash of the content. This hash is used to verify the
 // integrity of the data during transport. When the Content-MD5 header is specified, the File service compares the hash
 // of the content that has arrived with the header value that was sent. If the two hashes do not match, the operation
-// will fail with error code 400 (Bad Request).
-func (client fileClient) UploadRange(ctx context.Context, rangeParameter string, fileRangeWrite FileRangeWriteType, contentLength int64, body io.ReadSeeker, timeout *int32, contentMD5 []byte) (*FileUploadRangeResponse, error) {
+// will fail with error code 400 (Bad Request). leaseID is if specified, the operation only succeeds if the resource's
+// lease is active and matches this ID.
+func (client fileClient) UploadRange(ctx context.Context, rangeParameter string, fileRangeWrite FileRangeWriteType, contentLength int64, body io.ReadSeeker, timeout *int32, contentMD5 []byte, leaseID *string) (*FileUploadRangeResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.uploadRangePreparer(rangeParameter, fileRangeWrite, contentLength, body, timeout, contentMD5)
+	req, err := client.uploadRangePreparer(rangeParameter, fileRangeWrite, contentLength, body, timeout, contentMD5, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -796,7 +1124,7 @@ func (client fileClient) UploadRange(ctx context.Context, rangeParameter string,
 }
 
 // uploadRangePreparer prepares the UploadRange request.
-func (client fileClient) uploadRangePreparer(rangeParameter string, fileRangeWrite FileRangeWriteType, contentLength int64, body io.ReadSeeker, timeout *int32, contentMD5 []byte) (pipeline.Request, error) {
+func (client fileClient) uploadRangePreparer(rangeParameter string, fileRangeWrite FileRangeWriteType, contentLength int64, body io.ReadSeeker, timeout *int32, contentMD5 []byte, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, body)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -814,6 +1142,9 @@ func (client fileClient) uploadRangePreparer(rangeParameter string, fileRangeWri
 		req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(contentMD5))
 	}
 	req.Header.Set("x-ms-version", ServiceVersion)
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
 	return req, nil
 }
 
@@ -844,14 +1175,15 @@ func (client fileClient) uploadRangeResponder(resp pipeline.Response) (pipeline.
 // sourceContentCrc64 is specify the crc64 calculated for the range of bytes that must be read from the copy source.
 // sourceIfMatchCrc64 is specify the crc64 value to operate only on range with a matching crc64 checksum.
 // sourceIfNoneMatchCrc64 is specify the crc64 value to operate only on range without a matching crc64 checksum.
-func (client fileClient) UploadRangeFromURL(ctx context.Context, rangeParameter string, copySource string, contentLength int64, timeout *int32, sourceRange *string, sourceContentCrc64 []byte, sourceIfMatchCrc64 []byte, sourceIfNoneMatchCrc64 []byte) (*FileUploadRangeFromURLResponse, error) {
+// leaseID is if specified, the operation only succeeds if the resource's lease is active and matches this ID.
+func (client fileClient) UploadRangeFromURL(ctx context.Context, rangeParameter string, copySource string, contentLength int64, timeout *int32, sourceRange *string, sourceContentCrc64 []byte, sourceIfMatchCrc64 []byte, sourceIfNoneMatchCrc64 []byte, leaseID *string) (*FileUploadRangeFromURLResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.uploadRangeFromURLPreparer(rangeParameter, copySource, contentLength, timeout, sourceRange, sourceContentCrc64, sourceIfMatchCrc64, sourceIfNoneMatchCrc64)
+	req, err := client.uploadRangeFromURLPreparer(rangeParameter, copySource, contentLength, timeout, sourceRange, sourceContentCrc64, sourceIfMatchCrc64, sourceIfNoneMatchCrc64, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -863,7 +1195,7 @@ func (client fileClient) UploadRangeFromURL(ctx context.Context, rangeParameter 
 }
 
 // uploadRangeFromURLPreparer prepares the UploadRangeFromURL request.
-func (client fileClient) uploadRangeFromURLPreparer(rangeParameter string, copySource string, contentLength int64, timeout *int32, sourceRange *string, sourceContentCrc64 []byte, sourceIfMatchCrc64 []byte, sourceIfNoneMatchCrc64 []byte) (pipeline.Request, error) {
+func (client fileClient) uploadRangeFromURLPreparer(rangeParameter string, copySource string, contentLength int64, timeout *int32, sourceRange *string, sourceContentCrc64 []byte, sourceIfMatchCrc64 []byte, sourceIfNoneMatchCrc64 []byte, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -891,6 +1223,9 @@ func (client fileClient) uploadRangeFromURLPreparer(rangeParameter string, copyS
 		req.Header.Set("x-ms-source-if-none-match-crc64", base64.StdEncoding.EncodeToString(sourceIfNoneMatchCrc64))
 	}
 	req.Header.Set("x-ms-version", ServiceVersion)
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
 	return req, nil
 }
 

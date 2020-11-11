@@ -185,9 +185,11 @@ func (mp MetricProperties) toM() *Metrics {
 // GetProperties returns the properties of the File service.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/get-file-service-properties.
 func (s ServiceURL) GetProperties(ctx context.Context) (*FileServiceProperties, error) {
-	ssp, error := s.client.GetProperties(ctx, nil)
-
-	return ssp.toFsp(), error
+	ssp, err := s.client.GetProperties(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	return ssp.toFsp(), err
 }
 
 // SetProperties sets the properties of the File service.

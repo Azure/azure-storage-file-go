@@ -496,10 +496,10 @@ func ExampleShareURL_SetQuota() {
 	// Check current usage stats for the share.
 	// Note that the ShareStats object is part of the protocol layer for the File service.
 	if statistics, err := shareURL.GetStatistics(ctx); err == nil {
-		shareUsageGB := statistics.ShareUsageBytes/1024/1024/1024
+		shareUsageGB := statistics.ShareUsageBytes / 1024 / 1024 / 1024
 		fmt.Printf("Current share usage: %d GB\n", shareUsageGB)
 
-		shareURL.SetQuota(ctx, 10+shareUsageGB)
+		shareURL.SetProperties(ctx, 10+shareUsageGB)
 
 		properties, err := shareURL.GetProperties(ctx)
 		if err != nil {

@@ -39,7 +39,7 @@ type RetryReaderOptions struct {
 	MaxRetryRequests   int
 	doInjectError      bool
 	doInjectErrorRound int
-	injectedError error
+	injectedError      error
 
 	// NotifyFailedRead is called, if non-nil, after any failure to read. Expected usage is diagnostic logging.
 	NotifyFailedRead FailedReadNotifier
