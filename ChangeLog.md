@@ -2,6 +2,12 @@
 
 > See [BreakingChanges](BreakingChanges.md) for a detailed list of API breaks.
 
+## Version 0.9.0:
+- Added support of service version `2020-02-10`. 
+    - Please visit [File Service Rest API public documentation](https://docs.microsoft.com/en-us/rest/api/storageservices/file-service-rest-api) to read more about supported operations and updated file/share limits
+- Updated the GO version to `1.15` and other dependencies (`azure-pipeline-go`, `sys`, `check.v1`, `pretty`)
+- Resolved issue [#27](https://github.com/Azure/azure-storage-file-go/issues/27)
+ 
 ## Version 0.8.0:
 - Allow more time formats for SAS
 - Enable recovering from an unexpectedEOF error

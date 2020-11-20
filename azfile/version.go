@@ -1,3 +1,3 @@
 package azfile
 
-const serviceLibVersion = "0.8.0"
+const serviceLibVersion = "0.9.0"
