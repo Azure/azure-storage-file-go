@@ -2955,7 +2955,7 @@ func (ssqr ShareSetQuotaResponse) Version() string {
 type ShareStats struct {
 	rawResponse *http.Response
 	// ShareUsageBytes - The approximate size of the data stored in bytes. Note that this value may not include all recently created or recently resized files.
-	ShareUsageBytes int32 `xml:"ShareUsageBytes"`
+	ShareUsageBytes int64 `xml:"ShareUsageBytes"`
 }
 
 // Response returns the raw HTTP response object.
