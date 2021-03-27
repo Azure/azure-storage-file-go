@@ -6,7 +6,6 @@ package azfile
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"encoding/xml"
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"io"
@@ -245,8 +244,9 @@ func (client shareClient) changeLeaseResponder(resp pipeline.Response) (pipeline
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
 // quota is specifies the maximum size of the share, in gigabytes. accessTier is specifies the access tier of the
-// share.
-func (client shareClient) Create(ctx context.Context, timeout *int32, metadata map[string]string, quota *int32, accessTier ShareAccessTierType) (*ShareCreateResponse, error) {
+// share. enabledProtocols is protocols to enable on the share. rootSquash is root squash to set on the share.  Only
+// valid for NFS shares.
+func (client shareClient) Create(ctx context.Context, timeout *int32, metadata map[string]string, quota *int32, accessTier ShareAccessTierType, enabledProtocols *string, rootSquash ShareRootSquashType) (*ShareCreateResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
@@ -256,7 +256,7 @@ func (client shareClient) Create(ctx context.Context, timeout *int32, metadata m
 				chain: []constraint{{target: "quota", name: inclusiveMinimum, rule: 1, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.createPreparer(timeout, metadata, quota, accessTier)
+	req, err := client.createPreparer(timeout, metadata, quota, accessTier, enabledProtocols, rootSquash)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +268,7 @@ func (client shareClient) Create(ctx context.Context, timeout *int32, metadata m
 }
 
 // createPreparer prepares the Create request.
-func (client shareClient) createPreparer(timeout *int32, metadata map[string]string, quota *int32, accessTier ShareAccessTierType) (pipeline.Request, error) {
+func (client shareClient) createPreparer(timeout *int32, metadata map[string]string, quota *int32, accessTier ShareAccessTierType, enabledProtocols *string, rootSquash ShareRootSquashType) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -291,6 +291,12 @@ func (client shareClient) createPreparer(timeout *int32, metadata map[string]str
 		req.Header.Set("x-ms-access-tier", string(accessTier))
 	}
 	req.Header.Set("x-ms-version", ServiceVersion)
+	if enabledProtocols != nil {
+		req.Header.Set("x-ms-enabled-protocols", *enabledProtocols)
+	}
+	if rootSquash != ShareRootSquashNone {
+		req.Header.Set("x-ms-root-squash", string(rootSquash))
+	}
 	return req, nil
 }
 
@@ -343,7 +349,7 @@ func (client shareClient) createPermissionPreparer(sharePermission SharePermissi
 	params.Set("comp", "filepermission")
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("x-ms-version", ServiceVersion)
-	b, err := json.Marshal(sharePermission)
+	b, err := xml.Marshal(sharePermission)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to marshal request body")
 	}
@@ -613,7 +619,7 @@ func (client shareClient) getPermissionResponder(resp pipeline.Response) (pipeli
 	}
 	if len(b) > 0 {
 		b = removeBOM(b)
-		err = json.Unmarshal(b, result)
+		err = xml.Unmarshal(b, result)
 		if err != nil {
 			return result, NewResponseError(err, resp.Response(), "failed to unmarshal response body")
 		}
@@ -1069,8 +1075,8 @@ func (client shareClient) setMetadataResponder(resp pipeline.Response) (pipeline
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> quota is specifies the maximum size of the share, in gigabytes. accessTier
 // is specifies the access tier of the share. leaseID is if specified, the operation only succeeds if the resource's
-// lease is active and matches this ID.
-func (client shareClient) SetProperties(ctx context.Context, timeout *int32, quota *int32, accessTier ShareAccessTierType, leaseID *string) (*ShareSetPropertiesResponse, error) {
+// lease is active and matches this ID. rootSquash is root squash to set on the share.  Only valid for NFS shares.
+func (client shareClient) SetProperties(ctx context.Context, timeout *int32, quota *int32, accessTier ShareAccessTierType, leaseID *string, rootSquash ShareRootSquashType) (*ShareSetPropertiesResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
@@ -1080,7 +1086,7 @@ func (client shareClient) SetProperties(ctx context.Context, timeout *int32, quo
 				chain: []constraint{{target: "quota", name: inclusiveMinimum, rule: 1, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.setPropertiesPreparer(timeout, quota, accessTier, leaseID)
+	req, err := client.setPropertiesPreparer(timeout, quota, accessTier, leaseID, rootSquash)
 	if err != nil {
 		return nil, err
 	}
@@ -1092,7 +1098,7 @@ func (client shareClient) SetProperties(ctx context.Context, timeout *int32, quo
 }
 
 // setPropertiesPreparer prepares the SetProperties request.
-func (client shareClient) setPropertiesPreparer(timeout *int32, quota *int32, accessTier ShareAccessTierType, leaseID *string) (pipeline.Request, error) {
+func (client shareClient) setPropertiesPreparer(timeout *int32, quota *int32, accessTier ShareAccessTierType, leaseID *string, rootSquash ShareRootSquashType) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -1113,6 +1119,9 @@ func (client shareClient) setPropertiesPreparer(timeout *int32, quota *int32, ac
 	}
 	if leaseID != nil {
 		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
+	if rootSquash != ShareRootSquashNone {
+		req.Header.Set("x-ms-root-squash", string(rootSquash))
 	}
 	return req, nil
 }
