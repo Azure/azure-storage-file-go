@@ -2650,13 +2650,13 @@ func (lhr ListHandlesResponse) Version() string {
 type ListSharesResponse struct {
 	rawResponse *http.Response
 	// XMLName is used for marshalling and is subject to removal in a future release.
-	XMLName         xml.Name            `xml:"EnumerationResults"`
-	ServiceEndpoint string              `xml:"ServiceEndpoint,attr"`
-	Prefix          *string             `xml:"Prefix"`
-	Marker          *string             `xml:"Marker"`
-	MaxResults      *int32              `xml:"MaxResults"`
-	ShareItems      []ShareItemInternal `xml:"Shares>Share"`
-	NextMarker      Marker              `xml:"NextMarker"`
+	XMLName         xml.Name    `xml:"EnumerationResults"`
+	ServiceEndpoint string      `xml:"ServiceEndpoint,attr"`
+	Prefix          *string     `xml:"Prefix"`
+	Marker          *string     `xml:"Marker"`
+	MaxResults      *int32      `xml:"MaxResults"`
+	ShareItems      []ShareItem `xml:"Shares>Share"`
+	NextMarker      Marker      `xml:"NextMarker"`
 }
 
 // Response returns the raw HTTP response object.
@@ -3495,16 +3495,16 @@ func (sgpr ShareGetPropertiesResponse) Version() string {
 	return sgpr.rawResponse.Header.Get("x-ms-version")
 }
 
-// ShareItemInternal - A listed Azure Storage share item.
-type ShareItemInternal struct {
+// ShareItem - A listed Azure Storage share item.
+type ShareItem struct {
 	// XMLName is used for marshalling and is subject to removal in a future release.
-	XMLName    xml.Name                `xml:"Share"`
-	Name       string                  `xml:"Name"`
-	Snapshot   *string                 `xml:"Snapshot"`
-	Deleted    *bool                   `xml:"Deleted"`
-	Version    *string                 `xml:"Version"`
-	Properties SharePropertiesInternal `xml:"Properties"`
-	Metadata   Metadata                `xml:"Metadata"`
+	XMLName    xml.Name        `xml:"Share"`
+	Name       string          `xml:"Name"`
+	Snapshot   *string         `xml:"Snapshot"`
+	Deleted    *bool           `xml:"Deleted"`
+	Version    *string         `xml:"Version"`
+	Properties ShareProperties `xml:"Properties"`
+	Metadata   Metadata        `xml:"Metadata"`
 }
 
 // SharePermission - A permission (a security descriptor) at the share level.
@@ -3557,8 +3557,8 @@ func (sp SharePermission) Version() string {
 	return sp.rawResponse.Header.Get("x-ms-version")
 }
 
-// SharePropertiesInternal - Properties of a share.
-type SharePropertiesInternal struct {
+// ShareProperties - Properties of a share.
+type ShareProperties struct {
 	LastModified                  time.Time  `xml:"Last-Modified"`
 	Etag                          ETag       `xml:"Etag"`
 	Quota                         int32      `xml:"Quota"`
@@ -3582,16 +3582,16 @@ type SharePropertiesInternal struct {
 	RootSquash ShareRootSquashType `xml:"RootSquash"`
 }
 
-// MarshalXML implements the xml.Marshaler interface for SharePropertiesInternal.
-func (spi SharePropertiesInternal) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-	spi2 := (*sharePropertiesInternal)(unsafe.Pointer(&spi))
+// MarshalXML implements the xml.Marshaler interface for ShareProperties.
+func (sp ShareProperties) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	spi2 := (*sharePropertiesInternal)(unsafe.Pointer(&sp))
 	return e.EncodeElement(*spi2, start)
 }
 
-// UnmarshalXML implements the xml.Unmarshaler interface for SharePropertiesInternal.
-func (spi *SharePropertiesInternal) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	spi2 := (*sharePropertiesInternal)(unsafe.Pointer(spi))
-	return d.DecodeElement(spi2, &start)
+// UnmarshalXML implements the xml.Unmarshaler interface for ShareProperties.
+func (sp *ShareProperties) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	sp2 := (*sharePropertiesInternal)(unsafe.Pointer(sp))
+	return d.DecodeElement(sp2, &start)
 }
 
 // ShareProtocolSettings - Protocol settings
@@ -4232,8 +4232,8 @@ func init() {
 	if reflect.TypeOf((*HandleItem)(nil)).Elem().Size() != reflect.TypeOf((*handleItem)(nil)).Elem().Size() {
 		validateError(errors.New("size mismatch between HandleItem and handleItem"))
 	}
-	if reflect.TypeOf((*SharePropertiesInternal)(nil)).Elem().Size() != reflect.TypeOf((*sharePropertiesInternal)(nil)).Elem().Size() {
-		validateError(errors.New("size mismatch between SharePropertiesInternal and sharePropertiesInternal"))
+	if reflect.TypeOf((*ShareProperties)(nil)).Elem().Size() != reflect.TypeOf((*sharePropertiesInternal)(nil)).Elem().Size() {
+		validateError(errors.New("size mismatch between ShareProperties and sharePropertiesInternal"))
 	}
 }
 
