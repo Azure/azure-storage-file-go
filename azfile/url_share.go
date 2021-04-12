@@ -71,7 +71,7 @@ func (s ShareURL) Create(ctx context.Context, metadata Metadata, quotaInGB int32
 	if quotaInGB != 0 {
 		quota = &quotaInGB
 	}
-	return s.shareClient.Create(ctx, nil, metadata, quota, ShareAccessTierNone)
+	return s.shareClient.Create(ctx, nil, metadata, quota, ShareAccessTierNone, nil, ShareRootSquashNone)
 }
 
 // CreateSnapshot creates a read-only snapshot of a share.
@@ -101,7 +101,7 @@ func (s ShareURL) SetProperties(ctx context.Context, quotaInGB int32) (*ShareSet
 	if quotaInGB != 0 {
 		quota = &quotaInGB
 	}
-	return s.shareClient.SetProperties(ctx, nil, quota, ShareAccessTierNone, nil)
+	return s.shareClient.SetProperties(ctx, nil, quota, ShareAccessTierNone, nil, ShareRootSquashNone)
 }
 
 // SetMetadata sets the share's metadata.

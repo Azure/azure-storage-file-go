@@ -260,6 +260,25 @@ func PossibleShareAccessTierTypeValues() []ShareAccessTierType {
 	return []ShareAccessTierType{ShareAccessTierCool, ShareAccessTierHot, ShareAccessTierNone, ShareAccessTierTransactionOptimized}
 }
 
+// ShareRootSquashType enumerates the values for share root squash type.
+type ShareRootSquashType string
+
+const (
+	// ShareRootSquashAllSquash ...
+	ShareRootSquashAllSquash ShareRootSquashType = "AllSquash"
+	// ShareRootSquashNone represents an empty ShareRootSquashType.
+	ShareRootSquashNone ShareRootSquashType = ""
+	// ShareRootSquashNoRootSquash ...
+	ShareRootSquashNoRootSquash ShareRootSquashType = "NoRootSquash"
+	// ShareRootSquashRootSquash ...
+	ShareRootSquashRootSquash ShareRootSquashType = "RootSquash"
+)
+
+// PossibleShareRootSquashTypeValues returns an array of possible values for the ShareRootSquashType const type.
+func PossibleShareRootSquashTypeValues() []ShareRootSquashType {
+	return []ShareRootSquashType{ShareRootSquashAllSquash, ShareRootSquashNone, ShareRootSquashNoRootSquash, ShareRootSquashRootSquash}
+}
+
 // StorageErrorCodeType enumerates the values for storage error code type.
 type StorageErrorCodeType string
 
@@ -3353,6 +3372,11 @@ func (sgpr ShareGetPropertiesResponse) Date() time.Time {
 	return t
 }
 
+// EnabledProtocols returns the value for header x-ms-enabled-protocols.
+func (sgpr ShareGetPropertiesResponse) EnabledProtocols() string {
+	return sgpr.rawResponse.Header.Get("x-ms-enabled-protocols")
+}
+
 // ErrorCode returns the value for header x-ms-error-code.
 func (sgpr ShareGetPropertiesResponse) ErrorCode() string {
 	return sgpr.rawResponse.Header.Get("x-ms-error-code")
@@ -3461,6 +3485,11 @@ func (sgpr ShareGetPropertiesResponse) RequestID() string {
 	return sgpr.rawResponse.Header.Get("x-ms-request-id")
 }
 
+// RootSquash returns the value for header x-ms-root-squash.
+func (sgpr ShareGetPropertiesResponse) RootSquash() ShareRootSquashType {
+	return ShareRootSquashType(sgpr.rawResponse.Header.Get("x-ms-root-squash"))
+}
+
 // Version returns the value for header x-ms-version.
 func (sgpr ShareGetPropertiesResponse) Version() string {
 	return sgpr.rawResponse.Header.Get("x-ms-version")
@@ -3547,23 +3576,28 @@ type ShareProperties struct {
 	// LeaseState - Possible values include: 'LeaseStateAvailable', 'LeaseStateLeased', 'LeaseStateExpired', 'LeaseStateBreaking', 'LeaseStateBroken', 'LeaseStateNone'
 	LeaseState LeaseStateType `xml:"LeaseState"`
 	// LeaseDuration - Possible values include: 'LeaseDurationInfinite', 'LeaseDurationFixed', 'LeaseDurationNone'
-	LeaseDuration LeaseDurationType `xml:"LeaseDuration"`
+	LeaseDuration    LeaseDurationType `xml:"LeaseDuration"`
+	EnabledProtocols *string           `xml:"EnabledProtocols"`
+	// RootSquash - Possible values include: 'ShareRootSquashNoRootSquash', 'ShareRootSquashRootSquash', 'ShareRootSquashAllSquash', 'ShareRootSquashNone'
+	RootSquash ShareRootSquashType `xml:"RootSquash"`
 }
 
 // MarshalXML implements the xml.Marshaler interface for ShareProperties.
 func (sp ShareProperties) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-	sp2 := (*shareProperties)(unsafe.Pointer(&sp))
-	return e.EncodeElement(*sp2, start)
+	spi2 := (*sharePropertiesInternal)(unsafe.Pointer(&sp))
+	return e.EncodeElement(*spi2, start)
 }
 
 // UnmarshalXML implements the xml.Unmarshaler interface for ShareProperties.
 func (sp *ShareProperties) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	sp2 := (*shareProperties)(unsafe.Pointer(sp))
+	sp2 := (*sharePropertiesInternal)(unsafe.Pointer(sp))
 	return d.DecodeElement(sp2, &start)
 }
 
 // ShareProtocolSettings - Protocol settings
 type ShareProtocolSettings struct {
+	// XMLName is used for marshalling and is subject to removal in a future release.
+	XMLName xml.Name `xml:"ProtocolSettings"`
 	// Smb - Settings for SMB protocol.
 	Smb *ShareSmbSettings `xml:"SMB"`
 }
@@ -3986,6 +4020,8 @@ func (sspr ShareSetPropertiesResponse) Version() string {
 
 // ShareSmbSettings - Settings for SMB protocol.
 type ShareSmbSettings struct {
+	// XMLName is used for marshalling and is subject to removal in a future release.
+	XMLName xml.Name `xml:"SMB"`
 	// Multichannel - Settings for SMB Multichannel.
 	Multichannel *SmbMultichannel `xml:"Multichannel"`
 }
@@ -4196,8 +4232,8 @@ func init() {
 	if reflect.TypeOf((*HandleItem)(nil)).Elem().Size() != reflect.TypeOf((*handleItem)(nil)).Elem().Size() {
 		validateError(errors.New("size mismatch between HandleItem and handleItem"))
 	}
-	if reflect.TypeOf((*ShareProperties)(nil)).Elem().Size() != reflect.TypeOf((*shareProperties)(nil)).Elem().Size() {
-		validateError(errors.New("size mismatch between ShareProperties and shareProperties"))
+	if reflect.TypeOf((*ShareProperties)(nil)).Elem().Size() != reflect.TypeOf((*sharePropertiesInternal)(nil)).Elem().Size() {
+		validateError(errors.New("size mismatch between ShareProperties and sharePropertiesInternal"))
 	}
 }
 
@@ -4262,20 +4298,22 @@ type handleItem struct {
 }
 
 // internal type used for marshalling
-type shareProperties struct {
-	LastModified                  timeRFC1123       `xml:"Last-Modified"`
-	Etag                          ETag              `xml:"Etag"`
-	Quota                         int32             `xml:"Quota"`
-	ProvisionedIops               *int32            `xml:"ProvisionedIops"`
-	ProvisionedIngressMBps        *int32            `xml:"ProvisionedIngressMBps"`
-	ProvisionedEgressMBps         *int32            `xml:"ProvisionedEgressMBps"`
-	NextAllowedQuotaDowngradeTime *timeRFC1123      `xml:"NextAllowedQuotaDowngradeTime"`
-	DeletedTime                   *timeRFC1123      `xml:"DeletedTime"`
-	RemainingRetentionDays        *int32            `xml:"RemainingRetentionDays"`
-	AccessTier                    *string           `xml:"AccessTier"`
-	AccessTierChangeTime          *timeRFC1123      `xml:"AccessTierChangeTime"`
-	AccessTierTransitionState     *string           `xml:"AccessTierTransitionState"`
-	LeaseStatus                   LeaseStatusType   `xml:"LeaseStatus"`
-	LeaseState                    LeaseStateType    `xml:"LeaseState"`
-	LeaseDuration                 LeaseDurationType `xml:"LeaseDuration"`
+type sharePropertiesInternal struct {
+	LastModified                  timeRFC1123         `xml:"Last-Modified"`
+	Etag                          ETag                `xml:"Etag"`
+	Quota                         int32               `xml:"Quota"`
+	ProvisionedIops               *int32              `xml:"ProvisionedIops"`
+	ProvisionedIngressMBps        *int32              `xml:"ProvisionedIngressMBps"`
+	ProvisionedEgressMBps         *int32              `xml:"ProvisionedEgressMBps"`
+	NextAllowedQuotaDowngradeTime *timeRFC1123        `xml:"NextAllowedQuotaDowngradeTime"`
+	DeletedTime                   *timeRFC1123        `xml:"DeletedTime"`
+	RemainingRetentionDays        *int32              `xml:"RemainingRetentionDays"`
+	AccessTier                    *string             `xml:"AccessTier"`
+	AccessTierChangeTime          *timeRFC1123        `xml:"AccessTierChangeTime"`
+	AccessTierTransitionState     *string             `xml:"AccessTierTransitionState"`
+	LeaseStatus                   LeaseStatusType     `xml:"LeaseStatus"`
+	LeaseState                    LeaseStateType      `xml:"LeaseState"`
+	LeaseDuration                 LeaseDurationType   `xml:"LeaseDuration"`
+	EnabledProtocols              *string             `xml:"EnabledProtocols"`
+	RootSquash                    ShareRootSquashType `xml:"RootSquash"`
 }
