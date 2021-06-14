@@ -7,13 +7,13 @@ import (
 )
 
 const (
-	// CountToEnd indiciates a flag for count parameter. It means the count of bytes
-	// from start offset to the end of file.
+	// CountToEnd indiciates a flag for Count parameter. It means the Count of bytes
+	// from start Offset to the end of file.
 	CountToEnd = 0
 )
 
 // httpRange defines a range of bytes within an HTTP resource, starting at offset and
-// ending at offset+count-1 inclusively.
+// ending at offset+Count-1 inclusively.
 // An httpRange which has a zero-value offset, and a count with value CountToEnd indicates the entire resource.
 // An httpRange which has a non zero-value offset but a count with value CountToEnd indicates from the offset to the resource's end.
 type httpRange struct {
@@ -30,7 +30,7 @@ func (r httpRange) pointers() *string {
 }
 
 // toRange makes range string adhere to REST API.
-// A count with value CountToEnd means count of bytes from offset to the end of file.
+// A Count with value CountToEnd means Count of bytes from Offset to the end of file.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/specifying-the-range-header-for-file-service-operations.
 func toRange(offset int64, count int64) *string {
 	// No additional validation by design. API can validate parameter by case, and use this method.
@@ -63,6 +63,6 @@ func validateSeekableStreamAt0(body io.ReadSeeker) {
 		if err != nil {
 			sanityCheckFailed(err.Error())
 		}
-		sanityCheckFailed("stream must be set to position 0")
+		sanityCheckFailed("stream must be set to Position 0")
 	}
 }

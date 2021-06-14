@@ -107,11 +107,11 @@ func (f FileURL) AbortCopy(ctx context.Context, copyID string) (*FileAbortCopyRe
 	return f.fileClient.AbortCopy(ctx, copyID, nil, nil)
 }
 
-// Download downloads count bytes of data from the start offset.
+// Download downloads Count bytes of data from the start Offset.
 // The response includes all of the file’s properties. However, passing true for rangeGetContentMD5 returns the range’s MD5 in the ContentMD5
 // response header/property if the range is <= 4MB; the HTTP request fails with 400 (Bad Request) if the requested range is greater than 4MB.
-// Note: offset must be >=0, count must be >= 0.
-// If count is CountToEnd (0), then data is read from specified offset to the end.
+// Note: Offset must be >=0, Count must be >= 0.
+// If Count is CountToEnd (0), then data is read from specified Offset to the end.
 // rangeGetContentMD5 only works with partial data downloading.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/get-file.
 func (f FileURL) Download(ctx context.Context, offset int64, count int64, rangeGetContentMD5 bool) (*RetryableDownloadResponse, error) {
@@ -197,7 +197,7 @@ func (f FileURL) Resize(ctx context.Context, length int64) (*FileSetHTTPHeadersR
 }
 
 // UploadRange writes bytes to a file.
-// offset indicates the offset at which to begin writing, in bytes.
+// Offset indicates the Offset at which to begin writing, in bytes.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/put-range.
 func (f FileURL) UploadRange(ctx context.Context, offset int64, body io.ReadSeeker, transactionalMD5 []byte) (*FileUploadRangeResponse, error) {
 	if body == nil {
@@ -214,7 +214,7 @@ func (f FileURL) UploadRange(ctx context.Context, offset int64, body io.ReadSeek
 }
 
 // Update range with bytes from a specific URL.
-// offset indicates the offset at which to begin writing, in bytes.
+// Offset indicates the Offset at which to begin writing, in bytes.
 func (f FileURL) UploadRangeFromURL(ctx context.Context, sourceURL url.URL, sourceOffset int64, destOffset int64,
 	count int64) (*FileUploadRangeFromURLResponse, error) {
 
@@ -223,21 +223,21 @@ func (f FileURL) UploadRangeFromURL(ctx context.Context, sourceURL url.URL, sour
 }
 
 // ClearRange clears the specified range and releases the space used in storage for that range.
-// offset means the start offset of the range to clear.
-// count means count of bytes to clean, it cannot be CountToEnd (0), and must be explicitly specified.
+// Offset means the start Offset of the range to clear.
+// Count means Count of bytes to clean, it cannot be CountToEnd (0), and must be explicitly specified.
 // If the range specified is not 512-byte aligned, the operation will write zeros to
 // the start or end of the range that is not 512-byte aligned and free the rest of the range inside that is 512-byte aligned.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/put-range.
 func (f FileURL) ClearRange(ctx context.Context, offset int64, count int64) (*FileUploadRangeResponse, error) {
 	if count <= 0 {
-		return nil, errors.New("invalid argument, count cannot be CountToEnd, and must be > 0")
+		return nil, errors.New("invalid argument, Count cannot be CountToEnd, and must be > 0")
 	}
 
 	return f.fileClient.UploadRange(ctx, *toRange(offset, count), FileRangeWriteClear, 0, nil, nil, nil, nil)
 }
 
 // GetRangeList returns the list of valid ranges for a file.
-// Use a count with value CountToEnd (0) to indicate the left part of file start from offset.
+// Use a Count with value CountToEnd (0) to indicate the left part of file start from Offset.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/list-ranges.
 func (f FileURL) GetRangeList(ctx context.Context, offset int64, count int64) (*ShareFileRangeList, error) {
 	return f.fileClient.GetRangeList(ctx,

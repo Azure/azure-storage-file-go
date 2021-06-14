@@ -1058,7 +1058,7 @@ func (s *FileURLSuite) TestFileDownloadDataNonExistantFile(c *chk.C) {
 	validateStorageError(c, err, azfile.ServiceCodeResourceNotFound)
 }
 
-// Don't check offset by design.
+// Don't check Offset by design.
 // func (s *FileURLSuite) TestFileDownloadDataNegativeOffset(c *chk.C) {
 // 	fsu := getFSU()
 // 	shareURL, _ := createNewShare(c, fsu)
@@ -1067,7 +1067,7 @@ func (s *FileURLSuite) TestFileDownloadDataNonExistantFile(c *chk.C) {
 
 // 	_, err := fileURL.Download(ctx, -1, azfile.CountToEnd, false)
 // 	c.Assert(err, chk.NotNil)
-// 	c.Assert(strings.Contains(err.Error(), "offset must be >= 0"), chk.Equals, true)
+// 	c.Assert(strings.Contains(err.Error(), "Offset must be >= 0"), chk.Equals, true)
 // }
 
 func (s *FileURLSuite) TestFileDownloadDataOffsetOutOfRange(c *chk.C) {
@@ -1080,7 +1080,7 @@ func (s *FileURLSuite) TestFileDownloadDataOffsetOutOfRange(c *chk.C) {
 	validateStorageError(c, err, azfile.ServiceCodeInvalidRange)
 }
 
-// Don't check count by design.
+// Don't check Count by design.
 // func (s *FileURLSuite) TestFileDownloadDataInvalidCount(c *chk.C) {
 // 	fsu := getFSU()
 // 	shareURL, _ := createNewShare(c, fsu)
@@ -1089,7 +1089,7 @@ func (s *FileURLSuite) TestFileDownloadDataOffsetOutOfRange(c *chk.C) {
 
 // 	_, err := fileURL.Download(ctx, 0, -100, false)
 // 	c.Assert(err, chk.NotNil)
-// 	c.Assert(strings.Contains(err.Error(), "count must be >= 0"), chk.Equals, true)
+// 	c.Assert(strings.Contains(err.Error(), "Count must be >= 0"), chk.Equals, true)
 // }
 
 func (s *FileURLSuite) TestFileDownloadDataEntireFile(c *chk.C) {
@@ -1101,7 +1101,7 @@ func (s *FileURLSuite) TestFileDownloadDataEntireFile(c *chk.C) {
 	resp, err := fileURL.Download(ctx, 0, azfile.CountToEnd, false)
 	c.Assert(err, chk.IsNil)
 
-	// Specifying a count of 0 results in the value being ignored
+	// Specifying a Count of 0 results in the value being ignored
 	data, err := ioutil.ReadAll(resp.Response().Body)
 	c.Assert(err, chk.IsNil)
 	c.Assert(string(data), chk.Equals, fileDefaultData)
@@ -1135,7 +1135,7 @@ func (s *FileURLSuite) TestFileDownloadDataCountOutOfRange(c *chk.C) {
 	c.Assert(string(data), chk.Equals, fileDefaultData)
 }
 
-// Don't check offset by design.
+// Don't check Offset by design.
 // func (s *FileURLSuite) TestFileUploadRangeNegativeInvalidOffset(c *chk.C) {
 // 	fsu := getFSU()
 // 	shareURL, _ := createNewShare(c, fsu)
@@ -1144,7 +1144,7 @@ func (s *FileURLSuite) TestFileDownloadDataCountOutOfRange(c *chk.C) {
 
 // 	_, err := fileURL.UploadRange(ctx, -2, strings.NewReader(fileDefaultData), nil)
 // 	c.Assert(err, chk.NotNil)
-// 	c.Assert(strings.Contains(err.Error(), "offset must be >= 0"), chk.Equals, true)
+// 	c.Assert(strings.Contains(err.Error(), "Offset must be >= 0"), chk.Equals, true)
 // }
 
 func (s *FileURLSuite) TestFileUploadRangeNilBody(c *chk.C) {
@@ -1239,7 +1239,7 @@ func (f *FileURLSuite) TestUploadRangeFromURL(c *chk.C) {
 	shareURL, shareName := createNewShare(c, fsu)
 	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
 
-	// create the source file and populate it with random data at a specific offset
+	// create the source file and populate it with random data at a specific Offset
 	expectedDataSize := 2048
 	totalFileSize := 4096
 	srcOffset := 999
@@ -1407,7 +1407,7 @@ func (s *FileURLSuite) TestClearRangeNonDefault1Count(c *chk.C) {
 	c.Assert(bytes, chk.DeepEquals, []byte{0})
 }
 
-// Don't check offset by design.
+// Don't check Offset by design.
 // func (s *FileURLSuite) TestFileClearRangeNegativeInvalidOffset(c *chk.C) {
 // 	fsu := getFSU()
 // 	shareURL, _ := getShareURL(c, fsu)
@@ -1415,7 +1415,7 @@ func (s *FileURLSuite) TestClearRangeNonDefault1Count(c *chk.C) {
 
 // 	_, err := fileURL.ClearRange(ctx, -1, 1)
 // 	c.Assert(err, chk.NotNil)
-// 	c.Assert(strings.Contains(err.Error(), "offset must be >= 0"), chk.Equals, true)
+// 	c.Assert(strings.Contains(err.Error(), "Offset must be >= 0"), chk.Equals, true)
 // }
 
 func (s *FileURLSuite) TestFileClearRangeNegativeInvalidCount(c *chk.C) {
@@ -1425,7 +1425,7 @@ func (s *FileURLSuite) TestFileClearRangeNegativeInvalidCount(c *chk.C) {
 
 	_, err := fileURL.ClearRange(ctx, 0, 0)
 	c.Assert(err, chk.NotNil)
-	c.Assert(strings.Contains(err.Error(), "count cannot be CountToEnd, and must be > 0"), chk.Equals, true)
+	c.Assert(strings.Contains(err.Error(), "Count cannot be CountToEnd, and must be > 0"), chk.Equals, true)
 }
 
 func setupGetRangeListTest(c *chk.C) (shareURL azfile.ShareURL, fileURL azfile.FileURL) {

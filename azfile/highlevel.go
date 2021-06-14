@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 
-	"bytes"
 	"os"
 	"sync"
 
@@ -21,7 +20,7 @@ const (
 	fileSegmentSize = 500 * 1024 * 1024
 )
 
-// UploadToAzureFileOptions identifies options used by the UploadBufferToAzureFile and UploadFileToAzureFile functions.
+// UploadToAzureFileOptions identifies options used by the UploadReaderAtToAzureFile and UploadFileToAzureFile functions.
 type UploadToAzureFileOptions struct {
 	// RangeSize specifies the range size to use in each parallel upload; the default (and maximum size) is FileMaxUploadRangeBytes.
 	RangeSize int64
@@ -39,11 +38,10 @@ type UploadToAzureFileOptions struct {
 	Metadata Metadata
 }
 
-// UploadBufferToAzureFile uploads a buffer to an Azure file.
+// UploadReaderAtToAzureFile uploads a buffer to an Azure file.
 // Note: o.RangeSize must be >= 0 and <= FileMaxUploadRangeBytes, and if not specified, method will use FileMaxUploadRangeBytes by default.
 // The total size to be uploaded should be <= FileMaxSizeInBytes.
-func UploadBufferToAzureFile(ctx context.Context, b []byte,
-	fileURL FileURL, o UploadToAzureFileOptions) error {
+func UploadReaderAtToAzureFile(ctx context.Context, reader io.ReaderAt, readerSize int64, fileURL FileURL, o UploadToAzureFileOptions) error {
 
 	// 1. Validate parameters, and set defaults.
 	if o.RangeSize < 0 || o.RangeSize > FileMaxUploadRangeBytes {
@@ -53,20 +51,18 @@ func UploadBufferToAzureFile(ctx context.Context, b []byte,
 		o.RangeSize = FileMaxUploadRangeBytes
 	}
 
-	size := int64(len(b))
-
 	parallelism := o.Parallelism
 	if parallelism == 0 {
 		parallelism = defaultParallelCount // default parallelism
 	}
 
 	// 2. Try to create the Azure file.
-	_, err := fileURL.Create(ctx, size, o.FileHTTPHeaders, o.Metadata)
+	_, err := fileURL.Create(ctx, readerSize, o.FileHTTPHeaders, o.Metadata)
 	if err != nil {
 		return err
 	}
 	// If size equals to 0, upload nothing and directly return.
-	if size == 0 {
+	if readerSize == 0 {
 		return nil
 	}
 
@@ -75,12 +71,12 @@ func UploadBufferToAzureFile(ctx context.Context, b []byte,
 	progressLock := &sync.Mutex{}
 
 	return doBatchTransfer(ctx, batchTransferOptions{
-		transferSize: size,
+		transferSize: readerSize,
 		chunkSize:    o.RangeSize,
 		parallelism:  parallelism,
 		operation: func(offset int64, curRangeSize int64) error {
 			// Prepare to read the proper section of the buffer.
-			var body io.ReadSeeker = bytes.NewReader(b[offset : offset+curRangeSize])
+			var body io.ReadSeeker = io.NewSectionReader(reader, offset, curRangeSize)
 			if o.Progress != nil {
 				rangeProgress := int64(0)
 				body = pipeline.NewRequestBodyProgress(body,
@@ -97,7 +93,7 @@ func UploadBufferToAzureFile(ctx context.Context, b []byte,
 			_, err := fileURL.UploadRange(ctx, int64(offset), body, nil)
 			return err
 		},
-		operationName: "UploadBufferToAzureFile",
+		operationName: "UploadReaderAtToAzureFile",
 	})
 }
 
@@ -109,15 +105,7 @@ func UploadFileToAzureFile(ctx context.Context, file *os.File,
 	if err != nil {
 		return err
 	}
-	m := mmf{} // Default to an empty slice; used for 0-size file
-	if stat.Size() != 0 {
-		m, err = newMMF(file, false, 0, int(stat.Size()))
-		if err != nil {
-			return err
-		}
-		defer m.unmap()
-	}
-	return UploadBufferToAzureFile(ctx, m, fileURL, o)
+	return UploadReaderAtToAzureFile(ctx, file, stat.Size(), fileURL, o)
 }
 
 // DownloadFromAzureFileOptions identifies options used by the DownloadAzureFileToBuffer and DownloadAzureFileToFile functions.
@@ -247,17 +235,12 @@ func DownloadAzureFileToFile(ctx context.Context, fileURL FileURL, file *os.File
 		}
 	}
 
-	// 4. Set mmap and call DownloadAzureFileToBuffer, in this case file size should be > 0.
-	m := mmf{} // Default to an empty slice; used for 0-size file
-	if azfileSize > 0 {
-		m, err = newMMF(file, true, 0, int(azfileSize))
-		if err != nil {
-			return nil, err
-		}
-		defer m.unmap()
+	b := make([]byte, azfileSize)
+	_, err = file.Read(b)
+	if err != nil {
+		return nil, err
 	}
-
-	return downloadAzureFileToBuffer(ctx, fileURL, azfileProperties, m, o)
+	return downloadAzureFileToBuffer(ctx, fileURL, azfileProperties, b, o)
 }
 
 // BatchTransferOptions identifies options used by doBatchTransfer.

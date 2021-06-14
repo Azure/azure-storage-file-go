@@ -84,7 +84,7 @@ func Example() {
 	}
 
 	// Download the file's contents and verify that it worked correctly.
-	// User can specify 0 as offset and azfile.CountToEnd(-1) as count to indiciate downloading the entire file.
+	// User can specify 0 as Offset and azfile.CountToEnd(-1) as Count to indiciate downloading the entire file.
 	get, err := fileURL.Download(ctx, 0, azfile.CountToEnd, false)
 	if err != nil {
 		log.Fatal(err)
@@ -662,7 +662,7 @@ func ExampleFileURL() {
 	}
 
 	// Let's get all the data saved in the file, and verify if data is correct.
-	// User can specify 0 as offset and azfile.CountToEnd(-1) as count to indiciate downloading the entire file.
+	// User can specify 0 as Offset and azfile.CountToEnd(-1) as Count to indiciate downloading the entire file.
 	get, err := fileURL.Download(ctx, 0, azfile.CountToEnd, false)
 	if err != nil {
 		log.Fatal(err)
@@ -900,7 +900,7 @@ func ExampleFileURL_Download() {
 	fileURL := azfile.NewFileURL(*u, azfile.NewPipeline(credential, azfile.PipelineOptions{}))
 
 	// Trigger download.
-	downloadResponse, err := fileURL.Download(context.Background(), 0, azfile.CountToEnd, false) // 0 offset and azfile.CountToEnd(-1) count means download entire file.
+	downloadResponse, err := fileURL.Download(context.Background(), 0, azfile.CountToEnd, false) // 0 Offset and azfile.CountToEnd(-1) Count means download entire file.
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -997,7 +997,7 @@ func ExampleDownloadAzureFileToFile() {
 	}
 	defer file.Close()
 
-	// Trigger parallel download with Parallelism set to 3, MaxRetryRequestsPerRange means the count of retry requests
+	// Trigger parallel download with Parallelism set to 3, MaxRetryRequestsPerRange means the Count of retry requests
 	// could be sent if there is error during reading stream.
 	downloadResponse, err := azfile.DownloadAzureFileToFile(context.Background(), fileURL, file,
 		azfile.DownloadFromAzureFileOptions{

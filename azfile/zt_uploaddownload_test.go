@@ -354,11 +354,11 @@ func (ud *uploadDownloadSuite) TestDownloadDefaultParam(c *chk.C) {
 	c.Assert(resp.ContentLength(), chk.Equals, fileSize)
 
 	retryReader := resp.Body(RetryReaderOptions{})
-	bytes, err := ioutil.ReadAll(retryReader)
+	bytes1, err := ioutil.ReadAll(retryReader)
 	zeroBytes := make([]byte, fileSize, fileSize)
 	c.Assert(err, chk.IsNil)
-	c.Assert(int64(len(bytes)), chk.Equals, fileSize)
-	c.Assert(zeroBytes, chk.DeepEquals, bytes)
+	c.Assert(int64(len(bytes1)), chk.Equals, fileSize)
+	c.Assert(zeroBytes, chk.DeepEquals, bytes1)
 }
 
 func (ud *uploadDownloadSuite) TestDownloadNegativePanic(c *chk.C) {
@@ -446,7 +446,9 @@ func (ud *uploadDownloadSuite) TestUploadDownloadBufferParallelNonDefault(c *chk
 		"overwrite": "overwrite",
 	}
 
-	err := UploadBufferToAzureFile(ctx, srcBytes, file, UploadToAzureFileOptions{FileHTTPHeaders: headers, Metadata: metadata})
+	reader := bytes.NewReader(srcBytes)
+	readerSize := int64(len(srcBytes))
+	err := UploadReaderAtToAzureFile(ctx, reader, readerSize, file, UploadToAzureFileOptions{FileHTTPHeaders: headers, Metadata: metadata})
 	c.Assert(err, chk.IsNil)
 
 	destBytes := make([]byte, fileSize)
@@ -464,7 +466,9 @@ func (ud *uploadDownloadSuite) TestUploadDownloadBufferParallelNonDefault(c *chk
 	c.Assert(destBytes, chk.DeepEquals, srcBytes)
 
 	// Test overwrite scenario
-	err = UploadBufferToAzureFile(ctx, srcBytes2, file, UploadToAzureFileOptions{FileHTTPHeaders: headers2, Metadata: metadata2})
+	reader2 := bytes.NewReader(srcBytes2)
+	readerSize2 := int64(len(srcBytes2))
+	err = UploadReaderAtToAzureFile(ctx, reader2, readerSize2, file, UploadToAzureFileOptions{FileHTTPHeaders: headers2, Metadata: metadata2})
 	c.Assert(err, chk.IsNil)
 
 	destBytes2 := make([]byte, fileSize2)
@@ -482,7 +486,7 @@ func (ud *uploadDownloadSuite) TestUploadDownloadBufferParallelNonDefault(c *chk
 	c.Assert(destBytes2, chk.DeepEquals, srcBytes2)
 }
 
-// Customzied range size, parallel count and progress update.
+// Customzied range size, parallel Count and progress update.
 func (ud *uploadDownloadSuite) TestUploadDownloadBufferParallelCheckProgress(c *chk.C) {
 	fsu := getFSU()
 	share, _ := createNewShare(c, fsu)
@@ -500,8 +504,10 @@ func (ud *uploadDownloadSuite) TestUploadDownloadBufferParallelCheckProgress(c *
 	uLogBuffer := bytes.Buffer{}
 	dLogBuffer := bytes.Buffer{}
 
-	err := UploadBufferToAzureFile(
-		ctx, srcBytes, file,
+	reader := bytes.NewReader(srcBytes)
+	readerSize := int64(len(srcBytes))
+	err := UploadReaderAtToAzureFile(
+		ctx, reader, readerSize, file,
 		UploadToAzureFileOptions{
 			RangeSize:   int64(blockSize),
 			Parallelism: 3,
@@ -564,7 +570,7 @@ func testUploadDownloadFileParallelDefault(c *chk.C, fileSize int64) {
 
 	fileURL, _ := getFileURLFromShare(c, share)
 
-	file, bytes := createNewLocalFile(c, fileSize)
+	file, bytes1 := createNewLocalFile(c, fileSize)
 	defer func() {
 		file.Close()
 		os.Remove(file.Name())
@@ -596,7 +602,7 @@ func testUploadDownloadFileParallelDefault(c *chk.C, fileSize int64) {
 	destBytes, err := ioutil.ReadFile(file2Name)
 	c.Assert(err, chk.IsNil)
 
-	c.Assert(bytes, chk.DeepEquals, destBytes)
+	c.Assert(bytes1, chk.DeepEquals, destBytes)
 }
 
 func (ud *uploadDownloadSuite) TestUploadFileToAzureFileNegativeInvalidRangeSize(c *chk.C) {
@@ -606,7 +612,9 @@ func (ud *uploadDownloadSuite) TestUploadFileToAzureFileNegativeInvalidRangeSize
 	shareURL, _ := getShareURL(c, fsu)
 	fileURL, _ := getFileURLFromShare(c, shareURL)
 
-	err := UploadBufferToAzureFile(ctx, srcBytes, fileURL, UploadToAzureFileOptions{RangeSize: -1})
+	reader := bytes.NewReader(srcBytes)
+	readerSize := int64(len(srcBytes))
+	err := UploadReaderAtToAzureFile(ctx, reader, readerSize, fileURL, UploadToAzureFileOptions{RangeSize: -1})
 	c.Assert(err, chk.NotNil)
 	c.Assert(strings.Contains(err.Error(), "o.RangeSize must be >= 0"), chk.Equals, true)
 }
@@ -618,7 +626,9 @@ func (ud *uploadDownloadSuite) TestUploadFileToAzureFileNegativeInvalidRangeSize
 	shareURL, _ := getShareURL(c, fsu)
 	fileURL, _ := getFileURLFromShare(c, shareURL)
 
-	err := UploadBufferToAzureFile(ctx, srcBytes, fileURL, UploadToAzureFileOptions{RangeSize: FileMaxUploadRangeBytes + 1})
+	reader := bytes.NewReader(srcBytes)
+	readerSize := int64(len(srcBytes))
+	err := UploadReaderAtToAzureFile(ctx, reader, readerSize, fileURL, UploadToAzureFileOptions{RangeSize: FileMaxUploadRangeBytes + 1})
 	c.Assert(err, chk.NotNil)
 	c.Assert(strings.Contains(err.Error(), "o.RangeSize must be >= 0 and <= 4194304, in bytes"), chk.Equals, true)
 }
@@ -690,7 +700,9 @@ func (ud *uploadDownloadSuite) TestDownloadFileParallelOverwriteLocalFile(c *chk
 		"bar": "barvalue",
 	}
 
-	err := UploadBufferToAzureFile(ctx, srcBytes, fileURL, UploadToAzureFileOptions{FileHTTPHeaders: headers, Metadata: metadata})
+	reader := bytes.NewReader(srcBytes)
+	readerSize := int64(len(srcBytes))
+	err := UploadReaderAtToAzureFile(ctx, reader, readerSize, fileURL, UploadToAzureFileOptions{FileHTTPHeaders: headers, Metadata: metadata})
 	c.Assert(err, chk.IsNil)
 
 	resp, err := DownloadAzureFileToFile(ctx, fileURL, localFile, DownloadFromAzureFileOptions{})
