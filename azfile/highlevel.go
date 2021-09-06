@@ -1,12 +1,11 @@
 package azfile
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
-
-	"bytes"
 	"os"
 	"sync"
 
@@ -181,6 +180,9 @@ func downloadAzureFileToBuffer(ctx context.Context, fileURL FileURL, azfilePrope
 		parallelism:  parallelism,
 		operation: func(offset int64, curRangeSize int64) error {
 			dr, err := fileURL.Download(ctx, offset, curRangeSize, false)
+			if err != nil {
+				return err
+			}
 			body := dr.Body(RetryReaderOptions{MaxRetryRequests: o.MaxRetryRequestsPerRange})
 
 			if o.Progress != nil {
@@ -277,13 +279,13 @@ func doBatchTransfer(ctx context.Context, o batchTransferOptions) error {
 
 	// Create the goroutines that process each operation (in parallel).
 	for g := uint16(0); g < o.parallelism; g++ {
-		//grIndex := g
+		// grIndex := g
 		go func() {
 			for f := range operationChannel {
-				//fmt.Printf("[%s] gr-%d start action\n", o.operationName, grIndex)
+				// fmt.Printf("[%s] gr-%d start action\n", o.operationName, grIndex)
 				err := f()
 				operationResponseChannel <- err
-				//fmt.Printf("[%s] gr-%d end action\n", o.operationName, grIndex)
+				// fmt.Printf("[%s] gr-%d end action\n", o.operationName, grIndex)
 			}
 		}()
 	}
