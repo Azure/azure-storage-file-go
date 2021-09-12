@@ -305,13 +305,15 @@ func doBatchTransfer(ctx context.Context, o batchTransferOptions) error {
 	}
 	close(operationChannel)
 
+	var err error
 	// Wait for the operations to complete.
 	for chunkIndex := int64(0); chunkIndex < numChunks; chunkIndex++ {
 		responseError := <-operationResponseChannel
 		if responseError != nil {
-			cancel()             // As soon as any operation fails, cancel all remaining operation calls
-			return responseError // No need to process anymore responses
+			cancel() // As soon as any operation fails, cancel all remaining operation calls, but still wait for all pending operations, as otherwise we may free the mmap buffer before they're done
+			err = responseError
 		}
 	}
-	return nil
+
+	return err
 }
