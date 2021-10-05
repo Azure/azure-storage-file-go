@@ -594,7 +594,7 @@ func (s *ShareURLSuite) TestShareGetStats(c *chk.C) {
 	// c.Assert(gResp.LastModified().IsZero(), chk.Equals, false) // TODO: Even share is once updated, no LastModified would be returned.
 	c.Assert(gResp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(gResp.Version(), chk.Not(chk.Equals), "")
-	c.Assert(gResp.ShareUsageBytes, chk.Equals, int32(0))
+	c.Assert(gResp.ShareUsageBytes, chk.Equals, int64(0))
 }
 
 func (s *ShareURLSuite) TestShareGetStatsNegative(c *chk.C) {
