@@ -606,6 +606,28 @@ func (s *ShareURLSuite) TestShareGetStatsNegative(c *chk.C) {
 	validateStorageError(c, err, azfile.ServiceCodeShareNotFound)
 }
 
+func (s *ShareURLSuite) TestSetAndGetStatistics(c *chk.C) {
+	fsu := getFSU()
+	share, _ := getShareURL(c, fsu)
+
+	cResp, err := share.Create(ctx, nil, 1024)
+	c.Assert(err, chk.IsNil)
+	c.Assert(cResp.StatusCode(), chk.Equals, 201)
+	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
+
+	dir := share.NewDirectoryURL("testdir")
+	_, err = dir.Create(ctx, nil, azfile.SMBProperties{})
+	c.Assert(err, chk.IsNil)
+
+	fileUrl := dir.NewFileURL("testfile")
+	_, err = fileUrl.Create(ctx, 1024*1024*1024*1024, azfile.FileHTTPHeaders{}, nil)
+	c.Assert(err, chk.IsNil)
+
+	getStats, err := share.GetStatistics(ctx)
+	c.Assert(err, chk.IsNil)
+	c.Assert(getStats.ShareUsageBytes, chk.Equals, int64(1024*1024*1024*1024))
+}
+
 func (s *ShareURLSuite) TestShareCreateSnapshotNonDefault(c *chk.C) {
 	fsu := getFSU()
 	share, shareName := createNewShare(c, fsu)

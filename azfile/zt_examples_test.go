@@ -500,7 +500,10 @@ func ExampleShareURL_SetQuota() {
 		shareUsageGB := statistics.ShareUsageBytes / 1024 / 1024 / 1024
 		fmt.Printf("Current share usage: %d GB\n", shareUsageGB)
 
-		shareURL.SetProperties(ctx, 10+shareUsageGB)
+		_, err = shareURL.SetProperties(ctx, int32(10+shareUsageGB))
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		properties, err := shareURL.GetProperties(ctx)
 		if err != nil {
