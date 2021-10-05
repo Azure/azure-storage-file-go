@@ -594,7 +594,7 @@ func (s *ShareURLSuite) TestShareGetStats(c *chk.C) {
 	// c.Assert(gResp.LastModified().IsZero(), chk.Equals, false) // TODO: Even share is once updated, no LastModified would be returned.
 	c.Assert(gResp.RequestID(), chk.Not(chk.Equals), "")
 	c.Assert(gResp.Version(), chk.Not(chk.Equals), "")
-	c.Assert(gResp.ShareUsageBytes, chk.Equals, int32(0))
+	c.Assert(gResp.ShareUsageBytes, chk.Equals, int64(0))
 }
 
 func (s *ShareURLSuite) TestShareGetStatsNegative(c *chk.C) {
@@ -604,6 +604,28 @@ func (s *ShareURLSuite) TestShareGetStatsNegative(c *chk.C) {
 	_, err := share.GetStatistics(ctx)
 	c.Assert(err, chk.NotNil)
 	validateStorageError(c, err, azfile.ServiceCodeShareNotFound)
+}
+
+func (s *ShareURLSuite) TestSetAndGetStatistics(c *chk.C) {
+	fsu := getFSU()
+	share, _ := getShareURL(c, fsu)
+
+	cResp, err := share.Create(ctx, nil, 1024)
+	c.Assert(err, chk.IsNil)
+	c.Assert(cResp.StatusCode(), chk.Equals, 201)
+	defer delShare(c, share, azfile.DeleteSnapshotsOptionNone)
+
+	dir := share.NewDirectoryURL("testdir")
+	_, err = dir.Create(ctx, nil, azfile.SMBProperties{})
+	c.Assert(err, chk.IsNil)
+
+	fileUrl := dir.NewFileURL("testfile")
+	_, err = fileUrl.Create(ctx, 1024*1024*1024*1024, azfile.FileHTTPHeaders{}, nil)
+	c.Assert(err, chk.IsNil)
+
+	getStats, err := share.GetStatistics(ctx)
+	c.Assert(err, chk.IsNil)
+	c.Assert(getStats.ShareUsageBytes, chk.Equals, int64(1024*1024*1024*1024))
 }
 
 func (s *ShareURLSuite) TestShareCreateSnapshotNonDefault(c *chk.C) {
