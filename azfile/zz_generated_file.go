@@ -1054,7 +1054,7 @@ func (client fileClient) startCopyPreparer(copySource string, timeout *int32, me
 		req.Header.Set("x-ms-file-permission-copy-mode", string(filePermissionCopyMode))
 	}
 	if ignoreReadOnly != nil {
-		req.Header.Set("x-ms-file-copy-ignore-read-only", strconv.FormatBool(*ignoreReadOnly))
+		req.Header.Set("x-ms-file-copy-ignore-readonly", strconv.FormatBool(*ignoreReadOnly))
 	}
 	if fileAttributes != nil {
 		req.Header.Set("x-ms-file-attributes", *fileAttributes)
