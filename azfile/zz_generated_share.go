@@ -8,12 +8,13 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/xml"
-	"github.com/Azure/azure-pipeline-go/pipeline"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
+
+	"github.com/Azure/azure-pipeline-go/pipeline"
 )
 
 // shareClient is the client for the Share methods of the Azfile service.
@@ -29,7 +30,8 @@ func newShareClient(url url.URL, p pipeline.Pipeline) shareClient {
 // AcquireLease the Lease Share operation establishes and manages a lock on a share, or the specified snapshot for set
 // and delete share operations.
 //
-// timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// shareName is the name of the target share. timeout is the timeout parameter is expressed in seconds. For more
+// information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> duration is specifies the duration of the lease, in seconds, or negative
 // one (-1) for a lease that never expires. A non-infinite lease can be between 15 and 60 seconds. A lease duration
@@ -38,14 +40,14 @@ func newShareClient(url url.URL, p pipeline.Pipeline) shareClient {
 // (String) for a list of valid GUID string formats. sharesnapshot is the snapshot parameter is an opaque DateTime
 // value that, when present, specifies the share snapshot to query. requestID is provides a client-generated, opaque
 // value with a 1 KB character limit that is recorded in the analytics logs when storage analytics logging is enabled.
-func (client shareClient) AcquireLease(ctx context.Context, timeout *int32, duration *int32, proposedLeaseID *string, sharesnapshot *string, requestID *string) (*ShareAcquireLeaseResponse, error) {
+func (client shareClient) AcquireLease(ctx context.Context, shareName string, timeout *int32, duration *int32, proposedLeaseID *string, sharesnapshot *string, requestID *string) (*ShareAcquireLeaseResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.acquireLeasePreparer(timeout, duration, proposedLeaseID, sharesnapshot, requestID)
+	req, err := client.acquireLeasePreparer(shareName, timeout, duration, proposedLeaseID, sharesnapshot, requestID)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +59,7 @@ func (client shareClient) AcquireLease(ctx context.Context, timeout *int32, dura
 }
 
 // acquireLeasePreparer prepares the AcquireLease request.
-func (client shareClient) acquireLeasePreparer(timeout *int32, duration *int32, proposedLeaseID *string, sharesnapshot *string, requestID *string) (pipeline.Request, error) {
+func (client shareClient) acquireLeasePreparer(shareName string, timeout *int32, duration *int32, proposedLeaseID *string, sharesnapshot *string, requestID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -100,7 +102,8 @@ func (client shareClient) acquireLeaseResponder(resp pipeline.Response) (pipelin
 // BreakLease the Lease Share operation establishes and manages a lock on a share, or the specified snapshot for set
 // and delete share operations.
 //
-// timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// shareName is the name of the target share. timeout is the timeout parameter is expressed in seconds. For more
+// information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> breakPeriod is for a break operation, proposed duration the lease should
 // continue before it is broken, in seconds, between 0 and 60. This break period is only used if it is shorter than the
@@ -111,14 +114,14 @@ func (client shareClient) acquireLeaseResponder(resp pipeline.Response) (pipelin
 // active and matches this ID. requestID is provides a client-generated, opaque value with a 1 KB character limit that
 // is recorded in the analytics logs when storage analytics logging is enabled. sharesnapshot is the snapshot parameter
 // is an opaque DateTime value that, when present, specifies the share snapshot to query.
-func (client shareClient) BreakLease(ctx context.Context, timeout *int32, breakPeriod *int32, leaseID *string, requestID *string, sharesnapshot *string) (*ShareBreakLeaseResponse, error) {
+func (client shareClient) BreakLease(ctx context.Context, shareName string, timeout *int32, breakPeriod *int32, leaseID *string, requestID *string, sharesnapshot *string) (*ShareBreakLeaseResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.breakLeasePreparer(timeout, breakPeriod, leaseID, requestID, sharesnapshot)
+	req, err := client.breakLeasePreparer(shareName, timeout, breakPeriod, leaseID, requestID, sharesnapshot)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +133,7 @@ func (client shareClient) BreakLease(ctx context.Context, timeout *int32, breakP
 }
 
 // breakLeasePreparer prepares the BreakLease request.
-func (client shareClient) breakLeasePreparer(timeout *int32, breakPeriod *int32, leaseID *string, requestID *string, sharesnapshot *string) (pipeline.Request, error) {
+func (client shareClient) breakLeasePreparer(shareName string, timeout *int32, breakPeriod *int32, leaseID *string, requestID *string, sharesnapshot *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -173,22 +176,22 @@ func (client shareClient) breakLeaseResponder(resp pipeline.Response) (pipeline.
 // ChangeLease the Lease Share operation establishes and manages a lock on a share, or the specified snapshot for set
 // and delete share operations.
 //
-// leaseID is specifies the current lease ID on the resource. timeout is the timeout parameter is expressed in seconds.
-// For more information, see <a
+// leaseID is specifies the current lease ID on the resource. shareName is the name of the target share. timeout is the
+// timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> proposedLeaseID is proposed lease ID, in a GUID string format. The File
 // service returns 400 (Invalid request) if the proposed lease ID is not in the correct format. See Guid Constructor
 // (String) for a list of valid GUID string formats. sharesnapshot is the snapshot parameter is an opaque DateTime
 // value that, when present, specifies the share snapshot to query. requestID is provides a client-generated, opaque
 // value with a 1 KB character limit that is recorded in the analytics logs when storage analytics logging is enabled.
-func (client shareClient) ChangeLease(ctx context.Context, leaseID string, timeout *int32, proposedLeaseID *string, sharesnapshot *string, requestID *string) (*ShareChangeLeaseResponse, error) {
+func (client shareClient) ChangeLease(ctx context.Context, leaseID string, shareName string, timeout *int32, proposedLeaseID *string, sharesnapshot *string, requestID *string) (*ShareChangeLeaseResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.changeLeasePreparer(leaseID, timeout, proposedLeaseID, sharesnapshot, requestID)
+	req, err := client.changeLeasePreparer(leaseID, shareName, timeout, proposedLeaseID, sharesnapshot, requestID)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +203,7 @@ func (client shareClient) ChangeLease(ctx context.Context, leaseID string, timeo
 }
 
 // changeLeasePreparer prepares the ChangeLease request.
-func (client shareClient) changeLeasePreparer(leaseID string, timeout *int32, proposedLeaseID *string, sharesnapshot *string, requestID *string) (pipeline.Request, error) {
+func (client shareClient) changeLeasePreparer(leaseID string, shareName string, timeout *int32, proposedLeaseID *string, sharesnapshot *string, requestID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -241,12 +244,14 @@ func (client shareClient) changeLeaseResponder(resp pipeline.Response) (pipeline
 // Create creates a new share under the specified account. If the share with the same name already exists, the
 // operation fails.
 //
-// timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// shareName is the name of the target share. timeout is the timeout parameter is expressed in seconds. For more
+// information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
 // quota is specifies the maximum size of the share, in gigabytes. accessTier is specifies the access tier of the
-// share.
-func (client shareClient) Create(ctx context.Context, timeout *int32, metadata map[string]string, quota *int32, accessTier ShareAccessTierType) (*ShareCreateResponse, error) {
+// share. enabledProtocols is protocols to enable on the share. rootSquash is root squash to set on the share.  Only
+// valid for NFS shares.
+func (client shareClient) Create(ctx context.Context, shareName string, timeout *int32, metadata map[string]string, quota *int32, accessTier ShareAccessTierType, enabledProtocols *string, rootSquash ShareRootSquashType) (*ShareCreateResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
@@ -256,7 +261,7 @@ func (client shareClient) Create(ctx context.Context, timeout *int32, metadata m
 				chain: []constraint{{target: "quota", name: inclusiveMinimum, rule: 1, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.createPreparer(timeout, metadata, quota, accessTier)
+	req, err := client.createPreparer(shareName, timeout, metadata, quota, accessTier, enabledProtocols, rootSquash)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +273,7 @@ func (client shareClient) Create(ctx context.Context, timeout *int32, metadata m
 }
 
 // createPreparer prepares the Create request.
-func (client shareClient) createPreparer(timeout *int32, metadata map[string]string, quota *int32, accessTier ShareAccessTierType) (pipeline.Request, error) {
+func (client shareClient) createPreparer(shareName string, timeout *int32, metadata map[string]string, quota *int32, accessTier ShareAccessTierType, enabledProtocols *string, rootSquash ShareRootSquashType) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -291,6 +296,12 @@ func (client shareClient) createPreparer(timeout *int32, metadata map[string]str
 		req.Header.Set("x-ms-access-tier", string(accessTier))
 	}
 	req.Header.Set("x-ms-version", ServiceVersion)
+	if enabledProtocols != nil {
+		req.Header.Set("x-ms-enabled-protocols", *enabledProtocols)
+	}
+	if rootSquash != ShareRootSquashNone {
+		req.Header.Set("x-ms-root-squash", string(rootSquash))
+	}
 	return req, nil
 }
 
@@ -307,18 +318,18 @@ func (client shareClient) createResponder(resp pipeline.Response) (pipeline.Resp
 
 // CreatePermission create a permission (a security descriptor).
 //
-// sharePermission is a permission (a security descriptor) at the share level. timeout is the timeout parameter is
-// expressed in seconds. For more information, see <a
+// sharePermission is a permission (a security descriptor) at the share level. shareName is the name of the target
+// share. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
-func (client shareClient) CreatePermission(ctx context.Context, sharePermission SharePermission, timeout *int32) (*ShareCreatePermissionResponse, error) {
+func (client shareClient) CreatePermission(ctx context.Context, sharePermission SharePermission, shareName string, timeout *int32) (*ShareCreatePermissionResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.createPermissionPreparer(sharePermission, timeout)
+	req, err := client.createPermissionPreparer(sharePermission, shareName, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -330,7 +341,7 @@ func (client shareClient) CreatePermission(ctx context.Context, sharePermission 
 }
 
 // createPermissionPreparer prepares the CreatePermission request.
-func (client shareClient) createPermissionPreparer(sharePermission SharePermission, timeout *int32) (pipeline.Request, error) {
+func (client shareClient) createPermissionPreparer(sharePermission SharePermission, shareName string, timeout *int32) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -368,17 +379,18 @@ func (client shareClient) createPermissionResponder(resp pipeline.Response) (pip
 
 // CreateSnapshot creates a read-only snapshot of a share.
 //
-// timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// shareName is the name of the target share. timeout is the timeout parameter is expressed in seconds. For more
+// information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
-func (client shareClient) CreateSnapshot(ctx context.Context, timeout *int32, metadata map[string]string) (*ShareCreateSnapshotResponse, error) {
+func (client shareClient) CreateSnapshot(ctx context.Context, shareName string, timeout *int32, metadata map[string]string) (*ShareCreateSnapshotResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.createSnapshotPreparer(timeout, metadata)
+	req, err := client.createSnapshotPreparer(shareName, timeout, metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +402,7 @@ func (client shareClient) CreateSnapshot(ctx context.Context, timeout *int32, me
 }
 
 // createSnapshotPreparer prepares the CreateSnapshot request.
-func (client shareClient) createSnapshotPreparer(timeout *int32, metadata map[string]string) (pipeline.Request, error) {
+func (client shareClient) createSnapshotPreparer(shareName string, timeout *int32, metadata map[string]string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -425,20 +437,21 @@ func (client shareClient) createSnapshotResponder(resp pipeline.Response) (pipel
 // Delete operation marks the specified share or share snapshot for deletion. The share or share snapshot and any files
 // contained within it are later deleted during garbage collection.
 //
-// sharesnapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot
-// to query. timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// shareName is the name of the target share. sharesnapshot is the snapshot parameter is an opaque DateTime value that,
+// when present, specifies the share snapshot to query. timeout is the timeout parameter is expressed in seconds. For
+// more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> deleteSnapshots is specifies the option include to delete the base share
 // and all of its snapshots. leaseID is if specified, the operation only succeeds if the resource's lease is active and
 // matches this ID.
-func (client shareClient) Delete(ctx context.Context, sharesnapshot *string, timeout *int32, deleteSnapshots DeleteSnapshotsOptionType, leaseID *string) (*ShareDeleteResponse, error) {
+func (client shareClient) Delete(ctx context.Context, shareName string, sharesnapshot *string, timeout *int32, deleteSnapshots DeleteSnapshotsOptionType, leaseID *string) (*ShareDeleteResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.deletePreparer(sharesnapshot, timeout, deleteSnapshots, leaseID)
+	req, err := client.deletePreparer(shareName, sharesnapshot, timeout, deleteSnapshots, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -450,7 +463,7 @@ func (client shareClient) Delete(ctx context.Context, sharesnapshot *string, tim
 }
 
 // deletePreparer prepares the Delete request.
-func (client shareClient) deletePreparer(sharesnapshot *string, timeout *int32, deleteSnapshots DeleteSnapshotsOptionType, leaseID *string) (pipeline.Request, error) {
+func (client shareClient) deletePreparer(shareName string, sharesnapshot *string, timeout *int32, deleteSnapshots DeleteSnapshotsOptionType, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("DELETE", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -487,18 +500,19 @@ func (client shareClient) deleteResponder(resp pipeline.Response) (pipeline.Resp
 
 // GetAccessPolicy returns information about stored access policies specified on the share.
 //
-// timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// shareName is the name of the target share. timeout is the timeout parameter is expressed in seconds. For more
+// information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> leaseID is if specified, the operation only succeeds if the resource's
 // lease is active and matches this ID.
-func (client shareClient) GetAccessPolicy(ctx context.Context, timeout *int32, leaseID *string) (*SignedIdentifiers, error) {
+func (client shareClient) GetAccessPolicy(ctx context.Context, shareName string, timeout *int32, leaseID *string) (*SignedIdentifiers, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.getAccessPolicyPreparer(timeout, leaseID)
+	req, err := client.getAccessPolicyPreparer(shareName, timeout, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -510,7 +524,7 @@ func (client shareClient) GetAccessPolicy(ctx context.Context, timeout *int32, l
 }
 
 // getAccessPolicyPreparer prepares the GetAccessPolicy request.
-func (client shareClient) getAccessPolicyPreparer(timeout *int32, leaseID *string) (pipeline.Request, error) {
+func (client shareClient) getAccessPolicyPreparer(shareName string, timeout *int32, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("GET", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -556,18 +570,18 @@ func (client shareClient) getAccessPolicyResponder(resp pipeline.Response) (pipe
 
 // GetPermission returns the permission (security descriptor) for a given key
 //
-// filePermissionKey is key of the permission to be set for the directory/file. timeout is the timeout parameter is
-// expressed in seconds. For more information, see <a
+// filePermissionKey is key of the permission to be set for the directory/file. shareName is the name of the target
+// share. timeout is the timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a>
-func (client shareClient) GetPermission(ctx context.Context, filePermissionKey string, timeout *int32) (*SharePermission, error) {
+func (client shareClient) GetPermission(ctx context.Context, filePermissionKey string, shareName string, timeout *int32) (*SharePermission, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.getPermissionPreparer(filePermissionKey, timeout)
+	req, err := client.getPermissionPreparer(filePermissionKey, shareName, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -579,7 +593,7 @@ func (client shareClient) GetPermission(ctx context.Context, filePermissionKey s
 }
 
 // getPermissionPreparer prepares the GetPermission request.
-func (client shareClient) getPermissionPreparer(filePermissionKey string, timeout *int32) (pipeline.Request, error) {
+func (client shareClient) getPermissionPreparer(filePermissionKey string, shareName string, timeout *int32) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("GET", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -624,19 +638,20 @@ func (client shareClient) getPermissionResponder(resp pipeline.Response) (pipeli
 // GetProperties returns all user-defined metadata and system properties for the specified share or share snapshot. The
 // data returned does not include the share's list of files.
 //
-// sharesnapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the share snapshot
-// to query. timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// shareName is the name of the target share. sharesnapshot is the snapshot parameter is an opaque DateTime value that,
+// when present, specifies the share snapshot to query. timeout is the timeout parameter is expressed in seconds. For
+// more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> leaseID is if specified, the operation only succeeds if the resource's
 // lease is active and matches this ID.
-func (client shareClient) GetProperties(ctx context.Context, sharesnapshot *string, timeout *int32, leaseID *string) (*ShareGetPropertiesResponse, error) {
+func (client shareClient) GetProperties(ctx context.Context, shareName string, sharesnapshot *string, timeout *int32, leaseID *string) (*ShareGetPropertiesResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.getPropertiesPreparer(sharesnapshot, timeout, leaseID)
+	req, err := client.getPropertiesPreparer(shareName, sharesnapshot, timeout, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -648,7 +663,7 @@ func (client shareClient) GetProperties(ctx context.Context, sharesnapshot *stri
 }
 
 // getPropertiesPreparer prepares the GetProperties request.
-func (client shareClient) getPropertiesPreparer(sharesnapshot *string, timeout *int32, leaseID *string) (pipeline.Request, error) {
+func (client shareClient) getPropertiesPreparer(shareName string, sharesnapshot *string, timeout *int32, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("GET", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -682,18 +697,19 @@ func (client shareClient) getPropertiesResponder(resp pipeline.Response) (pipeli
 
 // GetStatistics retrieves statistics related to the share.
 //
-// timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// shareName is the name of the target share. timeout is the timeout parameter is expressed in seconds. For more
+// information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> leaseID is if specified, the operation only succeeds if the resource's
 // lease is active and matches this ID.
-func (client shareClient) GetStatistics(ctx context.Context, timeout *int32, leaseID *string) (*ShareStats, error) {
+func (client shareClient) GetStatistics(ctx context.Context, shareName string, timeout *int32, leaseID *string) (*ShareStats, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.getStatisticsPreparer(timeout, leaseID)
+	req, err := client.getStatisticsPreparer(shareName, timeout, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -705,7 +721,7 @@ func (client shareClient) GetStatistics(ctx context.Context, timeout *int32, lea
 }
 
 // getStatisticsPreparer prepares the GetStatistics request.
-func (client shareClient) getStatisticsPreparer(timeout *int32, leaseID *string) (pipeline.Request, error) {
+func (client shareClient) getStatisticsPreparer(shareName string, timeout *int32, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("GET", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -752,20 +768,20 @@ func (client shareClient) getStatisticsResponder(resp pipeline.Response) (pipeli
 // ReleaseLease the Lease Share operation establishes and manages a lock on a share, or the specified snapshot for set
 // and delete share operations.
 //
-// leaseID is specifies the current lease ID on the resource. timeout is the timeout parameter is expressed in seconds.
-// For more information, see <a
+// leaseID is specifies the current lease ID on the resource. shareName is the name of the target share. timeout is the
+// timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> sharesnapshot is the snapshot parameter is an opaque DateTime value that,
 // when present, specifies the share snapshot to query. requestID is provides a client-generated, opaque value with a 1
 // KB character limit that is recorded in the analytics logs when storage analytics logging is enabled.
-func (client shareClient) ReleaseLease(ctx context.Context, leaseID string, timeout *int32, sharesnapshot *string, requestID *string) (*ShareReleaseLeaseResponse, error) {
+func (client shareClient) ReleaseLease(ctx context.Context, leaseID string, shareName string, timeout *int32, sharesnapshot *string, requestID *string) (*ShareReleaseLeaseResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.releaseLeasePreparer(leaseID, timeout, sharesnapshot, requestID)
+	req, err := client.releaseLeasePreparer(leaseID, shareName, timeout, sharesnapshot, requestID)
 	if err != nil {
 		return nil, err
 	}
@@ -777,7 +793,7 @@ func (client shareClient) ReleaseLease(ctx context.Context, leaseID string, time
 }
 
 // releaseLeasePreparer prepares the ReleaseLease request.
-func (client shareClient) releaseLeasePreparer(leaseID string, timeout *int32, sharesnapshot *string, requestID *string) (pipeline.Request, error) {
+func (client shareClient) releaseLeasePreparer(leaseID string, shareName string, timeout *int32, sharesnapshot *string, requestID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -815,20 +831,20 @@ func (client shareClient) releaseLeaseResponder(resp pipeline.Response) (pipelin
 // RenewLease the Lease Share operation establishes and manages a lock on a share, or the specified snapshot for set
 // and delete share operations.
 //
-// leaseID is specifies the current lease ID on the resource. timeout is the timeout parameter is expressed in seconds.
-// For more information, see <a
+// leaseID is specifies the current lease ID on the resource. shareName is the name of the target share. timeout is the
+// timeout parameter is expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> sharesnapshot is the snapshot parameter is an opaque DateTime value that,
 // when present, specifies the share snapshot to query. requestID is provides a client-generated, opaque value with a 1
 // KB character limit that is recorded in the analytics logs when storage analytics logging is enabled.
-func (client shareClient) RenewLease(ctx context.Context, leaseID string, timeout *int32, sharesnapshot *string, requestID *string) (*ShareRenewLeaseResponse, error) {
+func (client shareClient) RenewLease(ctx context.Context, leaseID string, shareName string, timeout *int32, sharesnapshot *string, requestID *string) (*ShareRenewLeaseResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.renewLeasePreparer(leaseID, timeout, sharesnapshot, requestID)
+	req, err := client.renewLeasePreparer(leaseID, shareName, timeout, sharesnapshot, requestID)
 	if err != nil {
 		return nil, err
 	}
@@ -840,7 +856,7 @@ func (client shareClient) RenewLease(ctx context.Context, leaseID string, timeou
 }
 
 // renewLeasePreparer prepares the RenewLease request.
-func (client shareClient) renewLeasePreparer(leaseID string, timeout *int32, sharesnapshot *string, requestID *string) (pipeline.Request, error) {
+func (client shareClient) renewLeasePreparer(leaseID string, shareName string, timeout *int32, sharesnapshot *string, requestID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -877,20 +893,21 @@ func (client shareClient) renewLeaseResponder(resp pipeline.Response) (pipeline.
 
 // Restore restores a previously deleted Share.
 //
-// timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// shareName is the name of the target share. timeout is the timeout parameter is expressed in seconds. For more
+// information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> requestID is provides a client-generated, opaque value with a 1 KB
 // character limit that is recorded in the analytics logs when storage analytics logging is enabled. deletedShareName
-// is specifies the name of the preivously-deleted share. deletedShareVersion is specifies the version of the
-// preivously-deleted share.
-func (client shareClient) Restore(ctx context.Context, timeout *int32, requestID *string, deletedShareName *string, deletedShareVersion *string) (*ShareRestoreResponse, error) {
+// is specifies the name of the previously-deleted share. deletedShareVersion is specifies the version of the
+// previously-deleted share.
+func (client shareClient) Restore(ctx context.Context, shareName string, timeout *int32, requestID *string, deletedShareName *string, deletedShareVersion *string) (*ShareRestoreResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.restorePreparer(timeout, requestID, deletedShareName, deletedShareVersion)
+	req, err := client.restorePreparer(shareName, timeout, requestID, deletedShareName, deletedShareVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -902,7 +919,7 @@ func (client shareClient) Restore(ctx context.Context, timeout *int32, requestID
 }
 
 // restorePreparer prepares the Restore request.
-func (client shareClient) restorePreparer(timeout *int32, requestID *string, deletedShareName *string, deletedShareVersion *string) (pipeline.Request, error) {
+func (client shareClient) restorePreparer(shareName string, timeout *int32, requestID *string, deletedShareName *string, deletedShareVersion *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -940,19 +957,19 @@ func (client shareClient) restoreResponder(resp pipeline.Response) (pipeline.Res
 
 // SetAccessPolicy sets a stored access policy for use with shared access signatures.
 //
-// shareACL is the ACL for the share. timeout is the timeout parameter is expressed in seconds. For more information,
-// see <a
+// shareName is the name of the target share. shareACL is the ACL for the share. timeout is the timeout parameter is
+// expressed in seconds. For more information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> leaseID is if specified, the operation only succeeds if the resource's
 // lease is active and matches this ID.
-func (client shareClient) SetAccessPolicy(ctx context.Context, shareACL []SignedIdentifier, timeout *int32, leaseID *string) (*ShareSetAccessPolicyResponse, error) {
+func (client shareClient) SetAccessPolicy(ctx context.Context, shareName string, shareACL []SignedIdentifier, timeout *int32, leaseID *string) (*ShareSetAccessPolicyResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.setAccessPolicyPreparer(shareACL, timeout, leaseID)
+	req, err := client.setAccessPolicyPreparer(shareName, shareACL, timeout, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -964,7 +981,7 @@ func (client shareClient) SetAccessPolicy(ctx context.Context, shareACL []Signed
 }
 
 // setAccessPolicyPreparer prepares the SetAccessPolicy request.
-func (client shareClient) setAccessPolicyPreparer(shareACL []SignedIdentifier, timeout *int32, leaseID *string) (pipeline.Request, error) {
+func (client shareClient) setAccessPolicyPreparer(shareName string, shareACL []SignedIdentifier, timeout *int32, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -1005,18 +1022,19 @@ func (client shareClient) setAccessPolicyResponder(resp pipeline.Response) (pipe
 
 // SetMetadata sets one or more user-defined name-value pairs for the specified share.
 //
-// timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// shareName is the name of the target share. timeout is the timeout parameter is expressed in seconds. For more
+// information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> metadata is a name-value pair to associate with a file storage object.
 // leaseID is if specified, the operation only succeeds if the resource's lease is active and matches this ID.
-func (client shareClient) SetMetadata(ctx context.Context, timeout *int32, metadata map[string]string, leaseID *string) (*ShareSetMetadataResponse, error) {
+func (client shareClient) SetMetadata(ctx context.Context, shareName string, timeout *int32, metadata map[string]string, leaseID *string) (*ShareSetMetadataResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.setMetadataPreparer(timeout, metadata, leaseID)
+	req, err := client.setMetadataPreparer(shareName, timeout, metadata, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -1028,7 +1046,7 @@ func (client shareClient) SetMetadata(ctx context.Context, timeout *int32, metad
 }
 
 // setMetadataPreparer prepares the SetMetadata request.
-func (client shareClient) setMetadataPreparer(timeout *int32, metadata map[string]string, leaseID *string) (pipeline.Request, error) {
+func (client shareClient) setMetadataPreparer(shareName string, timeout *int32, metadata map[string]string, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -1065,12 +1083,13 @@ func (client shareClient) setMetadataResponder(resp pipeline.Response) (pipeline
 
 // SetProperties sets properties for the specified share.
 //
-// timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// shareName is the name of the target share. timeout is the timeout parameter is expressed in seconds. For more
+// information, see <a
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/Setting-Timeouts-for-File-Service-Operations?redirectedfrom=MSDN">Setting
 // Timeouts for File Service Operations.</a> quota is specifies the maximum size of the share, in gigabytes. accessTier
 // is specifies the access tier of the share. leaseID is if specified, the operation only succeeds if the resource's
-// lease is active and matches this ID.
-func (client shareClient) SetProperties(ctx context.Context, timeout *int32, quota *int32, accessTier ShareAccessTierType, leaseID *string) (*ShareSetPropertiesResponse, error) {
+// lease is active and matches this ID. rootSquash is root squash to set on the share.  Only valid for NFS shares.
+func (client shareClient) SetProperties(ctx context.Context, shareName string, timeout *int32, quota *int32, accessTier ShareAccessTierType, leaseID *string, rootSquash ShareRootSquashType) (*ShareSetPropertiesResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
@@ -1080,7 +1099,7 @@ func (client shareClient) SetProperties(ctx context.Context, timeout *int32, quo
 				chain: []constraint{{target: "quota", name: inclusiveMinimum, rule: 1, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.setPropertiesPreparer(timeout, quota, accessTier, leaseID)
+	req, err := client.setPropertiesPreparer(shareName, timeout, quota, accessTier, leaseID, rootSquash)
 	if err != nil {
 		return nil, err
 	}
@@ -1092,7 +1111,7 @@ func (client shareClient) SetProperties(ctx context.Context, timeout *int32, quo
 }
 
 // setPropertiesPreparer prepares the SetProperties request.
-func (client shareClient) setPropertiesPreparer(timeout *int32, quota *int32, accessTier ShareAccessTierType, leaseID *string) (pipeline.Request, error) {
+func (client shareClient) setPropertiesPreparer(shareName string, timeout *int32, quota *int32, accessTier ShareAccessTierType, leaseID *string, rootSquash ShareRootSquashType) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -1113,6 +1132,9 @@ func (client shareClient) setPropertiesPreparer(timeout *int32, quota *int32, ac
 	}
 	if leaseID != nil {
 		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
+	if rootSquash != ShareRootSquashNone {
+		req.Header.Set("x-ms-root-squash", string(rootSquash))
 	}
 	return req, nil
 }

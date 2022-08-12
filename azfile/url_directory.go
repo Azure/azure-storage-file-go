@@ -67,20 +67,20 @@ func (d DirectoryURL) Create(ctx context.Context, metadata Metadata, properties 
 		return nil, err
 	}
 
-	return d.directoryClient.Create(ctx, fileAttr, fileCreateTime, FileLastWriteTime, nil, metadata,
+	return d.directoryClient.Create(ctx, fileAttr, fileCreateTime, FileLastWriteTime, "", "", nil, metadata,
 		permStr, permKey)
 }
 
 // Delete removes the specified empty directory. Note that the directory must be empty before it can be deleted..
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/delete-directory.
 func (d DirectoryURL) Delete(ctx context.Context) (*DirectoryDeleteResponse, error) {
-	return d.directoryClient.Delete(ctx, nil)
+	return d.directoryClient.Delete(ctx, "", "", nil)
 }
 
 // GetProperties returns the directory's metadata and system properties.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/get-directory-properties.
 func (d DirectoryURL) GetProperties(ctx context.Context) (*DirectoryGetPropertiesResponse, error) {
-	return d.directoryClient.GetProperties(ctx, nil, nil)
+	return d.directoryClient.GetProperties(ctx, "", "", nil, nil)
 }
 
 // SetProperties sets the directory's metadata and system properties.
@@ -93,13 +93,13 @@ func (d DirectoryURL) SetProperties(ctx context.Context, properties SMBPropertie
 		return nil, err
 	}
 
-	return d.directoryClient.SetProperties(ctx, fileAttr, fileCreateTime, FileLastWriteTime, nil, permStr, permKey)
+	return d.directoryClient.SetProperties(ctx, fileAttr, fileCreateTime, FileLastWriteTime, "", "", nil, permStr, permKey)
 }
 
 // SetMetadata sets the directory's metadata.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-directory-metadata.
 func (d DirectoryURL) SetMetadata(ctx context.Context, metadata Metadata) (*DirectorySetMetadataResponse, error) {
-	return d.directoryClient.SetMetadata(ctx, nil, metadata)
+	return d.directoryClient.SetMetadata(ctx, "", "", nil, metadata)
 }
 
 // ListFilesAndDirectoriesOptions defines options available when calling ListFilesAndDirectoriesSegment.
@@ -163,5 +163,5 @@ func (o *ListFilesAndDirectoriesOptions) pointers() (prefix *string, maxResults 
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/list-directories-and-files.
 func (d DirectoryURL) ListFilesAndDirectoriesSegment(ctx context.Context, marker Marker, o ListFilesAndDirectoriesOptions) (*ListFilesAndDirectoriesSegmentResponse, error) {
 	prefix, maxResults := o.pointers()
-	return d.directoryClient.ListFilesAndDirectoriesSegment(ctx, prefix, nil, marker.Val, maxResults, nil)
+	return d.directoryClient.ListFilesAndDirectoriesSegment(ctx, "", "", prefix, nil, marker.Val, maxResults, nil, nil, nil)
 }

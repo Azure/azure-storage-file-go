@@ -80,7 +80,7 @@ func (f FileURL) Create(ctx context.Context, size int64, h FileHTTPHeaders, meta
 		return nil, err
 	}
 
-	return f.fileClient.Create(ctx, size, fileAttr, fileCreateTime, FileLastWriteTime, nil,
+	return f.fileClient.Create(ctx, size, fileAttr, fileCreateTime, FileLastWriteTime, "", "", "", nil,
 		&h.ContentType, &h.ContentEncoding, &h.ContentLanguage, &h.CacheControl,
 		h.ContentMD5, &h.ContentDisposition, metadata, permStr, permKey, nil)
 }
@@ -88,7 +88,7 @@ func (f FileURL) Create(ctx context.Context, size int64, h FileHTTPHeaders, meta
 // StartCopy copies the data at the source URL to a file.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/copy-file.
 func (f FileURL) StartCopy(ctx context.Context, source url.URL, metadata Metadata) (*FileStartCopyResponse, error) {
-	return f.fileClient.StartCopy(ctx, source.String(), nil, metadata,
+	return f.fileClient.StartCopy(ctx, source.String(), "", "", "", nil, metadata,
 		nil,                    // filePermission
 		nil,                    // filePermissionKey
 		PermissionCopyModeNone, //filePermissionMode
@@ -104,7 +104,7 @@ func (f FileURL) StartCopy(ctx context.Context, source url.URL, metadata Metadat
 // AbortCopy stops a pending copy that was previously started and leaves a destination file with 0 length and metadata.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/abort-copy-file.
 func (f FileURL) AbortCopy(ctx context.Context, copyID string) (*FileAbortCopyResponse, error) {
-	return f.fileClient.AbortCopy(ctx, copyID, nil, nil)
+	return f.fileClient.AbortCopy(ctx, copyID, "", "", "", nil, nil)
 }
 
 // Download downloads count bytes of data from the start offset.
@@ -122,7 +122,7 @@ func (f FileURL) Download(ctx context.Context, offset int64, count int64, rangeG
 		}
 		xRangeGetContentMD5 = &rangeGetContentMD5
 	}
-	dr, err := f.fileClient.Download(ctx, nil, httpRange{offset: offset, count: count}.pointers(), xRangeGetContentMD5, nil)
+	dr, err := f.fileClient.Download(ctx, "", "", "", nil, httpRange{offset: offset, count: count}.pointers(), xRangeGetContentMD5, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -159,13 +159,13 @@ func (dr *RetryableDownloadResponse) Body(o RetryReaderOptions) io.ReadCloser {
 // Delete immediately removes the file from the storage account.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/delete-file2.
 func (f FileURL) Delete(ctx context.Context) (*FileDeleteResponse, error) {
-	return f.fileClient.Delete(ctx, nil, nil)
+	return f.fileClient.Delete(ctx, "", "", "", nil, nil)
 }
 
 // GetProperties returns the file's metadata and properties.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/get-file-properties.
 func (f FileURL) GetProperties(ctx context.Context) (*FileGetPropertiesResponse, error) {
-	return f.fileClient.GetProperties(ctx, nil, nil, nil)
+	return f.fileClient.GetProperties(ctx, "", "", "", nil, nil, nil)
 }
 
 // SetHTTPHeaders sets file's system properties.
@@ -177,7 +177,7 @@ func (f FileURL) SetHTTPHeaders(ctx context.Context, h FileHTTPHeaders) (*FileSe
 		return nil, err
 	}
 
-	return f.fileClient.SetHTTPHeaders(ctx, fileAttr, fileCreateTime, FileLastWriteTime, nil,
+	return f.fileClient.SetHTTPHeaders(ctx, fileAttr, fileCreateTime, FileLastWriteTime, "", "", "", nil,
 		nil, &h.ContentType, &h.ContentEncoding, &h.ContentLanguage, &h.CacheControl, h.ContentMD5,
 		&h.ContentDisposition, permStr, permKey, nil)
 }
@@ -185,13 +185,13 @@ func (f FileURL) SetHTTPHeaders(ctx context.Context, h FileHTTPHeaders) (*FileSe
 // SetMetadata sets a file's metadata.
 // https://docs.microsoft.com/rest/api/storageservices/set-file-metadata.
 func (f FileURL) SetMetadata(ctx context.Context, metadata Metadata) (*FileSetMetadataResponse, error) {
-	return f.fileClient.SetMetadata(ctx, nil, metadata, nil)
+	return f.fileClient.SetMetadata(ctx, "", "", "", nil, metadata, nil)
 }
 
 // Resize resizes the file to the specified size.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-file-properties.
 func (f FileURL) Resize(ctx context.Context, length int64) (*FileSetHTTPHeadersResponse, error) {
-	return f.fileClient.SetHTTPHeaders(ctx, "preserve", "preserve", "preserve", nil,
+	return f.fileClient.SetHTTPHeaders(ctx, "preserve", "preserve", "preserve", "", "", "", nil,
 		&length, nil, nil, nil, nil,
 		nil, nil, &defaultPreserveString, nil, nil)
 }
@@ -210,7 +210,7 @@ func (f FileURL) UploadRange(ctx context.Context, offset int64, body io.ReadSeek
 	}
 
 	// TransactionalContentMD5 isn't supported currently.
-	return f.fileClient.UploadRange(ctx, *toRange(offset, count), FileRangeWriteUpdate, count, body, nil, transactionalMD5, nil)
+	return f.fileClient.UploadRange(ctx, *toRange(offset, count), FileRangeWriteUpdate, count, "", "", "", body, nil, transactionalMD5, nil)
 }
 
 // Update range with bytes from a specific URL.
@@ -218,8 +218,8 @@ func (f FileURL) UploadRange(ctx context.Context, offset int64, body io.ReadSeek
 func (f FileURL) UploadRangeFromURL(ctx context.Context, sourceURL url.URL, sourceOffset int64, destOffset int64,
 	count int64) (*FileUploadRangeFromURLResponse, error) {
 
-	return f.fileClient.UploadRangeFromURL(ctx, *toRange(destOffset, count), sourceURL.String(), 0, nil,
-		toRange(sourceOffset, count), nil, nil, nil, nil)
+	return f.fileClient.UploadRangeFromURL(ctx, *toRange(destOffset, count), sourceURL.String(), 0, "", "", "", nil,
+		toRange(sourceOffset, count), nil, nil, nil, nil, nil)
 }
 
 // ClearRange clears the specified range and releases the space used in storage for that range.
@@ -233,14 +233,14 @@ func (f FileURL) ClearRange(ctx context.Context, offset int64, count int64) (*Fi
 		return nil, errors.New("invalid argument, count cannot be CountToEnd, and must be > 0")
 	}
 
-	return f.fileClient.UploadRange(ctx, *toRange(offset, count), FileRangeWriteClear, 0, nil, nil, nil, nil)
+	return f.fileClient.UploadRange(ctx, *toRange(offset, count), FileRangeWriteClear, 0, "", "", "", nil, nil, nil, nil)
 }
 
 // GetRangeList returns the list of valid ranges for a file.
 // Use a count with value CountToEnd (0) to indicate the left part of file start from offset.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/list-ranges.
 func (f FileURL) GetRangeList(ctx context.Context, offset int64, count int64) (*ShareFileRangeList, error) {
-	return f.fileClient.GetRangeList(ctx,
+	return f.fileClient.GetRangeList(ctx, "", "", "",
 		nil, // sharesnapshot
 		nil, //prevsharesnapshot
 		nil, // timeout
