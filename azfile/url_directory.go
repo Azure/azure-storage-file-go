@@ -165,3 +165,20 @@ func (d DirectoryURL) ListFilesAndDirectoriesSegment(ctx context.Context, marker
 	prefix, maxResults := o.pointers()
 	return d.directoryClient.ListFilesAndDirectoriesSegment(ctx, "", "", prefix, nil, marker.Val, maxResults, nil, nil, nil)
 }
+
+// Renames the directory to the provided destination
+// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/rename-directory.
+func (d DirectoryURL) Rename(ctx context.Context, destinationPath string, replaceIfExists *bool, metadata Metadata) (DirectoryURL, error) {
+	urlParts := NewFileURLParts(d.directoryClient.URL())
+	urlParts.DirectoryOrFilePath = destinationPath
+	renameSource := d.String()
+
+	destinationDirectoryURL := NewDirectoryURL(urlParts.URL(), d.directoryClient.Pipeline())
+
+	_, err := destinationDirectoryURL.directoryClient.Rename(ctx, renameSource, "", "", nil, replaceIfExists, nil, nil, nil, nil, nil, nil, nil, nil, metadata)
+	if err != nil {
+		return DirectoryURL{}, err
+	}
+
+	return destinationDirectoryURL, nil
+}

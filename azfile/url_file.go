@@ -248,3 +248,19 @@ func (f FileURL) GetRangeList(ctx context.Context, offset int64, count int64) (*
 		nil, // leaseID
 	)
 }
+
+// Renames the file to the provided destination
+// For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/rename-file.
+func (f FileURL) Rename(ctx context.Context, destinationPath string, replaceIfExists *bool, metadata Metadata, contentType *string) (FileURL, error) {
+	urlParts := NewFileURLParts(f.fileClient.URL())
+	urlParts.DirectoryOrFilePath = destinationPath
+	destinationFileURL := NewFileURL(urlParts.URL(), f.fileClient.Pipeline())
+	renameSource := f.String()
+
+	_, err := destinationFileURL.fileClient.Rename(ctx, renameSource, "", "", "", nil, replaceIfExists, nil, nil, nil, nil, nil, nil, nil, nil, metadata, contentType)
+	if err != nil {
+		return FileURL{}, err
+	}
+
+	return destinationFileURL, nil
+}
