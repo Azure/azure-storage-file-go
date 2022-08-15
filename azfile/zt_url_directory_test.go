@@ -607,3 +607,108 @@ func (s *DirectoryURLSuite) TestDirListWithShareSAS(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	c.Assert(lResp.NextMarker.NotDone(), chk.Equals, false)
 }
+
+func (s *DirectoryURLSuite) TestRename(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	dirURL, _ := createNewDirectoryFromShare(c, shareURL)
+
+	renamedDirName := generateDirectoryName()
+	renamedDirURL, err := dirURL.Rename(ctx, renamedDirName, nil, azfile.Metadata{})
+	c.Assert(err, chk.IsNil)
+	c.Assert(renamedDirURL, chk.NotNil)
+
+	_, err = dirURL.GetProperties(ctx)
+	c.Assert(err, chk.NotNil)
+
+	_, err = renamedDirURL.GetProperties(ctx)
+	c.Assert(err, chk.IsNil)
+}
+
+func (s *DirectoryURLSuite) TestRenameDifferentDirectory(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+	dirURL, _ := createNewDirectoryFromShare(c, shareURL)
+
+	directoryURL, _ := createNewDirectoryFromShare(c, shareURL)
+	renamedDirName := generateFileName()
+	destinationURL := directoryURL.NewFileURL(renamedDirName)
+	destinationPath := azfile.NewFileURLParts(destinationURL.URL()).DirectoryOrFilePath
+
+	renamedDirURL, err := dirURL.Rename(ctx, destinationPath, nil, azfile.Metadata{})
+	c.Assert(err, chk.IsNil)
+	c.Assert(renamedDirURL, chk.NotNil)
+
+	_, err = dirURL.GetProperties(ctx)
+	c.Assert(err, chk.NotNil)
+
+	_, err = renamedDirURL.GetProperties(ctx)
+	c.Assert(err, chk.IsNil)
+	c.Assert(renamedDirURL.String(), chk.Equals, destinationURL.String())
+
+}
+
+func (s *DirectoryURLSuite) TestRenameReplaceIfExistsTrue(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	dirURL, _ := createNewDirectoryFromShare(c, shareURL)
+
+	replaceIfExists := true
+
+	renamedDirName := generateFileName()
+	shareURL.NewRootDirectoryURL().NewFileURL(renamedDirName).Create(ctx, 0, azfile.FileHTTPHeaders{}, nil)
+	renamedDirURL, err := dirURL.Rename(ctx, renamedDirName, &replaceIfExists, azfile.Metadata{})
+	c.Assert(err, chk.IsNil)
+	c.Assert(renamedDirURL, chk.NotNil)
+}
+
+func (s *DirectoryURLSuite) TestRenameReplaceIfExistsFalse(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	dirURL, _ := createNewDirectoryFromShare(c, shareURL)
+
+	replaceIfExists := false
+
+	renamedDirName := generateFileName()
+	shareURL.NewRootDirectoryURL().NewFileURL(renamedDirName).Create(ctx, 0, azfile.FileHTTPHeaders{}, nil)
+	_, err := dirURL.Rename(ctx, renamedDirName, &replaceIfExists, azfile.Metadata{})
+	c.Assert(err, chk.NotNil)
+}
+
+func (s *DirectoryURLSuite) TestRenameMetadata(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	dirURL, _ := createNewDirectoryFromShare(c, shareURL)
+
+	metadata := azfile.Metadata{}
+	metadata["foo"] = "bar"
+	renamedDirName := generateFileName()
+	renamedDirURL, err := dirURL.Rename(ctx, renamedDirName, nil, metadata)
+	c.Assert(err, chk.IsNil)
+	c.Assert(renamedDirURL, chk.NotNil)
+
+	props, err := renamedDirURL.GetProperties(ctx)
+	c.Assert(err, chk.IsNil)
+	c.Assert(props.NewMetadata()["foo"], chk.Equals, "bar")
+}
+
+func (s *DirectoryURLSuite) TestRenameError(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	dirURL, _ := getDirectoryURLFromShare(c, shareURL)
+
+	renamedDirName := generateFileName()
+	_, err := dirURL.Rename(ctx, renamedDirName, nil, azfile.Metadata{})
+	c.Assert(err, chk.NotNil)
+}

@@ -205,6 +205,27 @@ func PossibleLeaseStatusTypeValues() []LeaseStatusType {
 	return []LeaseStatusType{LeaseStatusLocked, LeaseStatusNone, LeaseStatusUnlocked}
 }
 
+// ListFilesIncludeType enumerates the values for list files include type.
+type ListFilesIncludeType string
+
+const (
+	// ListFilesIncludeAttributes ...
+	ListFilesIncludeAttributes ListFilesIncludeType = "Attributes"
+	// ListFilesIncludeEtag ...
+	ListFilesIncludeEtag ListFilesIncludeType = "Etag"
+	// ListFilesIncludeNone represents an empty ListFilesIncludeType.
+	ListFilesIncludeNone ListFilesIncludeType = ""
+	// ListFilesIncludePermissionKey ...
+	ListFilesIncludePermissionKey ListFilesIncludeType = "PermissionKey"
+	// ListFilesIncludeTimestamps ...
+	ListFilesIncludeTimestamps ListFilesIncludeType = "Timestamps"
+)
+
+// PossibleListFilesIncludeTypeValues returns an array of possible values for the ListFilesIncludeType const type.
+func PossibleListFilesIncludeTypeValues() []ListFilesIncludeType {
+	return []ListFilesIncludeType{ListFilesIncludeAttributes, ListFilesIncludeEtag, ListFilesIncludeNone, ListFilesIncludePermissionKey, ListFilesIncludeTimestamps}
+}
+
 // ListSharesIncludeType enumerates the values for list shares include type.
 type ListSharesIncludeType string
 
@@ -258,6 +279,25 @@ const (
 // PossibleShareAccessTierTypeValues returns an array of possible values for the ShareAccessTierType const type.
 func PossibleShareAccessTierTypeValues() []ShareAccessTierType {
 	return []ShareAccessTierType{ShareAccessTierCool, ShareAccessTierHot, ShareAccessTierNone, ShareAccessTierTransactionOptimized}
+}
+
+// ShareRootSquashType enumerates the values for share root squash type.
+type ShareRootSquashType string
+
+const (
+	// ShareRootSquashAllSquash ...
+	ShareRootSquashAllSquash ShareRootSquashType = "AllSquash"
+	// ShareRootSquashNone represents an empty ShareRootSquashType.
+	ShareRootSquashNone ShareRootSquashType = ""
+	// ShareRootSquashNoRootSquash ...
+	ShareRootSquashNoRootSquash ShareRootSquashType = "NoRootSquash"
+	// ShareRootSquashRootSquash ...
+	ShareRootSquashRootSquash ShareRootSquashType = "RootSquash"
+)
+
+// PossibleShareRootSquashTypeValues returns an array of possible values for the ShareRootSquashType const type.
+func PossibleShareRootSquashTypeValues() []ShareRootSquashType {
+	return []ShareRootSquashType{ShareRootSquashAllSquash, ShareRootSquashNone, ShareRootSquashNoRootSquash, ShareRootSquashRootSquash}
 }
 
 // StorageErrorCodeType enumerates the values for storage error code type.
@@ -489,8 +529,8 @@ func (dcr DirectoryCreateResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (dcr DirectoryCreateResponse) ETag() ETag {
-	return ETag(dcr.rawResponse.Header.Get("ETag"))
+func (dcr DirectoryCreateResponse) ETag() string {
+	return dcr.rawResponse.Header.Get("ETag")
 }
 
 // FileAttributes returns the value for header x-ms-file-attributes.
@@ -803,11 +843,121 @@ func (dgpr DirectoryGetPropertiesResponse) Version() string {
 }
 
 // DirectoryItem - A listed directory item.
-//type DirectoryItem struct {
-//	// XMLName is used for marshalling and is subject to removal in a future release.
-//	XMLName xml.Name `xml:"Directory"`
-//	Name    string   `xml:"Name"`
-//}
+// type DirectoryItem struct {
+// 	// XMLName is used for marshalling and is subject to removal in a future release.
+// 	XMLName       xml.Name      `xml:"Directory"`
+// 	Name          string        `xml:"Name"`
+// 	FileID        *string       `xml:"FileId"`
+// 	Properties    *FileProperty `xml:"Properties"`
+// 	Attributes    *string       `xml:"Attributes"`
+// 	PermissionKey *string       `xml:"PermissionKey"`
+// }
+
+// DirectoryRenameResponse ...
+type DirectoryRenameResponse struct {
+	rawResponse *http.Response
+}
+
+// Response returns the raw HTTP response object.
+func (drr DirectoryRenameResponse) Response() *http.Response {
+	return drr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (drr DirectoryRenameResponse) StatusCode() int {
+	return drr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (drr DirectoryRenameResponse) Status() string {
+	return drr.rawResponse.Status
+}
+
+// Date returns the value for header Date.
+func (drr DirectoryRenameResponse) Date() time.Time {
+	s := drr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (drr DirectoryRenameResponse) ErrorCode() string {
+	return drr.rawResponse.Header.Get("x-ms-error-code")
+}
+
+// ETag returns the value for header ETag.
+func (drr DirectoryRenameResponse) ETag() string {
+	return drr.rawResponse.Header.Get("ETag")
+}
+
+// FileAttributes returns the value for header x-ms-file-attributes.
+func (drr DirectoryRenameResponse) FileAttributes() string {
+	return drr.rawResponse.Header.Get("x-ms-file-attributes")
+}
+
+// FileChangeTime returns the value for header x-ms-file-change-time.
+func (drr DirectoryRenameResponse) FileChangeTime() string {
+	return drr.rawResponse.Header.Get("x-ms-file-change-time")
+}
+
+// FileCreationTime returns the value for header x-ms-file-creation-time.
+func (drr DirectoryRenameResponse) FileCreationTime() string {
+	return drr.rawResponse.Header.Get("x-ms-file-creation-time")
+}
+
+// FileID returns the value for header x-ms-file-id.
+func (drr DirectoryRenameResponse) FileID() string {
+	return drr.rawResponse.Header.Get("x-ms-file-id")
+}
+
+// FileLastWriteTime returns the value for header x-ms-file-last-write-time.
+func (drr DirectoryRenameResponse) FileLastWriteTime() string {
+	return drr.rawResponse.Header.Get("x-ms-file-last-write-time")
+}
+
+// FileParentID returns the value for header x-ms-file-parent-id.
+func (drr DirectoryRenameResponse) FileParentID() string {
+	return drr.rawResponse.Header.Get("x-ms-file-parent-id")
+}
+
+// FilePermissionKey returns the value for header x-ms-file-permission-key.
+func (drr DirectoryRenameResponse) FilePermissionKey() string {
+	return drr.rawResponse.Header.Get("x-ms-file-permission-key")
+}
+
+// IsServerEncrypted returns the value for header x-ms-request-server-encrypted.
+func (drr DirectoryRenameResponse) IsServerEncrypted() string {
+	return drr.rawResponse.Header.Get("x-ms-request-server-encrypted")
+}
+
+// LastModified returns the value for header Last-Modified.
+func (drr DirectoryRenameResponse) LastModified() time.Time {
+	s := drr.rawResponse.Header.Get("Last-Modified")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (drr DirectoryRenameResponse) RequestID() string {
+	return drr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (drr DirectoryRenameResponse) Version() string {
+	return drr.rawResponse.Header.Get("x-ms-version")
+}
 
 // DirectorySetMetadataResponse ...
 type DirectorySetMetadataResponse struct {
@@ -848,8 +998,8 @@ func (dsmr DirectorySetMetadataResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (dsmr DirectorySetMetadataResponse) ETag() ETag {
-	return ETag(dsmr.rawResponse.Header.Get("ETag"))
+func (dsmr DirectorySetMetadataResponse) ETag() string {
+	return dsmr.rawResponse.Header.Get("ETag")
 }
 
 // IsServerEncrypted returns the value for header x-ms-request-server-encrypted.
@@ -906,8 +1056,8 @@ func (dspr DirectorySetPropertiesResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (dspr DirectorySetPropertiesResponse) ETag() ETag {
-	return ETag(dspr.rawResponse.Header.Get("ETag"))
+func (dspr DirectorySetPropertiesResponse) ETag() string {
+	return dspr.rawResponse.Header.Get("ETag")
 }
 
 // FileAttributes returns the value for header x-ms-file-attributes.
@@ -1316,8 +1466,8 @@ func (falr FileAcquireLeaseResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (falr FileAcquireLeaseResponse) ETag() ETag {
-	return ETag(falr.rawResponse.Header.Get("ETag"))
+func (falr FileAcquireLeaseResponse) ETag() string {
+	return falr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -1392,8 +1542,8 @@ func (fblr FileBreakLeaseResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (fblr FileBreakLeaseResponse) ETag() ETag {
-	return ETag(fblr.rawResponse.Header.Get("ETag"))
+func (fblr FileBreakLeaseResponse) ETag() string {
+	return fblr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -1468,8 +1618,8 @@ func (fclr FileChangeLeaseResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (fclr FileChangeLeaseResponse) ETag() ETag {
-	return ETag(fclr.rawResponse.Header.Get("ETag"))
+func (fclr FileChangeLeaseResponse) ETag() string {
+	return fclr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -1539,8 +1689,8 @@ func (fcr FileCreateResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (fcr FileCreateResponse) ETag() ETag {
-	return ETag(fcr.rawResponse.Header.Get("ETag"))
+func (fcr FileCreateResponse) ETag() string {
+	return fcr.rawResponse.Header.Get("ETag")
 }
 
 // FileAttributes returns the value for header x-ms-file-attributes.
@@ -1874,8 +2024,8 @@ func (fgpr FileGetPropertiesResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (fgpr FileGetPropertiesResponse) ETag() ETag {
-	return ETag(fgpr.rawResponse.Header.Get("ETag"))
+func (fgpr FileGetPropertiesResponse) ETag() string {
+	return fgpr.rawResponse.Header.Get("ETag")
 }
 
 // FileAttributes returns the value for header x-ms-file-attributes.
@@ -1962,17 +2112,38 @@ func (fgpr FileGetPropertiesResponse) Version() string {
 }
 
 // FileItem - A listed file item.
-//type FileItem struct {
-//	// XMLName is used for marshalling and is subject to removal in a future release.
-//	XMLName    xml.Name     `xml:"File"`
-//	Name       string       `xml:"Name"`
-//	Properties FileProperty `xml:"Properties"`
-//}
+// type FileItem struct {
+// 	// XMLName is used for marshalling and is subject to removal in a future release.
+// 	XMLName       xml.Name     `xml:"File"`
+// 	Name          string       `xml:"Name"`
+// 	FileID        *string      `xml:"FileId"`
+// 	Properties    FileProperty `xml:"Properties"`
+// 	Attributes    *string      `xml:"Attributes"`
+// 	PermissionKey *string      `xml:"PermissionKey"`
+// }
 
 // FileProperty - File properties.
 type FileProperty struct {
 	// ContentLength - Content length of the file. This value may not be up-to-date since an SMB client may have modified the file locally. The value of Content-Length may not reflect that fact until the handle is closed or the op-lock is broken. To retrieve current property values, call Get File Properties.
-	ContentLength int64 `xml:"Content-Length"`
+	ContentLength  int64      `xml:"Content-Length"`
+	CreationTime   *time.Time `xml:"CreationTime"`
+	LastAccessTime *time.Time `xml:"LastAccessTime"`
+	LastWriteTime  *time.Time `xml:"LastWriteTime"`
+	ChangeTime     *time.Time `xml:"ChangeTime"`
+	LastModified   *time.Time `xml:"Last-Modified"`
+	Etag           *string    `xml:"Etag"`
+}
+
+// MarshalXML implements the xml.Marshaler interface for FileProperty.
+func (fp FileProperty) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	fp2 := (*fileProperty)(unsafe.Pointer(&fp))
+	return e.EncodeElement(*fp2, start)
+}
+
+// UnmarshalXML implements the xml.Unmarshaler interface for FileProperty.
+func (fp *FileProperty) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	fp2 := (*fileProperty)(unsafe.Pointer(fp))
+	return d.DecodeElement(fp2, &start)
 }
 
 // FileRange - An Azure Storage file range.
@@ -2029,8 +2200,8 @@ func (frlr FileReleaseLeaseResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (frlr FileReleaseLeaseResponse) ETag() ETag {
-	return ETag(frlr.rawResponse.Header.Get("ETag"))
+func (frlr FileReleaseLeaseResponse) ETag() string {
+	return frlr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -2054,6 +2225,112 @@ func (frlr FileReleaseLeaseResponse) RequestID() string {
 // Version returns the value for header x-ms-version.
 func (frlr FileReleaseLeaseResponse) Version() string {
 	return frlr.rawResponse.Header.Get("x-ms-version")
+}
+
+// FileRenameResponse ...
+type FileRenameResponse struct {
+	rawResponse *http.Response
+}
+
+// Response returns the raw HTTP response object.
+func (frr FileRenameResponse) Response() *http.Response {
+	return frr.rawResponse
+}
+
+// StatusCode returns the HTTP status code of the response, e.g. 200.
+func (frr FileRenameResponse) StatusCode() int {
+	return frr.rawResponse.StatusCode
+}
+
+// Status returns the HTTP status message of the response, e.g. "200 OK".
+func (frr FileRenameResponse) Status() string {
+	return frr.rawResponse.Status
+}
+
+// Date returns the value for header Date.
+func (frr FileRenameResponse) Date() time.Time {
+	s := frr.rawResponse.Header.Get("Date")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// ErrorCode returns the value for header x-ms-error-code.
+func (frr FileRenameResponse) ErrorCode() string {
+	return frr.rawResponse.Header.Get("x-ms-error-code")
+}
+
+// ETag returns the value for header ETag.
+func (frr FileRenameResponse) ETag() string {
+	return frr.rawResponse.Header.Get("ETag")
+}
+
+// FileAttributes returns the value for header x-ms-file-attributes.
+func (frr FileRenameResponse) FileAttributes() string {
+	return frr.rawResponse.Header.Get("x-ms-file-attributes")
+}
+
+// FileChangeTime returns the value for header x-ms-file-change-time.
+func (frr FileRenameResponse) FileChangeTime() string {
+	return frr.rawResponse.Header.Get("x-ms-file-change-time")
+}
+
+// FileCreationTime returns the value for header x-ms-file-creation-time.
+func (frr FileRenameResponse) FileCreationTime() string {
+	return frr.rawResponse.Header.Get("x-ms-file-creation-time")
+}
+
+// FileID returns the value for header x-ms-file-id.
+func (frr FileRenameResponse) FileID() string {
+	return frr.rawResponse.Header.Get("x-ms-file-id")
+}
+
+// FileLastWriteTime returns the value for header x-ms-file-last-write-time.
+func (frr FileRenameResponse) FileLastWriteTime() string {
+	return frr.rawResponse.Header.Get("x-ms-file-last-write-time")
+}
+
+// FileParentID returns the value for header x-ms-file-parent-id.
+func (frr FileRenameResponse) FileParentID() string {
+	return frr.rawResponse.Header.Get("x-ms-file-parent-id")
+}
+
+// FilePermissionKey returns the value for header x-ms-file-permission-key.
+func (frr FileRenameResponse) FilePermissionKey() string {
+	return frr.rawResponse.Header.Get("x-ms-file-permission-key")
+}
+
+// IsServerEncrypted returns the value for header x-ms-request-server-encrypted.
+func (frr FileRenameResponse) IsServerEncrypted() string {
+	return frr.rawResponse.Header.Get("x-ms-request-server-encrypted")
+}
+
+// LastModified returns the value for header Last-Modified.
+func (frr FileRenameResponse) LastModified() time.Time {
+	s := frr.rawResponse.Header.Get("Last-Modified")
+	if s == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC1123, s)
+	if err != nil {
+		t = time.Time{}
+	}
+	return t
+}
+
+// RequestID returns the value for header x-ms-request-id.
+func (frr FileRenameResponse) RequestID() string {
+	return frr.rawResponse.Header.Get("x-ms-request-id")
+}
+
+// Version returns the value for header x-ms-version.
+func (frr FileRenameResponse) Version() string {
+	return frr.rawResponse.Header.Get("x-ms-version")
 }
 
 // FilesAndDirectoriesListSegment - Abstract for entries that can be listed from Directory.
@@ -2103,8 +2380,8 @@ func (fshhr FileSetHTTPHeadersResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (fshhr FileSetHTTPHeadersResponse) ETag() ETag {
-	return ETag(fshhr.rawResponse.Header.Get("ETag"))
+func (fshhr FileSetHTTPHeadersResponse) ETag() string {
+	return fshhr.rawResponse.Header.Get("ETag")
 }
 
 // FileAttributes returns the value for header x-ms-file-attributes.
@@ -2209,8 +2486,8 @@ func (fsmr FileSetMetadataResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (fsmr FileSetMetadataResponse) ETag() ETag {
-	return ETag(fsmr.rawResponse.Header.Get("ETag"))
+func (fsmr FileSetMetadataResponse) ETag() string {
+	return fsmr.rawResponse.Header.Get("ETag")
 }
 
 // IsServerEncrypted returns the value for header x-ms-request-server-encrypted.
@@ -2277,8 +2554,8 @@ func (fscr FileStartCopyResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (fscr FileStartCopyResponse) ETag() ETag {
-	return ETag(fscr.rawResponse.Header.Get("ETag"))
+func (fscr FileStartCopyResponse) ETag() string {
+	return fscr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -2343,8 +2620,8 @@ func (furfur FileUploadRangeFromURLResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (furfur FileUploadRangeFromURLResponse) ETag() ETag {
-	return ETag(furfur.rawResponse.Header.Get("ETag"))
+func (furfur FileUploadRangeFromURLResponse) ETag() string {
+	return furfur.rawResponse.Header.Get("ETag")
 }
 
 // IsServerEncrypted returns the value for header x-ms-request-server-encrypted.
@@ -2440,8 +2717,8 @@ func (furr FileUploadRangeResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (furr FileUploadRangeResponse) ETag() ETag {
-	return ETag(furr.rawResponse.Header.Get("ETag"))
+func (furr FileUploadRangeResponse) ETag() string {
+	return furr.rawResponse.Header.Get("ETag")
 }
 
 // IsServerEncrypted returns the value for header x-ms-request-server-encrypted.
@@ -2506,69 +2783,70 @@ func (hi *HandleItem) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error
 	return d.DecodeElement(hi2, &start)
 }
 
-//// ListFilesAndDirectoriesSegmentResponse - An enumeration of directories and files.
-//type ListFilesAndDirectoriesSegmentResponse struct {
-//	rawResponse *http.Response
-//	// XMLName is used for marshalling and is subject to removal in a future release.
-//	XMLName         xml.Name                       `xml:"EnumerationResults"`
-//	ServiceEndpoint string                         `xml:"ServiceEndpoint,attr"`
-//	ShareName       string                         `xml:"ShareName,attr"`
-//	ShareSnapshot   *string                        `xml:"ShareSnapshot,attr"`
-//	DirectoryPath   string                         `xml:"DirectoryPath,attr"`
-//	Prefix          string                         `xml:"Prefix"`
-//	Marker          *string                        `xml:"Marker"`
-//	MaxResults      *int32                         `xml:"MaxResults"`
-//	Segment         FilesAndDirectoriesListSegment `xml:"Entries"`
-//	NextMarker      Marker                         `xml:"NextMarker"`
-//}
-//
-//// Response returns the raw HTTP response object.
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) Response() *http.Response {
-//	return lfadsr.rawResponse
-//}
-//
-//// StatusCode returns the HTTP status code of the response, e.g. 200.
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) StatusCode() int {
-//	return lfadsr.rawResponse.StatusCode
-//}
-//
-//// Status returns the HTTP status message of the response, e.g. "200 OK".
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) Status() string {
-//	return lfadsr.rawResponse.Status
-//}
-//
-//// ContentType returns the value for header Content-Type.
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) ContentType() string {
-//	return lfadsr.rawResponse.Header.Get("Content-Type")
-//}
-//
-//// Date returns the value for header Date.
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) Date() time.Time {
-//	s := lfadsr.rawResponse.Header.Get("Date")
-//	if s == "" {
-//		return time.Time{}
-//	}
-//	t, err := time.Parse(time.RFC1123, s)
-//	if err != nil {
-//		t = time.Time{}
-//	}
-//	return t
-//}
-//
-//// ErrorCode returns the value for header x-ms-error-code.
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) ErrorCode() string {
-//	return lfadsr.rawResponse.Header.Get("x-ms-error-code")
-//}
-//
-//// RequestID returns the value for header x-ms-request-id.
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) RequestID() string {
-//	return lfadsr.rawResponse.Header.Get("x-ms-request-id")
-//}
-//
-//// Version returns the value for header x-ms-version.
-//func (lfadsr ListFilesAndDirectoriesSegmentResponse) Version() string {
-//	return lfadsr.rawResponse.Header.Get("x-ms-version")
-//}
+// // ListFilesAndDirectoriesSegmentResponse - An enumeration of directories and files.
+// type ListFilesAndDirectoriesSegmentResponse struct {
+// 	rawResponse *http.Response
+// 	// XMLName is used for marshalling and is subject to removal in a future release.
+// 	XMLName         xml.Name                       `xml:"EnumerationResults"`
+// 	ServiceEndpoint string                         `xml:"ServiceEndpoint,attr"`
+// 	ShareName       string                         `xml:"ShareName,attr"`
+// 	ShareSnapshot   *string                        `xml:"ShareSnapshot,attr"`
+// 	DirectoryPath   string                         `xml:"DirectoryPath,attr"`
+// 	Prefix          string                         `xml:"Prefix"`
+// 	Marker          *string                        `xml:"Marker"`
+// 	MaxResults      *int32                         `xml:"MaxResults"`
+// 	Segment         FilesAndDirectoriesListSegment `xml:"Entries"`
+// 	NextMarker      Marker                         `xml:"NextMarker"`
+// 	DirectoryID     *string                        `xml:"DirectoryId"`
+// }
+
+// // Response returns the raw HTTP response object.
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) Response() *http.Response {
+// 	return lfadsr.rawResponse
+// }
+
+// // StatusCode returns the HTTP status code of the response, e.g. 200.
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) StatusCode() int {
+// 	return lfadsr.rawResponse.StatusCode
+// }
+
+// // Status returns the HTTP status message of the response, e.g. "200 OK".
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) Status() string {
+// 	return lfadsr.rawResponse.Status
+// }
+
+// // ContentType returns the value for header Content-Type.
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) ContentType() string {
+// 	return lfadsr.rawResponse.Header.Get("Content-Type")
+// }
+
+// // Date returns the value for header Date.
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) Date() time.Time {
+// 	s := lfadsr.rawResponse.Header.Get("Date")
+// 	if s == "" {
+// 		return time.Time{}
+// 	}
+// 	t, err := time.Parse(time.RFC1123, s)
+// 	if err != nil {
+// 		t = time.Time{}
+// 	}
+// 	return t
+// }
+
+// // ErrorCode returns the value for header x-ms-error-code.
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) ErrorCode() string {
+// 	return lfadsr.rawResponse.Header.Get("x-ms-error-code")
+// }
+
+// // RequestID returns the value for header x-ms-request-id.
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) RequestID() string {
+// 	return lfadsr.rawResponse.Header.Get("x-ms-request-id")
+// }
+
+// // Version returns the value for header x-ms-version.
+// func (lfadsr ListFilesAndDirectoriesSegmentResponse) Version() string {
+// 	return lfadsr.rawResponse.Header.Get("x-ms-version")
+// }
 
 // ListHandlesResponse - An enumeration of handles.
 type ListHandlesResponse struct {
@@ -2631,13 +2909,13 @@ func (lhr ListHandlesResponse) Version() string {
 type ListSharesResponse struct {
 	rawResponse *http.Response
 	// XMLName is used for marshalling and is subject to removal in a future release.
-	XMLName         xml.Name    `xml:"EnumerationResults"`
-	ServiceEndpoint string      `xml:"ServiceEndpoint,attr"`
-	Prefix          *string     `xml:"Prefix"`
-	Marker          *string     `xml:"Marker"`
-	MaxResults      *int32      `xml:"MaxResults"`
-	ShareItems      []ShareItem `xml:"Shares>Share"`
-	NextMarker      Marker      `xml:"NextMarker"`
+	XMLName         xml.Name            `xml:"EnumerationResults"`
+	ServiceEndpoint string              `xml:"ServiceEndpoint,attr"`
+	Prefix          *string             `xml:"Prefix"`
+	Marker          *string             `xml:"Marker"`
+	MaxResults      *int32              `xml:"MaxResults"`
+	ShareItems      []ShareItemInternal `xml:"Shares>Share"`
+	NextMarker      Marker              `xml:"NextMarker"`
 }
 
 // Response returns the raw HTTP response object.
@@ -2768,8 +3046,8 @@ func (salr ShareAcquireLeaseResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (salr ShareAcquireLeaseResponse) ETag() ETag {
-	return ETag(salr.rawResponse.Header.Get("ETag"))
+func (salr ShareAcquireLeaseResponse) ETag() string {
+	return salr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -2844,8 +3122,8 @@ func (sblr ShareBreakLeaseResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (sblr ShareBreakLeaseResponse) ETag() ETag {
-	return ETag(sblr.rawResponse.Header.Get("ETag"))
+func (sblr ShareBreakLeaseResponse) ETag() string {
+	return sblr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -2933,8 +3211,8 @@ func (sclr ShareChangeLeaseResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (sclr ShareChangeLeaseResponse) ETag() ETag {
-	return ETag(sclr.rawResponse.Header.Get("ETag"))
+func (sclr ShareChangeLeaseResponse) ETag() string {
+	return sclr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -3057,8 +3335,8 @@ func (scr ShareCreateResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (scr ShareCreateResponse) ETag() ETag {
-	return ETag(scr.rawResponse.Header.Get("ETag"))
+func (scr ShareCreateResponse) ETag() string {
+	return scr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -3123,8 +3401,8 @@ func (scsr ShareCreateSnapshotResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (scsr ShareCreateSnapshotResponse) ETag() ETag {
-	return ETag(scsr.rawResponse.Header.Get("ETag"))
+func (scsr ShareCreateSnapshotResponse) ETag() string {
+	return scsr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -3244,8 +3522,8 @@ func (sfrl ShareFileRangeList) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (sfrl ShareFileRangeList) ETag() ETag {
-	return ETag(sfrl.rawResponse.Header.Get("ETag"))
+func (sfrl ShareFileRangeList) ETag() string {
+	return sfrl.rawResponse.Header.Get("ETag")
 }
 
 // FileContentLength returns the value for header x-ms-content-length.
@@ -3353,14 +3631,19 @@ func (sgpr ShareGetPropertiesResponse) Date() time.Time {
 	return t
 }
 
+// EnabledProtocols returns the value for header x-ms-enabled-protocols.
+func (sgpr ShareGetPropertiesResponse) EnabledProtocols() string {
+	return sgpr.rawResponse.Header.Get("x-ms-enabled-protocols")
+}
+
 // ErrorCode returns the value for header x-ms-error-code.
 func (sgpr ShareGetPropertiesResponse) ErrorCode() string {
 	return sgpr.rawResponse.Header.Get("x-ms-error-code")
 }
 
 // ETag returns the value for header ETag.
-func (sgpr ShareGetPropertiesResponse) ETag() ETag {
-	return ETag(sgpr.rawResponse.Header.Get("ETag"))
+func (sgpr ShareGetPropertiesResponse) ETag() string {
+	return sgpr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -3402,6 +3685,19 @@ func (sgpr ShareGetPropertiesResponse) NextAllowedQuotaDowngradeTime() time.Time
 		t = time.Time{}
 	}
 	return t
+}
+
+// ProvisionedBandwidthMibps returns the value for header x-ms-share-provisioned-bandwidth-mibps.
+func (sgpr ShareGetPropertiesResponse) ProvisionedBandwidthMibps() int32 {
+	s := sgpr.rawResponse.Header.Get("x-ms-share-provisioned-bandwidth-mibps")
+	if s == "" {
+		return -1
+	}
+	i, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		i = 0
+	}
+	return int32(i)
 }
 
 // ProvisionedEgressMBps returns the value for header x-ms-share-provisioned-egress-mbps.
@@ -3461,21 +3757,26 @@ func (sgpr ShareGetPropertiesResponse) RequestID() string {
 	return sgpr.rawResponse.Header.Get("x-ms-request-id")
 }
 
+// RootSquash returns the value for header x-ms-root-squash.
+func (sgpr ShareGetPropertiesResponse) RootSquash() ShareRootSquashType {
+	return ShareRootSquashType(sgpr.rawResponse.Header.Get("x-ms-root-squash"))
+}
+
 // Version returns the value for header x-ms-version.
 func (sgpr ShareGetPropertiesResponse) Version() string {
 	return sgpr.rawResponse.Header.Get("x-ms-version")
 }
 
-// ShareItem - A listed Azure Storage share item.
-type ShareItem struct {
+// ShareItemInternal - A listed Azure Storage share item.
+type ShareItemInternal struct {
 	// XMLName is used for marshalling and is subject to removal in a future release.
-	XMLName    xml.Name        `xml:"Share"`
-	Name       string          `xml:"Name"`
-	Snapshot   *string         `xml:"Snapshot"`
-	Deleted    *bool           `xml:"Deleted"`
-	Version    *string         `xml:"Version"`
-	Properties ShareProperties `xml:"Properties"`
-	Metadata   Metadata        `xml:"Metadata"`
+	XMLName    xml.Name                `xml:"Share"`
+	Name       string                  `xml:"Name"`
+	Snapshot   *string                 `xml:"Snapshot"`
+	Deleted    *bool                   `xml:"Deleted"`
+	Version    *string                 `xml:"Version"`
+	Properties SharePropertiesInternal `xml:"Properties"`
+	Metadata   Metadata                `xml:"Metadata"`
 }
 
 // SharePermission - A permission (a security descriptor) at the share level.
@@ -3528,14 +3829,15 @@ func (sp SharePermission) Version() string {
 	return sp.rawResponse.Header.Get("x-ms-version")
 }
 
-// ShareProperties - Properties of a share.
-type ShareProperties struct {
+// SharePropertiesInternal - Properties of a share.
+type SharePropertiesInternal struct {
 	LastModified                  time.Time  `xml:"Last-Modified"`
-	Etag                          ETag       `xml:"Etag"`
+	Etag                          string     `xml:"Etag"`
 	Quota                         int32      `xml:"Quota"`
 	ProvisionedIops               *int32     `xml:"ProvisionedIops"`
 	ProvisionedIngressMBps        *int32     `xml:"ProvisionedIngressMBps"`
 	ProvisionedEgressMBps         *int32     `xml:"ProvisionedEgressMBps"`
+	ProvisionedBandwidthMiBps     *int32     `xml:"ProvisionedBandwidthMiBps"`
 	NextAllowedQuotaDowngradeTime *time.Time `xml:"NextAllowedQuotaDowngradeTime"`
 	DeletedTime                   *time.Time `xml:"DeletedTime"`
 	RemainingRetentionDays        *int32     `xml:"RemainingRetentionDays"`
@@ -3547,23 +3849,28 @@ type ShareProperties struct {
 	// LeaseState - Possible values include: 'LeaseStateAvailable', 'LeaseStateLeased', 'LeaseStateExpired', 'LeaseStateBreaking', 'LeaseStateBroken', 'LeaseStateNone'
 	LeaseState LeaseStateType `xml:"LeaseState"`
 	// LeaseDuration - Possible values include: 'LeaseDurationInfinite', 'LeaseDurationFixed', 'LeaseDurationNone'
-	LeaseDuration LeaseDurationType `xml:"LeaseDuration"`
+	LeaseDuration    LeaseDurationType `xml:"LeaseDuration"`
+	EnabledProtocols *string           `xml:"EnabledProtocols"`
+	// RootSquash - Possible values include: 'ShareRootSquashNoRootSquash', 'ShareRootSquashRootSquash', 'ShareRootSquashAllSquash', 'ShareRootSquashNone'
+	RootSquash ShareRootSquashType `xml:"RootSquash"`
 }
 
-// MarshalXML implements the xml.Marshaler interface for ShareProperties.
-func (sp ShareProperties) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-	sp2 := (*shareProperties)(unsafe.Pointer(&sp))
-	return e.EncodeElement(*sp2, start)
+// MarshalXML implements the xml.Marshaler interface for SharePropertiesInternal.
+func (spi SharePropertiesInternal) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	spi2 := (*sharePropertiesInternal)(unsafe.Pointer(&spi))
+	return e.EncodeElement(*spi2, start)
 }
 
-// UnmarshalXML implements the xml.Unmarshaler interface for ShareProperties.
-func (sp *ShareProperties) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	sp2 := (*shareProperties)(unsafe.Pointer(sp))
-	return d.DecodeElement(sp2, &start)
+// UnmarshalXML implements the xml.Unmarshaler interface for SharePropertiesInternal.
+func (spi *SharePropertiesInternal) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	spi2 := (*sharePropertiesInternal)(unsafe.Pointer(spi))
+	return d.DecodeElement(spi2, &start)
 }
 
 // ShareProtocolSettings - Protocol settings
 type ShareProtocolSettings struct {
+	// XMLName is used for marshalling and is subject to removal in a future release.
+	XMLName xml.Name `xml:"ProtocolSettings"`
 	// Smb - Settings for SMB protocol.
 	Smb *ShareSmbSettings `xml:"SMB"`
 }
@@ -3612,8 +3919,8 @@ func (srlr ShareReleaseLeaseResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (srlr ShareReleaseLeaseResponse) ETag() ETag {
-	return ETag(srlr.rawResponse.Header.Get("ETag"))
+func (srlr ShareReleaseLeaseResponse) ETag() string {
+	return srlr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -3683,8 +3990,8 @@ func (srlr ShareRenewLeaseResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (srlr ShareRenewLeaseResponse) ETag() ETag {
-	return ETag(srlr.rawResponse.Header.Get("ETag"))
+func (srlr ShareRenewLeaseResponse) ETag() string {
+	return srlr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -3759,8 +4066,8 @@ func (srr ShareRestoreResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (srr ShareRestoreResponse) ETag() ETag {
-	return ETag(srr.rawResponse.Header.Get("ETag"))
+func (srr ShareRestoreResponse) ETag() string {
+	return srr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -3825,8 +4132,8 @@ func (ssapr ShareSetAccessPolicyResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (ssapr ShareSetAccessPolicyResponse) ETag() ETag {
-	return ETag(ssapr.rawResponse.Header.Get("ETag"))
+func (ssapr ShareSetAccessPolicyResponse) ETag() string {
+	return ssapr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -3891,8 +4198,8 @@ func (ssmr ShareSetMetadataResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (ssmr ShareSetMetadataResponse) ETag() ETag {
-	return ETag(ssmr.rawResponse.Header.Get("ETag"))
+func (ssmr ShareSetMetadataResponse) ETag() string {
+	return ssmr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -3957,8 +4264,8 @@ func (sspr ShareSetPropertiesResponse) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (sspr ShareSetPropertiesResponse) ETag() ETag {
-	return ETag(sspr.rawResponse.Header.Get("ETag"))
+func (sspr ShareSetPropertiesResponse) ETag() string {
+	return sspr.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -3986,6 +4293,8 @@ func (sspr ShareSetPropertiesResponse) Version() string {
 
 // ShareSmbSettings - Settings for SMB protocol.
 type ShareSmbSettings struct {
+	// XMLName is used for marshalling and is subject to removal in a future release.
+	XMLName xml.Name `xml:"SMB"`
 	// Multichannel - Settings for SMB Multichannel.
 	Multichannel *SmbMultichannel `xml:"Multichannel"`
 }
@@ -4031,8 +4340,8 @@ func (ss ShareStats) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (ss ShareStats) ETag() ETag {
-	return ETag(ss.rawResponse.Header.Get("ETag"))
+func (ss ShareStats) ETag() string {
+	return ss.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -4106,8 +4415,8 @@ func (si SignedIdentifiers) ErrorCode() string {
 }
 
 // ETag returns the value for header ETag.
-func (si SignedIdentifiers) ETag() ETag {
-	return ETag(si.rawResponse.Header.Get("ETag"))
+func (si SignedIdentifiers) ETag() string {
+	return si.rawResponse.Header.Get("ETag")
 }
 
 // LastModified returns the value for header Last-Modified.
@@ -4193,11 +4502,14 @@ func init() {
 	if reflect.TypeOf((*AccessPolicy)(nil)).Elem().Size() != reflect.TypeOf((*accessPolicy)(nil)).Elem().Size() {
 		validateError(errors.New("size mismatch between AccessPolicy and accessPolicy"))
 	}
+	if reflect.TypeOf((*FileProperty)(nil)).Elem().Size() != reflect.TypeOf((*fileProperty)(nil)).Elem().Size() {
+		validateError(errors.New("size mismatch between FileProperty and fileProperty"))
+	}
 	if reflect.TypeOf((*HandleItem)(nil)).Elem().Size() != reflect.TypeOf((*handleItem)(nil)).Elem().Size() {
 		validateError(errors.New("size mismatch between HandleItem and handleItem"))
 	}
-	if reflect.TypeOf((*ShareProperties)(nil)).Elem().Size() != reflect.TypeOf((*shareProperties)(nil)).Elem().Size() {
-		validateError(errors.New("size mismatch between ShareProperties and shareProperties"))
+	if reflect.TypeOf((*SharePropertiesInternal)(nil)).Elem().Size() != reflect.TypeOf((*sharePropertiesInternal)(nil)).Elem().Size() {
+		validateError(errors.New("size mismatch between SharePropertiesInternal and sharePropertiesInternal"))
 	}
 }
 
@@ -4248,6 +4560,17 @@ type accessPolicy struct {
 }
 
 // internal type used for marshalling
+type fileProperty struct {
+	ContentLength  int64        `xml:"Content-Length"`
+	CreationTime   *timeRFC3339 `xml:"CreationTime"`
+	LastAccessTime *timeRFC3339 `xml:"LastAccessTime"`
+	LastWriteTime  *timeRFC3339 `xml:"LastWriteTime"`
+	ChangeTime     *timeRFC3339 `xml:"ChangeTime"`
+	LastModified   *timeRFC1123 `xml:"Last-Modified"`
+	Etag           *string      `xml:"Etag"`
+}
+
+// internal type used for marshalling
 type handleItem struct {
 	// XMLName is used for marshalling and is subject to removal in a future release.
 	XMLName           xml.Name     `xml:"Handle"`
@@ -4262,20 +4585,23 @@ type handleItem struct {
 }
 
 // internal type used for marshalling
-type shareProperties struct {
-	LastModified                  timeRFC1123       `xml:"Last-Modified"`
-	Etag                          ETag              `xml:"Etag"`
-	Quota                         int32             `xml:"Quota"`
-	ProvisionedIops               *int32            `xml:"ProvisionedIops"`
-	ProvisionedIngressMBps        *int32            `xml:"ProvisionedIngressMBps"`
-	ProvisionedEgressMBps         *int32            `xml:"ProvisionedEgressMBps"`
-	NextAllowedQuotaDowngradeTime *timeRFC1123      `xml:"NextAllowedQuotaDowngradeTime"`
-	DeletedTime                   *timeRFC1123      `xml:"DeletedTime"`
-	RemainingRetentionDays        *int32            `xml:"RemainingRetentionDays"`
-	AccessTier                    *string           `xml:"AccessTier"`
-	AccessTierChangeTime          *timeRFC1123      `xml:"AccessTierChangeTime"`
-	AccessTierTransitionState     *string           `xml:"AccessTierTransitionState"`
-	LeaseStatus                   LeaseStatusType   `xml:"LeaseStatus"`
-	LeaseState                    LeaseStateType    `xml:"LeaseState"`
-	LeaseDuration                 LeaseDurationType `xml:"LeaseDuration"`
+type sharePropertiesInternal struct {
+	LastModified                  timeRFC1123         `xml:"Last-Modified"`
+	Etag                          string              `xml:"Etag"`
+	Quota                         int32               `xml:"Quota"`
+	ProvisionedIops               *int32              `xml:"ProvisionedIops"`
+	ProvisionedIngressMBps        *int32              `xml:"ProvisionedIngressMBps"`
+	ProvisionedEgressMBps         *int32              `xml:"ProvisionedEgressMBps"`
+	ProvisionedBandwidthMiBps     *int32              `xml:"ProvisionedBandwidthMiBps"`
+	NextAllowedQuotaDowngradeTime *timeRFC1123        `xml:"NextAllowedQuotaDowngradeTime"`
+	DeletedTime                   *timeRFC1123        `xml:"DeletedTime"`
+	RemainingRetentionDays        *int32              `xml:"RemainingRetentionDays"`
+	AccessTier                    *string             `xml:"AccessTier"`
+	AccessTierChangeTime          *timeRFC1123        `xml:"AccessTierChangeTime"`
+	AccessTierTransitionState     *string             `xml:"AccessTierTransitionState"`
+	LeaseStatus                   LeaseStatusType     `xml:"LeaseStatus"`
+	LeaseState                    LeaseStateType      `xml:"LeaseState"`
+	LeaseDuration                 LeaseDurationType   `xml:"LeaseDuration"`
+	EnabledProtocols              *string             `xml:"EnabledProtocols"`
+	RootSquash                    ShareRootSquashType `xml:"RootSquash"`
 }

@@ -2,6 +2,9 @@
 
 > See [BreakingChanges](BreakingChanges.md) for a detailed list of API breaks.
 
+## Version 0.9.0:
+- Added support for Rename
+
 ## Version 0.8.0:
 - Allow more time formats for SAS
 - Enable recovering from an unexpectedEOF error

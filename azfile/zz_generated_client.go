@@ -10,7 +10,7 @@ import (
 
 const (
 	// ServiceVersion specifies the version of the operations used in this package.
-	ServiceVersion = "2020-02-10"
+	ServiceVersion = "2021-04-10"
 )
 
 // managementClient is the base client for Azfile.

@@ -49,6 +49,7 @@ func (v AccountSASSignatureValues) NewSASQueryParameters(sharedKeyCredential *Sh
 		v.IPRange.String(),
 		string(v.Protocol),
 		v.Version,
+		"",  // encryptionScope
 		""}, // That right, the account SAS requires a terminating extra newline
 		"\n")
 

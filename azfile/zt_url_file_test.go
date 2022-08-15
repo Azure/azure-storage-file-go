@@ -1557,3 +1557,125 @@ func (s *FileURLSuite) TestCreateMaximumSizeFileShare(c *chk.C) {
 	c.Assert(err, chk.IsNil)
 	c.Assert(cResp.StatusCode(), chk.Equals, 201)
 }
+
+func (s *FileURLSuite) TestRename(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
+
+	renamedFileName := generateFileName()
+	renamedFileURL, err := fileURL.Rename(ctx, renamedFileName, nil, azfile.Metadata{}, nil)
+	c.Assert(err, chk.IsNil)
+	c.Assert(renamedFileURL, chk.NotNil)
+
+	_, err = fileURL.GetProperties(ctx)
+	c.Assert(err, chk.NotNil)
+
+	_, err = renamedFileURL.GetProperties(ctx)
+	c.Assert(err, chk.IsNil)
+}
+
+func (s *FileURLSuite) TestRenameDifferentDirectory(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
+
+	directoryURL, _ := createNewDirectoryFromShare(c, shareURL)
+	renamedFileName := generateFileName()
+	destinationURL := directoryURL.NewFileURL(renamedFileName)
+	destinationPath := azfile.NewFileURLParts(destinationURL.URL()).DirectoryOrFilePath
+
+	renamedFileURL, err := fileURL.Rename(ctx, destinationPath, nil, azfile.Metadata{}, nil)
+	c.Assert(err, chk.IsNil)
+	c.Assert(renamedFileURL, chk.NotNil)
+
+	_, err = fileURL.GetProperties(ctx)
+	c.Assert(err, chk.NotNil)
+
+	_, err = renamedFileURL.GetProperties(ctx)
+	c.Assert(err, chk.IsNil)
+	c.Assert(renamedFileURL.String(), chk.Equals, destinationURL.String())
+}
+
+func (s *FileURLSuite) TestRenameReplaceIfExistsTrue(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
+
+	replaceIfExists := true
+
+	renamedFileName := generateFileName()
+	shareURL.NewRootDirectoryURL().NewFileURL(renamedFileName).Create(ctx, 0, azfile.FileHTTPHeaders{}, nil)
+	renamedFileURL, err := fileURL.Rename(ctx, renamedFileName, &replaceIfExists, azfile.Metadata{}, nil)
+	c.Assert(err, chk.IsNil)
+	c.Assert(renamedFileURL, chk.NotNil)
+}
+
+func (s *FileURLSuite) TestRenameReplaceIfExistsFalse(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
+
+	replaceIfExists := false
+
+	renamedFileName := generateFileName()
+	shareURL.NewRootDirectoryURL().NewFileURL(renamedFileName).Create(ctx, 0, azfile.FileHTTPHeaders{}, nil)
+	_, err := fileURL.Rename(ctx, renamedFileName, &replaceIfExists, azfile.Metadata{}, nil)
+	c.Assert(err, chk.NotNil)
+}
+
+func (s *FileURLSuite) TestRenameMetadata(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
+
+	metadata := azfile.Metadata{}
+	metadata["foo"] = "bar"
+	renamedFileName := generateFileName()
+	renamedFileURL, err := fileURL.Rename(ctx, renamedFileName, nil, metadata, nil)
+	c.Assert(err, chk.IsNil)
+	c.Assert(renamedFileURL, chk.NotNil)
+
+	props, err := renamedFileURL.GetProperties(ctx)
+	c.Assert(err, chk.IsNil)
+	c.Assert(props.NewMetadata()["foo"], chk.Equals, "bar")
+}
+
+func (s *FileURLSuite) TestRenameContentType(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	fileURL, _ := createNewFileFromShare(c, shareURL, 0)
+
+	contentType := "application/pdf"
+	renamedFileName := generateFileName()
+	renamedFileURL, err := fileURL.Rename(ctx, renamedFileName, nil, azfile.Metadata{}, &contentType)
+	c.Assert(err, chk.IsNil)
+	c.Assert(renamedFileURL, chk.NotNil)
+
+	props, err := renamedFileURL.GetProperties(ctx)
+	c.Assert(err, chk.IsNil)
+	c.Assert(props.ContentType(), chk.Equals, contentType)
+}
+
+func (s *FileURLSuite) TestRenameError(c *chk.C) {
+	fsu := getFSU()
+	shareURL, _ := createNewShare(c, fsu)
+	defer delShare(c, shareURL, azfile.DeleteSnapshotsOptionNone)
+
+	fileURL, _ := getFileURLFromDirectory(c, shareURL.NewRootDirectoryURL())
+
+	renamedFileName := generateFileName()
+	_, err := fileURL.Rename(ctx, renamedFileName, nil, azfile.Metadata{}, nil)
+	c.Assert(err, chk.NotNil)
+}

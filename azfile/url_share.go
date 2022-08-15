@@ -71,26 +71,26 @@ func (s ShareURL) Create(ctx context.Context, metadata Metadata, quotaInGB int32
 	if quotaInGB != 0 {
 		quota = &quotaInGB
 	}
-	return s.shareClient.Create(ctx, nil, metadata, quota, ShareAccessTierNone)
+	return s.shareClient.Create(ctx, "", nil, metadata, quota, ShareAccessTierNone, nil, ShareRootSquashNone)
 }
 
 // CreateSnapshot creates a read-only snapshot of a share.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/snapshot-share.
 func (s ShareURL) CreateSnapshot(ctx context.Context, metadata Metadata) (*ShareCreateSnapshotResponse, error) {
-	return s.shareClient.CreateSnapshot(ctx, nil, metadata)
+	return s.shareClient.CreateSnapshot(ctx, "", nil, metadata)
 }
 
 // Delete marks the specified share or share snapshot for deletion.
 // The share or share snapshot and any files contained within it are later deleted during garbage collection.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/delete-share.
 func (s ShareURL) Delete(ctx context.Context, deleteSnapshotsOption DeleteSnapshotsOptionType) (*ShareDeleteResponse, error) {
-	return s.shareClient.Delete(ctx, nil, nil, deleteSnapshotsOption, nil)
+	return s.shareClient.Delete(ctx, "", nil, nil, deleteSnapshotsOption, nil)
 }
 
 // GetProperties returns all user-defined metadata and system properties for the specified share or share snapshot.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/get-share-properties.
 func (s ShareURL) GetProperties(ctx context.Context) (*ShareGetPropertiesResponse, error) {
-	return s.shareClient.GetProperties(ctx, nil, nil, nil)
+	return s.shareClient.GetProperties(ctx, "", nil, nil, nil)
 }
 
 // SetProperties sets service-defined properties for the specified share.
@@ -101,19 +101,19 @@ func (s ShareURL) SetProperties(ctx context.Context, quotaInGB int32) (*ShareSet
 	if quotaInGB != 0 {
 		quota = &quotaInGB
 	}
-	return s.shareClient.SetProperties(ctx, nil, quota, ShareAccessTierNone, nil)
+	return s.shareClient.SetProperties(ctx, "", nil, quota, ShareAccessTierNone, nil, ShareRootSquashNone)
 }
 
 // SetMetadata sets the share's metadata.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-share-metadata.
 func (s ShareURL) SetMetadata(ctx context.Context, metadata Metadata) (*ShareSetMetadataResponse, error) {
-	return s.shareClient.SetMetadata(ctx, nil, metadata, nil)
+	return s.shareClient.SetMetadata(ctx, "", nil, metadata, nil)
 }
 
 // GetPermissions returns information about stored access policies specified on the share.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/get-share-acl.
 func (s ShareURL) GetPermissions(ctx context.Context) (*SignedIdentifiers, error) {
-	return s.shareClient.GetAccessPolicy(ctx, nil, nil)
+	return s.shareClient.GetAccessPolicy(ctx, "", nil, nil)
 }
 
 // CreatePermission uploads a SDDL permission string, and returns a permission key to use in conjunction with a file or folder.
@@ -124,12 +124,12 @@ func (s ShareURL) GetPermissions(ctx context.Context) (*SignedIdentifiers, error
 // More info about SDDL strings can be located at: https://docs.microsoft.com/en-us/windows/win32/secauthz/security-descriptor-string-format
 func (s ShareURL) CreatePermission(ctx context.Context, permission string) (*ShareCreatePermissionResponse, error) {
 	perm := SharePermission{Permission: permission}
-	return s.shareClient.CreatePermission(ctx, perm, nil)
+	return s.shareClient.CreatePermission(ctx, perm, "", nil)
 }
 
 // GetPermission obtains a SDDL permission string from the service using a known permission key.
 func (s ShareURL) GetPermission(ctx context.Context, permissionKey string) (*SharePermission, error) {
-	return s.shareClient.GetPermission(ctx, permissionKey, nil)
+	return s.shareClient.GetPermission(ctx, permissionKey, "", nil)
 }
 
 // The AccessPolicyPermission type simplifies creating the permissions string for a share's access policy.
@@ -172,11 +172,11 @@ func (p *AccessPolicyPermission) Parse(s string) {
 // SetPermissions sets a stored access policy for use with shared access signatures.
 // For more information, see https://docs.microsoft.com/rest/api/storageservices/set-share-acl.
 func (s ShareURL) SetPermissions(ctx context.Context, permissions []SignedIdentifier) (*ShareSetAccessPolicyResponse, error) {
-	return s.shareClient.SetAccessPolicy(ctx, permissions, nil, nil)
+	return s.shareClient.SetAccessPolicy(ctx, "", permissions, nil, nil)
 }
 
 // GetStatistics retrieves statistics related to the share.
 // For more information, see https://docs.microsoft.com/en-us/rest/api/storageservices/get-share-stats.
 func (s ShareURL) GetStatistics(ctx context.Context) (*ShareStats, error) {
-	return s.shareClient.GetStatistics(ctx, nil, nil)
+	return s.shareClient.GetStatistics(ctx, "", nil, nil)
 }
