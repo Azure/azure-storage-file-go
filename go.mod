@@ -1,4 +1,4 @@
-module github.com/Azure/azure-storage-file-go
+module github.com/aymanjarrousms/azure-storage-file-go
 
 require (
 	github.com/Azure/azure-pipeline-go v0.2.1

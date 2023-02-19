@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-storage-file-go/azfile"
+	"github.com/aymanjarrousms/azure-storage-file-go/azfile"
 	chk "gopkg.in/check.v1"
 )
 
@@ -44,9 +44,9 @@ func (s *ShareURLSuite) TestPutAndGetPermission(c *chk.C) {
 	// Rather than checking against the original, we check for emptiness, as Azure Files has set a nilness flag on SACLs
 	//        and converted our well-known SID.
 	/*
-	Expected :string = "O:S-1-5-32-548G:S-1-5-21-397955417-626881126-188441444-512D:(A;;RPWPCCDCLCSWRCWDWOGA;;;S-1-0-0)"
-	Actual   :string = "O:AOG:S-1-5-21-397955417-626881126-188441444-512D:(A;;CCDCLCSWRPWPRCWDWOGA;;;S-1-0-0)S:NO_ACCESS_CONTROL"
-	 */
+		Expected :string = "O:S-1-5-32-548G:S-1-5-21-397955417-626881126-188441444-512D:(A;;RPWPCCDCLCSWRCWDWOGA;;;S-1-0-0)"
+		Actual   :string = "O:AOG:S-1-5-21-397955417-626881126-188441444-512D:(A;;CCDCLCSWRPWPRCWDWOGA;;;S-1-0-0)S:NO_ACCESS_CONTROL"
+	*/
 	c.Assert(getResp.Permission, chk.Not(chk.Equals), "")
 }
 

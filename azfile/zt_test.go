@@ -13,7 +13,7 @@ import (
 
 	chk "gopkg.in/check.v1"
 
-	"github.com/Azure/azure-storage-file-go/azfile"
+	"github.com/aymanjarrousms/azure-storage-file-go/azfile"
 )
 
 func Test(t *testing.T) { chk.TestingT(t) }
@@ -236,7 +236,7 @@ func createNewFileFromShareWithPermissions(c *chk.C, share azfile.ShareURL, file
 
 	file, name = getFileURLFromDirectory(c, dir)
 
-	cResp, err := file.Create(ctx, fileSize, azfile.FileHTTPHeaders{SMBProperties:azfile.SMBProperties{
+	cResp, err := file.Create(ctx, fileSize, azfile.FileHTTPHeaders{SMBProperties: azfile.SMBProperties{
 		PermissionString: &sampleSDDL,
 	}}, nil)
 	c.Assert(err, chk.IsNil)

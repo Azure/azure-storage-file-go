@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-storage-file-go/azfile"
+	"github.com/aymanjarrousms/azure-storage-file-go/azfile"
 	chk "gopkg.in/check.v1"
 )
 
@@ -121,7 +121,7 @@ func (s *DirectoryURLSuite) TestDirCreateDeleteNonDefault(c *chk.C) {
 		"bar": "bArvaLue",
 	}
 
-	cResp, err := directory.Create(context.Background(), md, azfile.SMBProperties{ PermissionString: &sampleSDDL })
+	cResp, err := directory.Create(context.Background(), md, azfile.SMBProperties{PermissionString: &sampleSDDL})
 	c.Assert(err, chk.IsNil)
 	// Ensure that the file key isn't empty, but don't worry about checking the permission. We just need to know it exists.
 	c.Assert(cResp.FilePermissionKey(), chk.Not(chk.Equals), "")

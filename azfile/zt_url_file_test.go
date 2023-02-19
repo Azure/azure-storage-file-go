@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-storage-file-go/azfile"
+	"github.com/aymanjarrousms/azure-storage-file-go/azfile"
 	chk "gopkg.in/check.v1" // go get gopkg.in/check.v1
 )
 
@@ -160,7 +160,7 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 
 	attribs := azfile.FileAttributeTemporary.Add(azfile.FileAttributeHidden)
 	creationTime := time.Now().Add(-time.Hour)
-	lastWriteTime := time.Now().Add(-time.Minute*15)
+	lastWriteTime := time.Now().Add(-time.Minute * 15)
 
 	// Format and re-parse the times so we have the same precision
 	creationTime, err := time.Parse(azfile.ISO8601, creationTime.Format(azfile.ISO8601))
@@ -177,8 +177,8 @@ func (s *FileURLSuite) TestFileGetSetPropertiesNonDefault(c *chk.C) {
 		ContentDisposition: "attachment",
 		SMBProperties: azfile.SMBProperties{
 			PermissionString:  &sampleSDDL, // Because our permission string is less than 9KB, it can be used here.
-			FileAttributes: &attribs,
-			FileCreationTime: &creationTime,
+			FileAttributes:    &attribs,
+			FileCreationTime:  &creationTime,
 			FileLastWriteTime: &lastWriteTime,
 		},
 	}
@@ -253,7 +253,7 @@ func (s *FileURLSuite) TestFilePreservePermissions(c *chk.C) {
 		ContentMD5:         testMd5,
 		CacheControl:       "no-transform",
 		ContentDisposition: "attachment",
-		SMBProperties: azfile.SMBProperties{
+		SMBProperties:      azfile.SMBProperties{
 			// SMBProperties, when options are left nil, leads to preserving.
 		},
 	}
