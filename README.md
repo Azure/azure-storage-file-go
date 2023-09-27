@@ -1,5 +1,9 @@
-# Azure Storage File SDK for Go
+# Azure Storage File SDK for Go (Deprecated)
 [![GoDoc Widget]][GoDoc] [![Build Status][Travis Widget]][Travis]
+
+This project will be in [Community Support](https://azure.github.io/azure-sdk/policies_support.html#package-lifecycle) until 13 September 2024. After this date the project and associated client libraries will be retired permanently. For more details on the retirement and alternatives to using this project, visit [Retirement notice: The legacy Azure Storage Go client libraries will be retired on 13 September 2024](https://azure.microsoft.com/updates/retirement-notice-the-legacy-azure-storage-go-client-libraries-will-be-retired-on-13-september-2024/).
+
+---
 
 The Microsoft Azure Storage SDK for Go allows you to build applications that takes advantage of Azure's scalable cloud storage. 
 
